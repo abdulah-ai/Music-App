@@ -6,8 +6,6 @@
 __pycache__/
 *.pyc
 .frontend_git_backup/
-.claude/
-frontend/.claude/
 
 # Python backend
 backend/.venv/
@@ -31,3 +29,6 @@ frontend/.env.*
 # OS/editor
 .DS_Store
 Thumbs.db
+
+.claude/
+frontend/.claude/
