@@ -1,0 +1,12 @@
+{
+  "appId": "com.supermediaapp.mobile",
+  "appName": "SuperMedia",
+  "webDir": "dist",
+  "backgroundColor": "#060B18",
+  "android": {
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}
