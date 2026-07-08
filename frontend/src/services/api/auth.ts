@@ -28,7 +28,7 @@ export async function login(email: string, password: string): Promise<TokenPair>
   return data;
 }
 
-export async function me(): Promise<User> {
-  const { data } = await apiClient.get<User>('/auth/me');
+export async function me(options?: { timeoutMs?: number }): Promise<User> {
+  const { data } = await apiClient.get<User>('/auth/me', options?.timeoutMs ? { timeout: options.timeoutMs } : undefined);
   return data;
 }

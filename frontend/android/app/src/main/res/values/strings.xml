@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Wavecairn</string>
-    <string name="title_activity_main">Wavecairn</string>
-    <string name="package_name">com.wavecairn.app</string>
-    <string name="custom_url_scheme">com.wavecairn.app</string>
+    <string name="app_name">Duskglen</string>
+    <string name="title_activity_main">Duskglen</string>
+    <string name="package_name">com.duskglen.app</string>
+    <string name="custom_url_scheme">com.duskglen.app</string>
 </resources>

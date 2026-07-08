@@ -1,4 +1,4 @@
-package com.wavecairn.app;
+package com.duskglen.app;
 
 import com.getcapacitor.BridgeActivity;
 

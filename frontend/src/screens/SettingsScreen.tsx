@@ -3,14 +3,17 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as Clipboard from 'expo-clipboard';
 
 import { BrandMark } from '../components/ui/BrandMark';
 import { Button } from '../components/ui/Button';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { ScreenContainer } from '../components/ui/ScreenContainer';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import * as recognitionsApi from '../services/api/recognitions';
 import * as telegramApi from '../services/api/telegram';
 import type { TelegramStatus } from '../services/api/telegram';
+import { watchJob } from '../services/api/jobSocket';
 import * as offlineMedia from '../services/storage/offlineMedia';
 import type { OfflineEntry } from '../services/storage/offlineMedia';
 import { useAuthStore } from '../store/authStore';
@@ -54,11 +57,78 @@ export function SettingsScreen() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const items = useLibraryStore((s) => s.items);
+  const upsertMedia = useLibraryStore((s) => s.upsert);
   const { networkOnline, backendOnline } = useOnlineStatus();
 
   const [telegramStatus, setTelegramStatus] = useState<TelegramStatus | null>(null);
   const [offlineEntries, setOfflineEntries] = useState<OfflineEntry[]>([]);
   const [clearing, setClearing] = useState(false);
+  const [naming, setNaming] = useState(false);
+
+  async function nameLibrary() {
+    if (naming) return;
+    setNaming(true);
+    try {
+      const jobs = await recognitionsApi.recognizeWholeLibrary();
+      if (jobs.length === 0) {
+        toast('Every track already has a name', 'success');
+        setNaming(false);
+        return;
+      }
+      toast(`Naming ${jobs.length} track${jobs.length === 1 ? '' : 's'}…`, 'info');
+      let done = 0;
+      let named = 0;
+      jobs.forEach((job) => {
+        const unsubscribe = watchJob(job.id, (update) => {
+          if (update.status === 'complete' || update.status === 'failed' || update.status === 'cancelled') {
+            done += 1;
+            if (update.stage_label === 'matched') {
+              named += 1;
+              if (update.result_media) upsertMedia(update.result_media);
+            }
+            unsubscribe();
+            if (done === jobs.length) {
+              setNaming(false);
+              toast(`Named ${named} of ${jobs.length} tracks`, named > 0 ? 'success' : 'info');
+            }
+          }
+        });
+      });
+    } catch {
+      toast("Couldn't start library naming", 'error');
+      setNaming(false);
+    }
+  }
+
+  async function exportLibrary() {
+    const payload = JSON.stringify(
+      items.map((m) => ({
+        title: m.title ?? m.recognized_title,
+        artist: m.artist ?? m.recognized_artist,
+        album: m.album,
+        type: m.media_type,
+        source: m.source,
+        source_url: m.source_url,
+        duration_seconds: m.duration_seconds,
+        added: m.created_at,
+      })),
+      null,
+      2,
+    );
+    if (Platform.OS === 'web') {
+      const blob = new Blob([payload], { type: 'application/json' });
+      const href = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = href;
+      anchor.download = 'duskglen-library.json';
+      anchor.click();
+      URL.revokeObjectURL(href);
+      toast('Library exported', 'success');
+    } else {
+      await Clipboard.setStringAsync(payload);
+      toast('Library JSON copied to clipboard', 'success');
+    }
+  }
 
   useEffect(() => {
     telegramApi.getStatus().then(setTelegramStatus).catch(() => setTelegramStatus(null));
@@ -102,7 +172,7 @@ export function SettingsScreen() {
           <GlassPanel style={styles.panel}>
             <View style={styles.panelBody}>
               <StatusRow label="Network" ok={networkOnline} />
-              <StatusRow label="Wavecairn API" ok={backendOnline} pending={backendOnline === null} />
+              <StatusRow label="Duskglen API" ok={backendOnline} pending={backendOnline === null} />
               <StatusRow
                 label="Telegram"
                 ok={telegramStatus ? telegramStatus.authorized : null}
@@ -172,12 +242,30 @@ export function SettingsScreen() {
             </View>
           </GlassPanel>
 
+          <SectionTitle>LIBRARY TOOLS</SectionTitle>
+          <GlassPanel style={styles.panel}>
+            <View style={styles.panelBody}>
+              <Pressable
+                onPress={nameLibrary}
+                disabled={naming}
+                style={({ pressed }) => [styles.toolRow, pressed && styles.toolRowPressed, naming && styles.toolRowBusy]}
+              >
+                <Ionicons name="sparkles-outline" size={18} color={colors.cyan} />
+                <Text style={styles.toolLabel}>{naming ? 'Naming your tracks…' : 'Name untitled tracks'}</Text>
+              </Pressable>
+              <Pressable onPress={exportLibrary} style={({ pressed }) => [styles.toolRow, pressed && styles.toolRowPressed]}>
+                <Ionicons name="download-outline" size={18} color={colors.textSecondary} />
+                <Text style={styles.toolLabel}>Export library as JSON</Text>
+              </Pressable>
+            </View>
+          </GlassPanel>
+
           <SectionTitle>ABOUT</SectionTitle>
           <GlassPanel style={styles.panel}>
             <View style={[styles.panelBody, styles.aboutRow]}>
               <BrandMark size={28} />
               <View>
-                <Text style={styles.fieldValue}>Wavecairn</Text>
+                <Text style={styles.fieldValue}>Duskglen</Text>
                 <Text style={styles.hint}>Your private signal archive.</Text>
               </View>
             </View>
@@ -196,7 +284,7 @@ export function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#060607' },
+  root: { flex: 1, backgroundColor: '#050805' },
   scroll: { paddingBottom: spacing.xxl },
   headerRow: {
     flexDirection: 'row',
@@ -237,4 +325,13 @@ const styles = StyleSheet.create({
   hint: { ...typography.caption, color: colors.textMuted, lineHeight: 18 },
   aboutRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   signOutButton: { marginTop: spacing.xl },
+  toolRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 2,
+    paddingVertical: spacing.xs,
+  },
+  toolRowPressed: { opacity: 0.7 },
+  toolRowBusy: { opacity: 0.6 },
+  toolLabel: { ...typography.body, fontSize: 15, color: colors.textPrimary },
 });

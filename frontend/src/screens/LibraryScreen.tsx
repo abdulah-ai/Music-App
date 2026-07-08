@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
   Image,
   Linking,
@@ -36,6 +37,7 @@ import { useFavoritesStore } from '../store/favoritesStore';
 import { useLibraryStore } from '../store/libraryStore';
 import { usePlayerStore } from '../store/playerStore';
 import { usePlaylistStore } from '../store/playlistStore';
+import { useVideoPlayerStore } from '../store/videoPlayerStore';
 import { toast } from '../store/toastStore';
 import { colors, gradients, layout, radii, shadows, spacing, typography } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/types';
@@ -102,6 +104,8 @@ export function LibraryScreen() {
   const [playlistPickMedia, setPlaylistPickMedia] = useState<Media | null>(null);
   const [offlineIds, setOfflineIds] = useState<Record<string, boolean>>({});
   const [savingOffline, setSavingOffline] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Record<string, true>>({});
 
   useEffect(() => {
     refresh();
@@ -144,7 +148,7 @@ export function LibraryScreen() {
 
   async function handlePlay(media: Media) {
     if (media.media_type === 'video') {
-      navigation.navigate('VideoPlayer', { mediaId: media.id });
+      useVideoPlayerStore.getState().openExpanded(media.id);
       return;
     }
     const audioOnly = visible.filter((m) => m.media_type !== 'video');
@@ -201,9 +205,36 @@ export function LibraryScreen() {
     setSheetMedia(null);
     try {
       await remove(media.id);
-      toast('Removed from your vault', 'success');
+      toast('Removed from your collection', 'success');
     } catch {
       toast("Couldn't delete that track", 'error');
+    }
+  }
+
+  function toggleSelect(mediaId: string) {
+    setSelectedIds((prev) => {
+      const next = { ...prev };
+      if (next[mediaId]) delete next[mediaId];
+      else next[mediaId] = true;
+      return next;
+    });
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelectedIds({});
+  }
+
+  async function handleDeleteSelected() {
+    const ids = Object.keys(selectedIds);
+    if (ids.length === 0) return;
+    try {
+      await Promise.all(ids.map((id) => remove(id)));
+      toast(`Removed ${ids.length} track${ids.length === 1 ? '' : 's'}`, 'success');
+    } catch {
+      toast("Couldn't remove every selected track", 'error');
+    } finally {
+      exitSelectMode();
     }
   }
 
@@ -272,6 +303,16 @@ export function LibraryScreen() {
               <Pressable onPress={() => setView(view === 'grid' ? 'list' : 'grid')} style={styles.toolChip}>
                 <Ionicons name={view === 'grid' ? 'list' : 'grid'} size={14} color={colors.textSecondary} />
               </Pressable>
+              <Pressable
+                onPress={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
+                style={[styles.toolChip, selectMode && styles.toolChipActive]}
+              >
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={14}
+                  color={selectMode ? colors.cyan : colors.textSecondary}
+                />
+              </Pressable>
             </View>
           )}
         </View>
@@ -282,6 +323,8 @@ export function LibraryScreen() {
             playlists={playlists.filter((p) => !query || p.name.toLowerCase().includes(query.toLowerCase()))}
             onOpen={setPlaylistDetailId}
           />
+        ) : isLoading && visible.length === 0 ? (
+          <SkeletonGrid columns={columns} cellSize={cellSize} view={view} />
         ) : (
         <FlatList
           key={`${view}-${columns}`}
@@ -309,21 +352,46 @@ export function LibraryScreen() {
                 media={item}
                 size={cellSize}
                 favorite={!!favoriteIds[item.id]}
-                onPress={() => handlePlay(item)}
-                onLongPress={() => setSheetMedia(item)}
+                selectMode={selectMode}
+                selected={!!selectedIds[item.id]}
+                onPress={() => (selectMode ? toggleSelect(item.id) : handlePlay(item))}
+                onLongPress={() => (selectMode ? toggleSelect(item.id) : setSheetMedia(item))}
               />
             ) : (
               <ListRow
                 media={item}
                 favorite={!!favoriteIds[item.id]}
-                onPress={() => handlePlay(item)}
-                onLongPress={() => setSheetMedia(item)}
+                selectMode={selectMode}
+                selected={!!selectedIds[item.id]}
+                onPress={() => (selectMode ? toggleSelect(item.id) : handlePlay(item))}
+                onLongPress={() => (selectMode ? toggleSelect(item.id) : setSheetMedia(item))}
               />
             )
           }
         />
         )}
       </ScreenContainer>
+
+      {selectMode && (
+        <View style={[styles.bulkBar, { paddingBottom: insets.bottom + spacing.sm }]}>
+          <Text style={styles.bulkLabel}>
+            {Object.keys(selectedIds).length} selected
+          </Text>
+          <View style={styles.bulkActions}>
+            <Pressable onPress={exitSelectMode} style={styles.bulkButton}>
+              <Text style={styles.bulkButtonLabel}>Cancel</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleDeleteSelected}
+              disabled={Object.keys(selectedIds).length === 0}
+              style={[styles.bulkButton, styles.bulkButtonDanger, Object.keys(selectedIds).length === 0 && { opacity: 0.4 }]}
+            >
+              <Ionicons name="trash-outline" size={15} color={colors.danger} />
+              <Text style={[styles.bulkButtonLabel, { color: colors.danger }]}>Delete</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
       <MiniPlayerBar />
 
       {/* Track actions sheet */}
@@ -468,7 +536,7 @@ function PlaylistsPane({ playlists, onOpen }: { playlists: Playlist[]; onOpen: (
           />
           <PressableScale onPress={handleCreate} disabled={creating || !name.trim()} scaleTo={0.9}>
             <LinearGradient colors={colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.createButton}>
-              {creating ? <ActivityIndicator size="small" color="#0C0D10" /> : <Ionicons name="add" size={20} color="#0C0D10" />}
+              {creating ? <ActivityIndicator size="small" color="#0A0F0D" /> : <Ionicons name="add" size={20} color="#0A0F0D" />}
             </LinearGradient>
           </PressableScale>
         </View>
@@ -561,7 +629,7 @@ function PlaylistPickerModal({ media, onClose }: { media: Media; onClose: () => 
             />
             <PressableScale onPress={createAndPick} disabled={busy || !name.trim()} scaleTo={0.9}>
               <LinearGradient colors={colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.createButton}>
-                <Ionicons name="add" size={20} color="#0C0D10" />
+                <Ionicons name="add" size={20} color="#0A0F0D" />
               </LinearGradient>
             </PressableScale>
           </View>
@@ -776,7 +844,7 @@ function EditMediaModal({
           <PressableScale onPress={save} disabled={saving} scaleTo={0.97}>
             <LinearGradient colors={colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.editSave}>
               {saving ? (
-                <ActivityIndicator size="small" color="#0C0D10" />
+                <ActivityIndicator size="small" color="#0A0F0D" />
               ) : (
                 <Text style={styles.editSaveLabel}>Save</Text>
               )}
@@ -792,12 +860,16 @@ function GridCard({
   media,
   size,
   favorite,
+  selectMode,
+  selected,
   onPress,
   onLongPress,
 }: {
   media: Media;
   size: number;
   favorite: boolean;
+  selectMode?: boolean;
+  selected?: boolean;
   onPress: () => void;
   onLongPress: () => void;
 }) {
@@ -810,7 +882,7 @@ function GridCard({
       onHoverIn={Platform.OS === 'web' ? () => setHovered(true) : undefined}
       onHoverOut={Platform.OS === 'web' ? () => setHovered(false) : undefined}
     >
-      <View style={[styles.card, hovered && styles.cardHovered, { width: size, height: size }]}>
+      <View style={[styles.card, hovered && styles.cardHovered, selected && styles.cardSelected, { width: size, height: size }]}>
         {media.thumbnail_url ? (
           <FadeImage uri={media.thumbnail_url} style={StyleSheet.absoluteFill as object} />
         ) : (
@@ -820,11 +892,12 @@ function GridCard({
 
         {!media.thumbnail_url && (
           <View style={styles.glyphWrap}>
-            <Ionicons name="musical-notes" size={38} color="rgba(248,250,252,0.3)" />
+            <Ionicons name={media.media_type === 'video' ? 'videocam' : 'musical-notes'} size={38} color="rgba(231,235,230,0.3)" />
           </View>
         )}
 
         <View style={styles.durationChip}>
+          <Ionicons name={media.media_type === 'video' ? 'videocam' : 'musical-notes'} size={10} color={colors.textSecondary} />
           <Text style={styles.durationText}>{formatDuration(media.duration_seconds)}</Text>
         </View>
         {favorite && (
@@ -833,8 +906,14 @@ function GridCard({
           </View>
         )}
 
+        {selectMode && (
+          <View style={[styles.selectCheck, selected && styles.selectCheckActive]}>
+            {selected && <Ionicons name="checkmark" size={13} color="#0A0F0D" />}
+          </View>
+        )}
+
         {/* Pointer affordances: a play FAB and an actions chip fade in on hover. */}
-        {hovered && (
+        {hovered && !selectMode && (
           <>
             <Pressable onPress={onLongPress} style={styles.moreChip} hitSlop={6}>
               <Ionicons name="ellipsis-horizontal" size={15} color={colors.textPrimary} />
@@ -849,7 +928,7 @@ function GridCard({
                 <Ionicons
                   name={media.media_type === 'video' ? 'play' : 'play'}
                   size={22}
-                  color="#0C0D10"
+                  color="#0A0F0D"
                   style={{ marginLeft: 2 }}
                 />
               </LinearGradient>
@@ -869,11 +948,15 @@ function GridCard({
 function ListRow({
   media,
   favorite,
+  selectMode,
+  selected,
   onPress,
   onLongPress,
 }: {
   media: Media;
   favorite: boolean;
+  selectMode?: boolean;
+  selected?: boolean;
   onPress: () => void;
   onLongPress: () => void;
 }) {
@@ -885,21 +968,31 @@ function ListRow({
       delayLongPress={350}
       onHoverIn={Platform.OS === 'web' ? () => setHovered(true) : undefined}
       onHoverOut={Platform.OS === 'web' ? () => setHovered(false) : undefined}
-      style={({ pressed }) => [styles.listRow, hovered && styles.listRowHovered, pressed && styles.listRowPressed]}
+      style={({ pressed }) => [styles.listRow, hovered && styles.listRowHovered, selected && styles.listRowSelected, pressed && styles.listRowPressed]}
     >
+      {selectMode && (
+        <View style={[styles.selectCheckInline, selected && styles.selectCheckActive]}>
+          {selected && <Ionicons name="checkmark" size={12} color="#0A0F0D" />}
+        </View>
+      )}
       {media.thumbnail_url ? (
         <FadeImage uri={media.thumbnail_url} style={styles.listCover as object} />
       ) : (
         <LinearGradient colors={gradients.coverFallback} style={styles.listCover}>
-          <Ionicons name="musical-notes" size={16} color="rgba(248,250,252,0.4)" />
+          <Ionicons name={media.media_type === 'video' ? 'videocam' : 'musical-notes'} size={16} color="rgba(231,235,230,0.4)" />
         </LinearGradient>
       )}
       <View style={styles.listText}>
         <Text numberOfLines={1} style={styles.cardTitle}>{displayTitle(media)}</Text>
         <Text numberOfLines={1} style={styles.cardArtist}>{displayArtist(media)}</Text>
       </View>
+      <Ionicons
+        name={media.media_type === 'video' ? 'videocam-outline' : 'musical-notes-outline'}
+        size={13}
+        color={colors.textMuted}
+      />
       {favorite && <Ionicons name="heart" size={14} color={colors.pink} />}
-      {hovered && (
+      {hovered && !selectMode && (
         <Pressable onPress={onLongPress} hitSlop={8} style={styles.rowMoreButton}>
           <Ionicons name="ellipsis-horizontal" size={16} color={colors.textSecondary} />
         </Pressable>
@@ -909,8 +1002,36 @@ function ListRow({
   );
 }
 
+/** Shimmering placeholder grid/list shown only during the very first load, before any cached or live data has arrived. */
+function SkeletonGrid({ columns, cellSize, view }: { columns: number; cellSize: number; view: ViewMode }) {
+  const pulse = useState(() => new Animated.Value(0.4))[0];
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 0.9, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
+  const count = view === 'grid' ? columns * 3 : 6;
+  return (
+    <View style={view === 'grid' ? styles.skeletonGridWrap : { gap: spacing.md }}>
+      {Array.from({ length: count }).map((_, i) =>
+        view === 'grid' ? (
+          <Animated.View key={i} style={[styles.skeletonCard, { width: cellSize, height: cellSize, opacity: pulse }]} />
+        ) : (
+          <Animated.View key={i} style={[styles.skeletonRow, { opacity: pulse }]} />
+        ),
+      )}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#060607' },
+  root: { flex: 1, backgroundColor: '#050805' },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   headerText: { flex: 1, paddingRight: spacing.md },
   eyebrow: { ...typography.eyebrow, color: colors.cyan, marginBottom: spacing.xs },
@@ -919,7 +1040,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: 'rgba(23,24,27,0.6)',
+    backgroundColor: 'rgba(18,28,24,0.6)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     height: 48,
@@ -938,9 +1059,9 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: spacing.md - 2,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(23,24,27,0.55)',
+    backgroundColor: 'rgba(18,28,24,0.55)',
   },
-  tabChipActive: { backgroundColor: 'rgba(224,149,79,0.18)' },
+  tabChipActive: { backgroundColor: 'rgba(47,191,170,0.18)' },
   tabLabel: { ...typography.caption, color: colors.textMuted },
   tabLabelActive: { color: colors.cyan, fontFamily: 'SpaceGrotesk_500Medium' },
   toolRow: { flexDirection: 'row', gap: 6 },
@@ -951,9 +1072,10 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: spacing.sm + 2,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(23,24,27,0.55)',
+    backgroundColor: 'rgba(18,28,24,0.55)',
   },
   toolLabel: { ...typography.caption, fontSize: 12, color: colors.textSecondary },
+  toolChipActive: { backgroundColor: 'rgba(47,191,170,0.18)' },
   gridRow: { gap: spacing.md },
   listContent: { gap: spacing.md, paddingBottom: layout.tabBarClearance },
   card: {
@@ -961,10 +1083,40 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'flex-end',
     borderWidth: 1,
-    borderColor: 'rgba(233,229,220,0.12)',
+    borderColor: 'rgba(167,176,168,0.12)',
   },
   cardHovered: {
-    borderColor: 'rgba(224,149,79,0.45)',
+    borderColor: 'rgba(47,191,170,0.45)',
+  },
+  cardSelected: {
+    borderColor: colors.cyan,
+    borderWidth: 2,
+  },
+  selectCheck: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    width: 22,
+    height: 22,
+    borderRadius: radii.pill,
+    borderWidth: 2,
+    borderColor: colors.textPrimary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(5,8,5,0.4)',
+  },
+  selectCheckInline: {
+    width: 20,
+    height: 20,
+    borderRadius: radii.pill,
+    borderWidth: 2,
+    borderColor: colors.textMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectCheckActive: {
+    backgroundColor: colors.cyan,
+    borderColor: colors.cyan,
   },
   moreChip: {
     position: 'absolute',
@@ -973,7 +1125,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(6,6,7,0.7)',
+    backgroundColor: 'rgba(5,8,5,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 2,
@@ -998,7 +1150,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(6,6,7,0.55)',
+    backgroundColor: 'rgba(5,8,5,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1011,7 +1163,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.sm,
     right: spacing.sm,
-    backgroundColor: 'rgba(6,6,7,0.65)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(5,8,5,0.65)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
@@ -1020,7 +1175,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.sm,
     left: spacing.sm,
-    backgroundColor: 'rgba(6,6,7,0.65)',
+    backgroundColor: 'rgba(5,8,5,0.65)',
     borderRadius: radii.pill,
     padding: 5,
   },
@@ -1032,12 +1187,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: 'rgba(23,24,27,0.5)',
+    backgroundColor: 'rgba(18,28,24,0.5)',
     borderRadius: radii.md,
     padding: spacing.sm,
   },
-  listRowHovered: { backgroundColor: 'rgba(23,24,27,0.85)' },
-  listRowPressed: { backgroundColor: 'rgba(224,149,79,0.10)' },
+  listRowHovered: { backgroundColor: 'rgba(18,28,24,0.85)' },
+  listRowPressed: { backgroundColor: 'rgba(47,191,170,0.10)' },
+  listRowSelected: { borderWidth: 1, borderColor: colors.cyan },
+  skeletonGridWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  skeletonCard: { borderRadius: radii.lg, backgroundColor: 'rgba(167,176,168,0.08)' },
+  skeletonRow: { height: 68, borderRadius: radii.md, backgroundColor: 'rgba(167,176,168,0.08)' },
+  bulkBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    backgroundColor: 'rgba(18,28,24,0.96)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(167,176,168,0.14)',
+  },
+  bulkLabel: { ...typography.subtitle, fontSize: 14, color: colors.textPrimary },
+  bulkActions: { flexDirection: 'row', gap: spacing.sm },
+  bulkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(5,8,5,0.5)',
+  },
+  bulkButtonDanger: { backgroundColor: 'rgba(224,104,95,0.14)' },
+  bulkButtonLabel: { ...typography.caption, fontSize: 13, color: colors.textPrimary },
   listCover: {
     width: 48,
     height: 48,
@@ -1049,9 +1231,9 @@ const styles = StyleSheet.create({
 
   modalRoot: { flex: 1, justifyContent: 'flex-end' },
   modalRootDesktop: { justifyContent: 'center', alignItems: 'center' },
-  modalBackdrop: { ...StyleSheet.absoluteFill as object, backgroundColor: 'rgba(4,4,5,0.65)' },
+  modalBackdrop: { ...StyleSheet.absoluteFill as object, backgroundColor: 'rgba(3,5,3,0.65)' },
   sheet: {
-    backgroundColor: '#111A2E',
+    backgroundColor: '#121C18',
     borderTopLeftRadius: radii.lg + 8,
     borderTopRightRadius: radii.lg + 8,
     paddingHorizontal: spacing.lg,
@@ -1064,7 +1246,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg + 8,
     paddingTop: spacing.lg,
     borderWidth: 1,
-    borderColor: 'rgba(233,229,220,0.16)',
+    borderColor: 'rgba(167,176,168,0.16)',
     ...shadows.card,
   },
   sheetHandle: {
@@ -1072,7 +1254,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(233,229,220,0.3)',
+    backgroundColor: 'rgba(167,176,168,0.3)',
     marginBottom: spacing.md,
   },
   sheetHeader: {
@@ -1099,7 +1281,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radii.md,
   },
-  sheetRowPressed: { backgroundColor: 'rgba(224,149,79,0.10)' },
+  sheetRowPressed: { backgroundColor: 'rgba(47,191,170,0.10)' },
   sheetRowLabel: { ...typography.body, color: colors.textPrimary },
 
   editTitle: { ...typography.title, fontSize: 20, lineHeight: 26, color: colors.textPrimary, marginBottom: spacing.md },
@@ -1108,7 +1290,7 @@ const styles = StyleSheet.create({
   editInput: {
     ...typography.body,
     color: colors.textPrimary,
-    backgroundColor: 'rgba(6,6,7,0.6)',
+    backgroundColor: 'rgba(5,8,5,0.6)',
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md - 4,
@@ -1119,7 +1301,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  editSaveLabel: { ...typography.subtitle, fontFamily: 'SpaceGrotesk_600SemiBold', color: '#0C0D10' },
+  editSaveLabel: { ...typography.subtitle, fontFamily: 'SpaceGrotesk_600SemiBold', color: '#0A0F0D' },
 
   createRow: {
     flexDirection: 'row',
@@ -1131,7 +1313,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     flex: 1,
     color: colors.textPrimary,
-    backgroundColor: 'rgba(23,24,27,0.6)',
+    backgroundColor: 'rgba(18,28,24,0.6)',
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md - 6,
@@ -1160,7 +1342,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: spacing.sm + 2,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(226,104,90,0.10)',
+    backgroundColor: 'rgba(224,104,95,0.10)',
   },
   detailDeleteLabel: { ...typography.caption, fontSize: 12, color: colors.danger },
   detailList: {

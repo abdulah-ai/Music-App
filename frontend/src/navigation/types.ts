@@ -14,7 +14,6 @@ export type MainTabParamList = {
 export type RootStackParamList = {
   Main: NavigatorScreenParams<MainTabParamList> | undefined;
   Player: undefined;
-  VideoPlayer: { mediaId: string };
   Telegram: undefined;
   Jobs: undefined;
   Settings: undefined;

@@ -43,7 +43,7 @@ export function ScreenContainer({ children, maxWidth = 1100 }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#060607',
+    backgroundColor: '#050805',
   },
   content: {
     flex: 1,

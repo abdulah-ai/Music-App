@@ -35,8 +35,8 @@ export function RegisterScreen({ navigation }: Props) {
 
   return (
     <AuthLayout
-      eyebrow="JOIN WAVECAIRN"
-      title="Build your vault."
+      eyebrow="JOIN DUSKGLEN"
+      title="Build your hollow."
       subtitle="Downloads, recognitions, and your library — all in one place."
     >
       <TextField label="Name" value={displayName} onChangeText={setDisplayName} placeholder="Your name" />

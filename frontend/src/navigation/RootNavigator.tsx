@@ -7,8 +7,9 @@ import { PlayerScreen } from '../screens/PlayerScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { TelegramScreen } from '../screens/TelegramScreen';
-import { VideoPlayerScreen } from '../screens/VideoPlayerScreen';
+import { AccountPopover } from '../components/ui/AccountPopover';
 import { Sidebar } from '../components/ui/Sidebar';
+import { GlobalVideoStage } from '../components/video/GlobalVideoStage';
 import { useAuthStore } from '../store/authStore';
 import { colors } from '../theme/tokens';
 import { MainTabs } from './MainTabs';
@@ -22,8 +23,8 @@ const navTheme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    background: '#060607',
-    card: '#060607',
+    background: '#050805',
+    card: '#050805',
     border: colors.surfaceBorder,
     primary: colors.cyan,
     text: colors.textPrimary,
@@ -49,16 +50,13 @@ export function RootNavigator() {
           <RootStack.Navigator screenOptions={{ headerShown: false }}>
             <RootStack.Screen name="Main" component={MainTabs} />
             <RootStack.Screen name="Player" component={PlayerScreen} options={{ presentation: 'fullScreenModal' }} />
-            <RootStack.Screen
-              name="VideoPlayer"
-              component={VideoPlayerScreen}
-              options={{ presentation: 'fullScreenModal' }}
-            />
             <RootStack.Screen name="Telegram" component={TelegramScreen} />
             <RootStack.Screen name="Jobs" component={JobsScreen} />
             <RootStack.Screen name="Settings" component={SettingsScreen} />
           </RootStack.Navigator>
           <Sidebar />
+          <AccountPopover />
+          <GlobalVideoStage />
         </>
       ) : (
         <AuthNavigator />

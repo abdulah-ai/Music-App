@@ -1,10 +1,11 @@
-# Wavecairn
+# Duskglen
 
 *(repo/folder name: SuperMediaApp — see [GO_PUBLIC.md](GO_PUBLIC.md) for the brand rationale)*
 
 A universal link downloader (TikTok/YouTube/etc. via yt-dlp), Shazam-style recognition (shazamio), and
 a Spotify-style library/player, wrapped in a React Native client built around a single audio-reactive 3D
-"Orb" that serves as the app's visual identity across every screen.
+"Moonlight" visual — a moon glimpsed through a pine treeline — that serves as the app's visual identity
+across every screen.
 
 Fresh project, independent of the `Telegram/` folder's `vault_app` — see that project's own history for
 where the recognition logic and general architecture pattern were ported from.

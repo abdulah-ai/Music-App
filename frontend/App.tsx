@@ -1,28 +1,28 @@
 import 'react-native-gesture-handler';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts, SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold } from '@expo-google-fonts/space-grotesk';
 
+import { BrandMark } from './src/components/ui/BrandMark';
 import { Toaster } from './src/components/ui/Toaster';
 
 // Browser-only chrome: themed scrollbars, selection color and font smoothing.
 // Injected once at module load so even the boot screen benefits.
-if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getElementById('supermedia-web-css')) {
+if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getElementById('duskglen-web-css')) {
   const style = document.createElement('style');
-  style.id = 'supermedia-web-css';
+  style.id = 'duskglen-web-css';
   style.textContent = `
-    html, body { background: #060B18; }
+    html, body { background: #0A0F0D; }
     * { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
-    ::selection { background: rgba(56,189,248,0.35); }
-    * { scrollbar-width: thin; scrollbar-color: rgba(148,163,184,0.28) transparent; }
+    ::selection { background: rgba(47,191,170,0.35); }
+    * { scrollbar-width: thin; scrollbar-color: rgba(167,176,168,0.28) transparent; }
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.28); border-radius: 99px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.45); }
+    ::-webkit-scrollbar-thumb { background: rgba(167,176,168,0.28); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(167,176,168,0.45); }
     input, textarea { outline: none; }
   `;
   document.head.appendChild(style);
@@ -30,7 +30,9 @@ if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getEle
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { configureAudioSession } from './src/services/audio/PlayerService';
 import { useAuthStore } from './src/store/authStore';
+import { useDashboardStore } from './src/store/dashboardStore';
 import { useFavoritesStore } from './src/store/favoritesStore';
+import { useLibraryStore } from './src/store/libraryStore';
 import { usePlayerStore } from './src/store/playerStore';
 import { useScanHistoryStore } from './src/store/scanHistoryStore';
 import { colors } from './src/theme/tokens';
@@ -54,19 +56,16 @@ function BootScreen() {
     <View style={bootStyles.root}>
       <Animated.View
         style={{
-          opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.65, 1] }),
-          transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.06] }) }],
+          opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] }),
+          transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.04] }) }],
         }}
       >
-        <LinearGradient
-          colors={['#38BDF8', '#818CF8']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={bootStyles.core}
-        />
+        <View style={bootStyles.core}>
+          <BrandMark size={56} />
+        </View>
       </Animated.View>
-      <Text style={bootStyles.wordmark}>SUPERMEDIA</Text>
-      <Text style={bootStyles.tagline}>warming up the vault…</Text>
+      <Text style={bootStyles.wordmark}>DUSKGLEN</Text>
+      <Text style={bootStyles.tagline}>settling into the hollow…</Text>
     </View>
   );
 }
@@ -74,17 +73,18 @@ function BootScreen() {
 const bootStyles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#060B18',
+    backgroundColor: '#0A0F0D',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 18,
   },
   core: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    shadowColor: '#38BDF8',
-    shadowOpacity: 0.6,
+    width: 72,
+    height: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#2FBFAA',
+    shadowOpacity: 0.4,
     shadowRadius: 30,
     shadowOffset: { width: 0, height: 0 },
     elevation: 16,
@@ -152,8 +152,18 @@ export default function App() {
   const hydrateFavorites = useFavoritesStore((s) => s.hydrate);
   const hydrateScans = useScanHistoryStore((s) => s.hydrate);
   const [audioReady, setAudioReady] = useState(false);
+  // Font files are fetched over the network and aren't guaranteed to be cached
+  // (especially offline, or on a flaky connection) — never let a stalled font
+  // fetch hold the whole app hostage on the boot screen. Worst case it opens
+  // with the system font and swaps in Space Grotesk if/when it lands.
+  const [fontTimedOut, setFontTimedOut] = useState(false);
 
   useKeyboardShortcuts();
+
+  useEffect(() => {
+    const timer = setTimeout(() => setFontTimedOut(true), 3000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     // Restore the last listening session (paused, at the saved position) once
@@ -163,12 +173,17 @@ export default function App() {
         usePlayerStore.getState().hydrate();
       }
     });
+    // Read the last-cached library list immediately so the app has something
+    // to show the instant it opens offline, before (or instead of) any network
+    // refresh resolves.
+    useLibraryStore.getState().hydrate();
+    useDashboardStore.getState().hydrate();
     hydrateFavorites();
     hydrateScans();
     configureAudioSession().finally(() => setAudioReady(true));
   }, [bootstrap, hydrateFavorites, hydrateScans]);
 
-  if (!fontsLoaded || isBootstrapping || !audioReady) {
+  if ((!fontsLoaded && !fontTimedOut) || isBootstrapping || !audioReady) {
     return <BootScreen />;
   }
 

@@ -190,7 +190,7 @@ export function JobsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#060607' },
+  root: { flex: 1, backgroundColor: '#050805' },
   scroll: { paddingBottom: spacing.xxl },
   headerRow: {
     flexDirection: 'row',
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(6,6,7,0.5)',
+    backgroundColor: 'rgba(5,8,5,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
   },

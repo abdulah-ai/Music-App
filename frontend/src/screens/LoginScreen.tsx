@@ -31,7 +31,7 @@ export function LoginScreen({ navigation }: Props) {
   }
 
   return (
-    <AuthLayout eyebrow="WAVECAIRN" title="Welcome back." subtitle="Your vault has been waiting.">
+    <AuthLayout eyebrow="DUSKGLEN" title="Welcome back." subtitle="Your hollow has been waiting.">
       <TextField
         label="Email"
         value={email}

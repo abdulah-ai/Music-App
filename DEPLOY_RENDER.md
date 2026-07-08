@@ -1,4 +1,4 @@
-# Deploy Wavecairn on Render
+# Deploy Duskglen on Render
 
 Render is the best free fit for this project because the backend is FastAPI and
 the frontend can export to static web files.

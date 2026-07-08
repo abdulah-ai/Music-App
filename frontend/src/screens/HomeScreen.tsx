@@ -1,14 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -17,22 +8,32 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { MiniPlayerBar } from '../components/player/MiniPlayerBar';
 import { useResponsive } from '../hooks/useResponsive';
-import { EmptyState } from '../components/ui/EmptyState';
-import { FadeImage } from '../components/ui/FadeImage';
+import { DashboardCustomizer } from '../components/dashboard/DashboardCustomizer';
+import {
+  ContinueListeningWidget,
+  FavoritesWidget,
+  OfflineWidget,
+  QueueWidget,
+  QuickActionsWidget,
+  RecentDownloadsWidget,
+  StatsWidget,
+  TelegramWidget,
+} from '../components/dashboard/widgets';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { Reveal } from '../components/ui/Reveal';
 import { GradientText } from '../components/ui/GradientText';
 import { PressableScale } from '../components/ui/PressableScale';
-import { ProgressRing } from '../components/ui/ProgressRing';
 import { ScreenContainer } from '../components/ui/ScreenContainer';
 import { SidebarTrigger } from '../components/ui/SidebarTrigger';
 import * as downloadsApi from '../services/api/downloads';
 import { watchJob } from '../services/api/jobSocket';
 import type { Job, Media } from '../services/api/types';
+import { useDashboardStore } from '../store/dashboardStore';
 import { useLibraryStore } from '../store/libraryStore';
 import { usePlayerStore } from '../store/playerStore';
+import { useVideoPlayerStore } from '../store/videoPlayerStore';
 import { toast } from '../store/toastStore';
-import { colors, gradients, layout, radii, spacing, typography } from '../theme/tokens';
+import { colors, layout, radii, spacing, typography } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/types';
 
 type MediaKind = 'audio' | 'video';
@@ -73,11 +74,17 @@ export function HomeScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [customizerOpen, setCustomizerOpen] = useState(false);
   const unsubscribers = useRef<Map<string, () => void>>(new Map());
   const upsertMedia = useLibraryStore((s) => s.upsert);
   const libraryItems = useLibraryStore((s) => s.items);
   const refreshLibrary = useLibraryStore((s) => s.refresh);
   const playQueue = usePlayerStore((s) => s.playQueue);
+
+  const widgetOrder = useDashboardStore((s) => s.order);
+  const density = useDashboardStore((s) => s.density);
+  const accentStyle = useDashboardStore((s) => s.accentStyle);
+  const accentColor = accentStyle === 'cosmic' ? colors.violet : colors.cyan;
 
   useEffect(() => {
     refreshLibrary();
@@ -163,7 +170,7 @@ export function HomeScreen() {
 
   async function handlePlayRecent(media: Media) {
     if (media.media_type === 'video') {
-      navigation.navigate('VideoPlayer', { mediaId: media.id });
+      useVideoPlayerStore.getState().openExpanded(media.id);
       return;
     }
     // Queue the whole shelf so next/prev keeps flowing from this tap.
@@ -180,11 +187,16 @@ export function HomeScreen() {
           <Reveal>
             <View style={styles.headerRow}>
               <View style={styles.headerText}>
-                <Text style={styles.eyebrow}>WAVECAIRN</Text>
+                <Text style={styles.eyebrow}>DUSKGLEN</Text>
                 <GradientText style={styles.megaTitle}>{greeting()}</GradientText>
-                <Text style={styles.tagline}>Feed the vault — paste any link.</Text>
+                <Text style={styles.tagline}>Bring something in — paste any link.</Text>
               </View>
-              <SidebarTrigger />
+              <View style={styles.headerActions}>
+                <Pressable onPress={() => setCustomizerOpen(true)} hitSlop={8} style={styles.customizeButton}>
+                  <Ionicons name="options-outline" size={18} color={colors.textSecondary} />
+                </Pressable>
+                <SidebarTrigger />
+              </View>
             </View>
           </Reveal>
 
@@ -214,9 +226,9 @@ export function HomeScreen() {
                     style={styles.goButton}
                   >
                     {submitting ? (
-                      <ActivityIndicator size="small" color="#0C0D10" />
+                      <ActivityIndicator size="small" color="#0A0F0D" />
                     ) : (
-                      <Ionicons name="arrow-forward" size={20} color="#0C0D10" />
+                      <Ionicons name="arrow-forward" size={20} color="#0A0F0D" />
                     )}
                   </LinearGradient>
                 </PressableScale>
@@ -263,205 +275,85 @@ export function HomeScreen() {
           </GlassPanel>
           </Reveal>
 
-          {jobs.length > 0 && (
-            <>
-              <View style={styles.sectionRow}>
-                <Text style={styles.sectionTitle}>In flight</Text>
-                {jobs.some((j) => j.status !== 'pending' && j.status !== 'in_progress') && (
-                  <Pressable onPress={clearFinishedJobs} hitSlop={8}>
-                    <Text style={styles.sectionAction}>Clear finished</Text>
-                  </Pressable>
-                )}
-              </View>
-              <View style={styles.jobList}>
-                {jobs.map((job) => (
-                  <JobCard
-                    key={job.id}
-                    job={job}
-                    onCancel={() => handleCancelJob(job)}
-                    onRetry={() => handleRetryJob(job)}
-                  />
-                ))}
-              </View>
-            </>
-          )}
-
-          {libraryItems.length > 0 && (
-            <Reveal delay={120}>
-              <View style={styles.statsRow}>
-                <StatTile icon="albums-outline" value={libraryItems.length} label="in the vault" />
-                <StatTile
-                  icon="musical-notes-outline"
-                  value={libraryItems.filter((m) => m.media_type === 'audio').length}
-                  label="audio tracks"
-                />
-                <StatTile
-                  icon="videocam-outline"
-                  value={libraryItems.filter((m) => m.media_type === 'video').length}
-                  label="videos"
-                />
-                <StatTile
-                  icon="sparkles-outline"
-                  value={libraryItems.filter((m) => m.recognized_title || m.recognized_artist).length}
-                  label="auto-named"
-                />
-              </View>
-            </Reveal>
-          )}
-
-          <Reveal delay={150}>
-          <Text style={styles.sectionTitle}>Fresh drops</Text>
-          {recents.length === 0 ? (
-            <EmptyState title="Nothing here yet" subtitle="Your latest downloads will land here." icon="cloud-download-outline" />
-          ) : (
-            <FlatList
-              horizontal
-              data={recents}
-              keyExtractor={(item) => item.id}
-              showsHorizontalScrollIndicator={false}
-              snapToInterval={coverSize + spacing.md}
-              decelerationRate="fast"
-              contentContainerStyle={styles.shelfContent}
-              renderItem={({ item }) => (
-                <CoverCard media={item} size={coverSize} onPress={() => handlePlayRecent(item)} />
-              )}
-            />
-          )}
+          <Reveal delay={120}>
+            <View>
+              {widgetOrder
+                .filter((w) => w.visible)
+                .map((w) => {
+                  switch (w.id) {
+                    case 'continueListening':
+                      return <ContinueListeningWidget key={w.id} density={density} accentColor={accentColor} />;
+                    case 'queue':
+                      return (
+                        <QueueWidget
+                          key={w.id}
+                          density={density}
+                          jobs={jobs}
+                          onCancel={handleCancelJob}
+                          onRetry={handleRetryJob}
+                          onClearFinished={clearFinishedJobs}
+                        />
+                      );
+                    case 'recent':
+                      return (
+                        <RecentDownloadsWidget
+                          key={w.id}
+                          density={density}
+                          items={recents}
+                          coverSize={coverSize}
+                          onPlay={handlePlayRecent}
+                        />
+                      );
+                    case 'favorites':
+                      return <FavoritesWidget key={w.id} density={density} coverSize={coverSize} onPlay={handlePlayRecent} />;
+                    case 'stats':
+                      return <StatsWidget key={w.id} density={density} accentColor={accentColor} />;
+                    case 'telegram':
+                      return <TelegramWidget key={w.id} density={density} />;
+                    case 'offline':
+                      return <OfflineWidget key={w.id} density={density} />;
+                    case 'quickActions':
+                      return <QuickActionsWidget key={w.id} density={density} accentColor={accentColor} />;
+                    default:
+                      return null;
+                  }
+                })}
+            </View>
           </Reveal>
         </ScrollView>
       </ScreenContainer>
       <MiniPlayerBar />
+      <DashboardCustomizer visible={customizerOpen} onClose={() => setCustomizerOpen(false)} />
     </View>
-  );
-}
-
-function StatTile({
-  icon,
-  value,
-  label,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  value: number;
-  label: string;
-}) {
-  return (
-    <View style={styles.statTile}>
-      <View style={styles.statIcon}>
-        <Ionicons name={icon} size={16} color={colors.cyan} />
-      </View>
-      <View>
-        <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
-      </View>
-    </View>
-  );
-}
-
-function sourceIcon(url: string | null): keyof typeof Ionicons.glyphMap {
-  if (!url) return 'link';
-  if (url.startsWith('telegram:')) return 'paper-plane';
-  if (url.startsWith('ytsearch')) return 'search';
-  if (/youtu\.?be/i.test(url)) return 'logo-youtube';
-  if (/tiktok/i.test(url)) return 'logo-tiktok';
-  if (/instagram/i.test(url)) return 'logo-instagram';
-  return 'link';
-}
-
-function JobCard({ job, onCancel, onRetry }: { job: Job; onCancel: () => void; onRetry: () => void }) {
-  const label = job.result_media?.title ?? job.source_url ?? 'Download';
-  const running = job.status === 'in_progress' || job.status === 'pending';
-  return (
-    <GlassPanel style={styles.jobPanel}>
-      <View style={styles.jobContent}>
-        {running ? (
-          <ProgressRing progress={job.progress_pct / 100} size={48} strokeWidth={4}>
-            <Text style={styles.jobPct}>{Math.round(job.progress_pct)}</Text>
-          </ProgressRing>
-        ) : (
-          <View style={[styles.jobBadge, job.status === 'failed' && styles.jobBadgeFailed]}>
-            <Ionicons
-              name={job.status === 'complete' ? 'checkmark' : job.status === 'failed' ? 'close' : 'remove'}
-              size={20}
-              color={job.status === 'failed' ? colors.danger : colors.success}
-            />
-          </View>
-        )}
-        <View style={styles.jobText}>
-          <View style={styles.jobTitleRow}>
-            <Ionicons name={sourceIcon(job.source_url)} size={13} color={colors.textMuted} />
-            <Text numberOfLines={1} style={styles.jobTitle}>
-              {label}
-            </Text>
-          </View>
-          {running ? (
-            <View style={styles.jobStageRow}>
-              <ActivityIndicator size="small" color={colors.cyan} />
-              <Text style={styles.jobStage}>{job.stage_label ?? 'starting'}…</Text>
-            </View>
-          ) : (
-            <Text style={[styles.jobStage, job.status === 'failed' && styles.jobError]} numberOfLines={2}>
-              {job.status === 'complete' ? 'Ready in your library' : job.status === 'failed' ? job.error_message : job.status}
-            </Text>
-          )}
-        </View>
-        {running && (
-          <Pressable onPress={onCancel} hitSlop={8} style={styles.jobAction}>
-            <Ionicons name="close" size={18} color={colors.textMuted} />
-          </Pressable>
-        )}
-        {job.status === 'failed' && job.source_url && (
-          <Pressable onPress={onRetry} hitSlop={8} style={styles.jobAction}>
-            <Ionicons name="refresh" size={18} color={colors.cyan} />
-          </Pressable>
-        )}
-      </View>
-    </GlassPanel>
-  );
-}
-
-function CoverCard({ media, size, onPress }: { media: Media; size: number; onPress: () => void }) {
-  return (
-    <PressableScale onPress={onPress} scaleTo={0.95}>
-      <View style={[styles.coverCard, { width: size, height: size }]}>
-        {media.thumbnail_url ? (
-          <FadeImage uri={media.thumbnail_url} style={StyleSheet.absoluteFill as object} />
-        ) : (
-          <LinearGradient colors={gradients.coverFallback} style={StyleSheet.absoluteFill} />
-        )}
-        <LinearGradient colors={gradients.coverScrim} style={styles.coverScrim} />
-        {!media.thumbnail_url && (
-          <View style={styles.coverGlyphWrap}>
-            <Ionicons name="musical-notes" size={34} color="rgba(248,250,252,0.35)" />
-          </View>
-        )}
-        <View style={styles.coverMeta}>
-          <Text numberOfLines={1} style={styles.coverTitle}>
-            {media.title ?? media.recognized_title ?? 'Untitled'}
-          </Text>
-          <Text numberOfLines={1} style={styles.coverArtist}>
-            {media.artist ?? media.recognized_artist ?? 'Unknown artist'}
-          </Text>
-        </View>
-      </View>
-    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#060607' },
+  root: { flex: 1, backgroundColor: '#050805' },
   scroll: { paddingBottom: layout.tabBarClearance },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   headerText: { flex: 1, paddingRight: spacing.md },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  customizeButton: {
+    width: 38,
+    height: 38,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(167,176,168,0.12)',
+  },
   eyebrow: { ...typography.eyebrow, color: colors.cyan, marginBottom: spacing.xs },
   megaTitle: { ...typography.mega },
   tagline: { ...typography.body, color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.lg },
-  heroPanel: { marginBottom: spacing.md },
+  heroPanel: { marginBottom: spacing.lg },
   heroContent: { padding: spacing.lg, gap: spacing.md },
   inputCapsule: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: 'rgba(6,6,7,0.6)',
+    backgroundColor: 'rgba(5,8,5,0.6)',
     borderRadius: radii.pill,
     paddingLeft: spacing.md,
     paddingRight: 6,
@@ -495,9 +387,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(6,6,7,0.5)',
+    backgroundColor: 'rgba(5,8,5,0.5)',
   },
-  chipActive: { backgroundColor: 'rgba(224,149,79,0.16)' },
+  chipActive: { backgroundColor: 'rgba(47,191,170,0.16)' },
   chipLabel: { ...typography.caption, color: colors.textMuted },
   chipLabelActive: { color: colors.cyan, fontFamily: 'SpaceGrotesk_500Medium' },
   qualityRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: -spacing.sm },
@@ -505,118 +397,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: spacing.sm + 4,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(6,6,7,0.5)',
+    backgroundColor: 'rgba(5,8,5,0.5)',
   },
   qualityLabel: { ...typography.caption, fontSize: 11, color: colors.textMuted },
   error: { ...typography.caption, color: colors.danger },
-  sectionTitle: {
-    ...typography.title,
-    fontSize: 20,
-    lineHeight: 26,
-    color: colors.textPrimary,
-    marginTop: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  sectionRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-  },
-  sectionAction: { ...typography.caption, color: colors.cyan },
-  jobList: { gap: spacing.sm },
-  jobPanel: { borderRadius: radii.lg },
-  jobTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  jobAction: {
-    width: 34,
-    height: 34,
-    borderRadius: radii.pill,
-    backgroundColor: 'rgba(6,6,7,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  jobContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.md,
-  },
-  jobPct: { ...typography.caption, fontSize: 11, color: colors.cyan, fontFamily: 'SpaceGrotesk_600SemiBold' },
-  jobBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.pill,
-    backgroundColor: 'rgba(111,191,139,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  jobBadgeFailed: { backgroundColor: 'rgba(226,104,90,0.12)' },
-  jobText: { flex: 1, gap: 4 },
-  jobTitle: { ...typography.subtitle, color: colors.textPrimary, flex: 1 },
-  jobStageRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  jobStage: { ...typography.caption, color: colors.textMuted },
-  jobError: { color: colors.danger },
-  statsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-    marginTop: spacing.lg,
-  },
-  statTile: {
-    flexGrow: 1,
-    flexBasis: 150,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md - 2,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(233,229,220,0.12)',
-    backgroundColor: 'rgba(23,24,27,0.5)',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-  },
-  statIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: radii.pill,
-    backgroundColor: 'rgba(224,149,79,0.10)',
-    borderWidth: 1,
-    borderColor: 'rgba(224,149,79,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statValue: {
-    ...typography.title,
-    fontSize: 20,
-    lineHeight: 25,
-    color: colors.textPrimary,
-    fontVariant: ['tabular-nums'],
-  },
-  statLabel: { ...typography.caption, fontSize: 12, color: colors.textMuted },
-  shelfContent: { gap: spacing.md, paddingVertical: spacing.xs },
-  coverCard: {
-    borderRadius: radii.lg,
-    overflow: 'hidden',
-    justifyContent: 'flex-end',
-    borderWidth: 1,
-    borderColor: 'rgba(233,229,220,0.12)',
-  },
-  coverScrim: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '65%',
-  },
-  coverGlyphWrap: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  coverMeta: { padding: spacing.sm + 2 },
-  coverTitle: { ...typography.subtitle, fontSize: 14, lineHeight: 18, color: colors.textPrimary },
-  coverArtist: { ...typography.caption, fontSize: 11, color: colors.textMuted },
 });

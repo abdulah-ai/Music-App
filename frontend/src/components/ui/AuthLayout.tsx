@@ -6,7 +6,7 @@ import { RippleField } from './RippleField';
 import { GlassPanel } from './GlassPanel';
 import { GradientText } from './GradientText';
 import { Reveal } from './Reveal';
-import { Orb } from '../three/Orb';
+import { Moonlight } from '../three/Moonlight';
 import { useResponsive } from '../../hooks/useResponsive';
 import { colors, radii, spacing, typography } from '../../theme/tokens';
 
@@ -16,7 +16,7 @@ const FEATURES: Feature[] = [
   { icon: 'cloud-download-outline', label: 'Save audio & video from any link' },
   { icon: 'mic-outline', label: 'Name any song playing around you' },
   { icon: 'paper-plane-outline', label: 'Import straight from Telegram' },
-  { icon: 'planet-outline', label: 'A private vault that feels alive' },
+  { icon: 'planet-outline', label: 'A private hollow that feels alive' },
 ];
 
 type Props = PropsWithChildren<{
@@ -44,7 +44,7 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: Props) {
         >
           <Reveal>
             <View style={styles.mobileOrb}>
-              <Orb state="idle" size={150} />
+              <Moonlight state="idle" size={150} />
             </View>
             <Text style={styles.eyebrow}>{eyebrow}</Text>
             <GradientText style={styles.mobileTitle}>{title}</GradientText>
@@ -73,7 +73,7 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: Props) {
         <View style={styles.split}>
           <Reveal style={styles.heroCol}>
             <View style={styles.heroOrbRow}>
-              <Orb state="idle" size={roomy ? 180 : 140} />
+              <Moonlight state="idle" size={roomy ? 180 : 140} />
             </View>
             <Text style={[styles.eyebrow, styles.heroEyebrow]}>{eyebrow}</Text>
             <GradientText style={styles.heroTitle}>{title}</GradientText>
@@ -91,7 +91,7 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: Props) {
           </Reveal>
 
           <Reveal delay={120} style={styles.formCol}>
-            <GlassPanel intensity={80} overlayColor="rgba(12,13,16,0.62)">
+            <GlassPanel intensity={80} overlayColor="rgba(10,15,13,0.62)">
               <View style={[styles.form, styles.formDesktop]}>{children}</View>
             </GlassPanel>
           </Reveal>
@@ -102,7 +102,7 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: Props) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#060607' },
+  root: { flex: 1, backgroundColor: '#050805' },
 
   // ----- Mobile -----
   mobileScroll: {
@@ -161,9 +161,9 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(224,149,79,0.12)',
+    backgroundColor: 'rgba(47,191,170,0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(224,149,79,0.22)',
+    borderColor: 'rgba(47,191,170,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,7 +1,7 @@
 import { gradients, layout, palette, typeScale } from './theme';
 
 /**
- * Legacy token surface, remapped onto the "Wavecairn" design system in
+ * Legacy token surface, remapped onto the "Duskglen" design system in
  * `theme.ts`. Existing components keep importing the same names and pick up
  * the new palette for free.
  */
@@ -10,16 +10,17 @@ export const colors = {
   bgElevated: palette.surface,
   surface: palette.surface,
   surfaceBright: palette.surfaceBright,
-  surfaceBorder: 'rgba(233,229,220,0.08)',
+  surfaceBorder: 'rgba(167,176,168,0.10)',
   textPrimary: palette.textPrimary,
   textSecondary: palette.textSecondary,
   textMuted: palette.textMuted,
 
-  // Accent slots: `violet` now carries the teal "wave" secondary accent and
-  // `cyan` the copper "signal" primary accent, so old call sites stay on-palette.
+  // Accent slots: `violet` carries the soft-violet secondary accent and
+  // `cyan` the aurora-teal primary accent, so old call sites stay on-palette.
   violet: palette.secondary,
   cyan: palette.primary,
-  pink: '#E0708C',
+  gold: palette.gold,
+  pink: '#D98AA8',
   coral: palette.danger,
 
   success: palette.success,
@@ -29,8 +30,8 @@ export const colors = {
   gradientHero: gradients.heroCard,
   gradientIdleScreen: gradients.screenIdle,
   gradientListeningScreen: gradients.screenListening,
-  gradientWarm: [palette.bloom, palette.danger] as const,
-  gradientOrb: [palette.primary, palette.secondary, palette.bloom] as const,
+  gradientWarm: [palette.gold, palette.danger] as const,
+  gradientOrb: [palette.primary, palette.secondary, palette.gold] as const,
 } as const;
 
 export const spacing = {

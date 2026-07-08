@@ -23,8 +23,8 @@ type RingSpec = {
 };
 
 const RINGS: RingSpec[] = [
-  { id: 'signal', size: 620, color: '#E0954F', opacity: 0.07, x: -180, y: -160, duration: 32000 },
-  { id: 'wave', size: 720, color: '#46A69C', opacity: 0.06, x: 220, y: 420, duration: 40000 },
+  { id: 'signal', size: 620, color: '#2FBFAA', opacity: 0.07, x: -180, y: -160, duration: 32000 },
+  { id: 'wave', size: 720, color: '#9B8FD9', opacity: 0.06, x: 220, y: 420, duration: 40000 },
 ];
 
 function Ring({ spec }: { spec: RingSpec }) {
@@ -80,6 +80,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     overflow: 'hidden',
-    backgroundColor: '#060607',
+    backgroundColor: '#050805',
   },
 });

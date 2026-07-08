@@ -1,7 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import type { User } from '../api/types';
+
 const ACCESS_KEY = 'sma.accessToken';
 const REFRESH_KEY = 'sma.refreshToken';
+const USER_KEY = 'sma.cachedUser';
 
 export const tokenStorage = {
   async getAccessToken() {
@@ -19,7 +22,15 @@ export const tokenStorage = {
   async setAccessToken(accessToken: string) {
     await AsyncStorage.setItem(ACCESS_KEY, accessToken);
   },
+  /** Last-known signed-in profile, so a session can be restored offline without a round trip to /auth/me. */
+  async getCachedUser(): Promise<User | null> {
+    const raw = await AsyncStorage.getItem(USER_KEY);
+    return raw ? (JSON.parse(raw) as User) : null;
+  },
+  async setCachedUser(user: User) {
+    await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+  },
   async clear() {
-    await AsyncStorage.multiRemove([ACCESS_KEY, REFRESH_KEY]);
+    await AsyncStorage.multiRemove([ACCESS_KEY, REFRESH_KEY, USER_KEY]);
   },
 };

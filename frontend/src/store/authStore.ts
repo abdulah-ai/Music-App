@@ -9,16 +9,25 @@ type AuthState = {
   user: User | null;
   isBootstrapping: boolean;
   isAuthenticated: boolean;
+  /** True when the session was restored from local cache because the network/API was unreachable — not a rejected token. */
+  isOfflineSession: boolean;
   bootstrap: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, displayName: string, inviteCode?: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
+/** True only for a genuine "this token is invalid" rejection — never for "we couldn't reach the server". */
+function isAuthRejection(error: any): boolean {
+  const status = error?.response?.status;
+  return status === 401 || status === 403;
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isBootstrapping: true,
   isAuthenticated: false,
+  isOfflineSession: false,
 
   async bootstrap() {
     const token = await tokenStorage.getAccessToken();
@@ -27,29 +36,44 @@ export const useAuthStore = create<AuthState>((set) => ({
       return;
     }
     try {
-      const user = await authApi.me();
-      set({ user, isAuthenticated: true, isBootstrapping: false });
-    } catch {
-      await tokenStorage.clear();
-      set({ isBootstrapping: false });
+      // Bounded well below the client's default 30s timeout: this is really just an
+      // "are we online" probe on boot, and a genuinely offline app open should resolve
+      // into the cached session in a couple of seconds, not stall on a boot screen.
+      const user = await authApi.me({ timeoutMs: 6000 });
+      await tokenStorage.setCachedUser(user);
+      set({ user, isAuthenticated: true, isOfflineSession: false, isBootstrapping: false });
+    } catch (error) {
+      if (isAuthRejection(error)) {
+        // The server actively rejected this token — it really is invalid/expired.
+        await tokenStorage.clear();
+        set({ isBootstrapping: false });
+        return;
+      }
+      // Network/backend unreachable: trust the token that's already on disk and
+      // open into the app using the last-known profile, instead of bouncing to
+      // the login screen every time the app opens offline.
+      const cachedUser = await tokenStorage.getCachedUser();
+      set({ user: cachedUser, isAuthenticated: true, isOfflineSession: true, isBootstrapping: false });
     }
   },
 
   async login(email, password) {
     const result = await authApi.login(email, password);
     await tokenStorage.setTokens(result.access_token, result.refresh_token);
-    set({ user: result.user, isAuthenticated: true });
+    await tokenStorage.setCachedUser(result.user);
+    set({ user: result.user, isAuthenticated: true, isOfflineSession: false });
   },
 
   async register(email, password, displayName, inviteCode) {
     const result = await authApi.register(email, password, displayName, inviteCode);
     await tokenStorage.setTokens(result.access_token, result.refresh_token);
-    set({ user: result.user, isAuthenticated: true });
+    await tokenStorage.setCachedUser(result.user);
+    set({ user: result.user, isAuthenticated: true, isOfflineSession: false });
   },
 
   async logout() {
     await tokenStorage.clear();
     await offlineMedia.clearAll();
-    set({ user: null, isAuthenticated: false });
+    set({ user: null, isAuthenticated: false, isOfflineSession: false });
   },
 }));

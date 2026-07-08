@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
@@ -7,7 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Orb } from '../components/three/Orb';
+import { Moonlight } from '../components/three/Moonlight';
 import { RippleField } from '../components/ui/RippleField';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { GradientText } from '../components/ui/GradientText';
@@ -62,6 +62,10 @@ export function PlayerScreen() {
   const { isDesktop } = useResponsive();
   const [panelTab, setPanelTab] = useState<PanelTab>('queue');
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [sanctuaryMode, setSanctuaryMode] = useState(false);
+  const [chromeVisible, setChromeVisible] = useState(true);
+  const chromeOpacity = useRef(new Animated.Value(1)).current;
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const {
     currentMedia,
     playing,
@@ -89,6 +93,31 @@ export function PlayerScreen() {
     cycleSleepTimer,
   } = usePlayerStore();
 
+  useEffect(() => {
+    if (!sanctuaryMode) {
+      setChromeVisible(true);
+      chromeOpacity.setValue(1);
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      return;
+    }
+    wakeChrome();
+    return () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sanctuaryMode]);
+
+  function wakeChrome() {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    setChromeVisible(true);
+    Animated.timing(chromeOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    hideTimer.current = setTimeout(() => {
+      Animated.timing(chromeOpacity, { toValue: 0, duration: 500, useNativeDriver: true }).start(({ finished }) => {
+        if (finished) setChromeVisible(false);
+      });
+    }, 3000);
+  }
+
   if (!currentMedia) {
     navigation.goBack();
     return null;
@@ -106,7 +135,7 @@ export function PlayerScreen() {
     : undefined;
 
   const transport = (
-    <GlassPanel style={styles.dock} overlayColor="rgba(12,13,16,0.6)">
+    <GlassPanel style={styles.dock} overlayColor="rgba(10,15,13,0.6)">
       <View style={styles.dockContent}>
         <GradientText numberOfLines={1} style={styles.title}>
           {currentMedia.title ?? currentMedia.recognized_title ?? 'Untitled'}
@@ -147,7 +176,7 @@ export function PlayerScreen() {
                 <Ionicons
                   name={playing ? 'pause' : 'play'}
                   size={32}
-                  color="#0C0D10"
+                  color="#0A0F0D"
                   style={playing ? undefined : styles.playGlyphNudge}
                 />
               </LinearGradient>
@@ -226,7 +255,7 @@ export function PlayerScreen() {
             value={muted ? 0 : volume}
             onValueChange={(v) => setVolume(v)}
             minimumTrackTintColor={colors.cyan}
-            maximumTrackTintColor="rgba(233,229,220,0.25)"
+            maximumTrackTintColor="rgba(167,176,168,0.25)"
             thumbTintColor={colors.cyan}
           />
         </View>
@@ -245,9 +274,62 @@ export function PlayerScreen() {
           {isBuffering ? 'BUFFERING' : hasQueue ? `TRACK ${queueIndex + 1} OF ${queue.length}` : 'NOW PLAYING'}
         </Text>
       </View>
-      <View style={styles.topSpacer} />
+      <Pressable onPress={() => setSanctuaryMode(true)} hitSlop={12} style={styles.closeButton}>
+        <Ionicons name="leaf-outline" size={18} color={colors.textSecondary} />
+      </Pressable>
     </View>
   );
+
+  if (sanctuaryMode) {
+    const sanctuarySize = Math.min(width, height) * 0.72;
+    return (
+      <Pressable style={styles.root} onPress={wakeChrome}>
+        <RippleField />
+        <View style={styles.sanctuaryStage}>
+          <Moonlight state={playing ? 'playing' : 'idle'} amplitude={playing ? amplitude : 0} size={sanctuarySize} />
+        </View>
+
+        <Animated.View pointerEvents={chromeVisible ? 'auto' : 'none'} style={[styles.sanctuaryChrome, { opacity: chromeOpacity, paddingBottom: insets.bottom + spacing.xl, paddingTop: insets.top + spacing.md }]}>
+          <Pressable onPress={() => setSanctuaryMode(false)} hitSlop={12} style={styles.closeButton}>
+            <Ionicons name="contract-outline" size={18} color={colors.textSecondary} />
+          </Pressable>
+
+          <View style={styles.sanctuaryMeta}>
+            <GradientText numberOfLines={1} style={styles.title}>
+              {currentMedia.title ?? currentMedia.recognized_title ?? 'Untitled'}
+            </GradientText>
+            <Text numberOfLines={1} style={styles.artist}>
+              {currentMedia.artist ?? currentMedia.recognized_artist ?? 'Unknown artist'}
+            </Text>
+
+            <View style={styles.sanctuaryProgress}>
+              <View style={[styles.sanctuaryProgressFill, { width: `${duration ? (currentTime / duration) * 100 : 0}%` }]} />
+            </View>
+
+            <View style={styles.sanctuaryControls}>
+              <PressableScale onPress={() => playPrev()} scaleTo={0.88}>
+                <View style={styles.sideButton}>
+                  <Ionicons name="play-skip-back" size={20} color={colors.textSecondary} />
+                </View>
+              </PressableScale>
+              <PressableScale onPress={toggle} scaleTo={0.92}>
+                <View style={styles.playShadow}>
+                  <LinearGradient colors={colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.playButton}>
+                    <Ionicons name={playing ? 'pause' : 'play'} size={30} color="#0A0F0D" style={playing ? undefined : styles.playGlyphNudge} />
+                  </LinearGradient>
+                </View>
+              </PressableScale>
+              <PressableScale onPress={() => playNext()} scaleTo={0.88}>
+                <View style={styles.sideButton}>
+                  <Ionicons name="play-skip-forward" size={20} color={colors.textSecondary} />
+                </View>
+              </PressableScale>
+            </View>
+          </View>
+        </Animated.View>
+      </Pressable>
+    );
+  }
 
   if (isDesktop) {
     return (
@@ -256,7 +338,7 @@ export function PlayerScreen() {
         <View style={[styles.desktopRow, { paddingTop: insets.top + spacing.xl + 40, paddingBottom: insets.bottom + spacing.lg }]}>
           <View style={styles.desktopStageCol}>
             <View style={styles.desktopStage}>
-              <Orb state={playing ? 'playing' : 'idle'} amplitude={playing ? amplitude : 0} size={orbSize} />
+              <Moonlight state={playing ? 'playing' : 'idle'} amplitude={playing ? amplitude : 0} size={orbSize} />
             </View>
             <View style={styles.desktopDockWrap}>{transport}</View>
           </View>
@@ -278,7 +360,7 @@ export function PlayerScreen() {
       <RippleField />
 
       <View style={[styles.stage, { height: stageHeight, paddingTop: insets.top }]}>
-        <Orb state={playing ? 'playing' : 'idle'} amplitude={playing ? amplitude : 0} size={orbSize} />
+        <Moonlight state={playing ? 'playing' : 'idle'} amplitude={playing ? amplitude : 0} size={orbSize} />
       </View>
 
       {topBar}
@@ -300,7 +382,7 @@ export function PlayerScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#060607' },
+  root: { flex: 1, backgroundColor: '#050805' },
   stage: { alignItems: 'center', justifyContent: 'center' },
   topBar: {
     position: 'absolute',
@@ -314,7 +396,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(23,24,27,0.72)',
+    backgroundColor: 'rgba(18,28,24,0.72)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -325,7 +407,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(23,24,27,0.6)',
+    backgroundColor: 'rgba(18,28,24,0.6)',
   },
   liveDot: { width: 6, height: 6, borderRadius: radii.pill, backgroundColor: colors.success },
   liveDotBuffering: { backgroundColor: colors.cyan },
@@ -369,7 +451,7 @@ const styles = StyleSheet.create({
     width: SIDE_SIZE,
     height: SIDE_SIZE,
     borderRadius: SIDE_SIZE / 2,
-    backgroundColor: 'rgba(23,24,27,0.7)',
+    backgroundColor: 'rgba(18,28,24,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -403,9 +485,9 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: spacing.sm + 2,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(23,24,27,0.6)',
+    backgroundColor: 'rgba(18,28,24,0.6)',
   },
-  chipActive: { backgroundColor: 'rgba(224,149,79,0.16)' },
+  chipActive: { backgroundColor: 'rgba(47,191,170,0.16)' },
   chipLabel: { ...typography.caption, fontSize: 12, color: colors.textSecondary },
   chipLabelActive: { ...typography.caption, fontSize: 12, color: colors.cyan, fontFamily: 'SpaceGrotesk_500Medium' },
   upNextRow: {
@@ -461,18 +543,18 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(23,24,27,0.55)',
+    backgroundColor: 'rgba(18,28,24,0.55)',
   },
-  panelTabActive: { backgroundColor: 'rgba(224,149,79,0.16)' },
+  panelTabActive: { backgroundColor: 'rgba(47,191,170,0.16)' },
   panelTabLabel: { ...typography.caption, fontSize: 12, color: colors.textMuted },
   panelTabLabelActive: { color: colors.cyan, fontFamily: 'SpaceGrotesk_500Medium' },
 
   // ----- Mobile sheet -----
   sheetRoot: { flex: 1, justifyContent: 'flex-end' },
-  sheetBackdrop: { ...(StyleSheet.absoluteFill as object), backgroundColor: 'rgba(4,4,5,0.65)' },
+  sheetBackdrop: { ...(StyleSheet.absoluteFill as object), backgroundColor: 'rgba(3,5,3,0.65)' },
   sheet: {
     height: '72%',
-    backgroundColor: '#111A2E',
+    backgroundColor: '#121C18',
     borderTopLeftRadius: radii.lg + 8,
     borderTopRightRadius: radii.lg + 8,
     paddingTop: spacing.sm,
@@ -482,8 +564,37 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(233,229,220,0.3)',
+    backgroundColor: 'rgba(167,176,168,0.3)',
     marginBottom: spacing.sm,
   },
   sheetBody: { flex: 1 },
+
+  // ----- Sanctuary Mode -----
+  sanctuaryStage: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  sanctuaryChrome: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  sanctuaryMeta: { alignItems: 'center', width: '100%', maxWidth: 420, gap: spacing.sm },
+  sanctuaryProgress: {
+    width: '100%',
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: 'rgba(167,176,168,0.2)',
+    overflow: 'hidden',
+    marginTop: spacing.sm,
+  },
+  sanctuaryProgressFill: { height: '100%', backgroundColor: colors.cyan },
+  sanctuaryControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+    marginTop: spacing.md,
+  },
 });

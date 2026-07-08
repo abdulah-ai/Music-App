@@ -15,10 +15,10 @@ import type { Media } from '../api/types';
  * work today.
  */
 
-const DB_NAME = 'wavecairn-offline';
+const DB_NAME = 'duskglen-offline';
 const DB_VERSION = 1;
 const META_STORE = 'media-meta';
-const CACHE_NAME = 'wavecairn-offline-media-v1';
+const CACHE_NAME = 'duskglen-offline-media-v1';
 
 export type OfflineEntry = {
   id: string;

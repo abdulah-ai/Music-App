@@ -1,63 +1,58 @@
 /**
- * "Wavecairn" design system — the single source of truth for the app's look.
+ * "Duskglen" design system — the single source of truth for the app's look.
  *
- * Visual concept: ripple & stack. A cairn is a marker built stone-by-stone by
- * whoever passed before you; a wave is the signal that reaches you from far
- * away. The product is both — a private archive you build one track at a
- * time, and a live signal (downloads, imports, recognition) arriving into it.
- * That pairing shows up as a warm "signal" accent (the beacon atop the
- * cairn) and a cool "wave" accent (the ripple), on a quiet stone-dark base —
- * not a neon dashboard.
- *
- * Screens should consume these values through `theme/tokens.ts`, which maps
- * legacy token names onto this palette so existing components stay wired up.
+ * Visual concept: a hollow in a night forest, lit by one glowing moon. Deep
+ * pine-black and midnight-green grounds; moon-silver text; an aurora-teal
+ * signal accent (the glow itself) with a soft-violet secondary and a rare
+ * star-gold reserved for genuinely premium moments (Sanctuary Mode, starred
+ * items) — not a UI colour, a highlight.
  */
 
 export const palette = {
-  /** Global app background — warm near-black stone, not blue-black. */
-  background: '#0C0D10',
+  /** Global app background — pine black, a hair warmer than pure black. */
+  background: '#0A0F0D',
   /** Deepest background, behind ambient washes. */
-  void: '#060607',
-  /** Cards, sheets and other raised containers. */
-  surface: '#17181B',
+  void: '#050805',
+  /** Cards, sheets and other raised containers — midnight green-navy. */
+  surface: '#121C18',
   /** A slightly brighter surface for pressed / highlighted states. */
-  surfaceBright: '#202226',
-  /** Primary accent — copper-amber "signal". CTAs, active states, progress. */
-  primary: '#E0954F',
-  /** Secondary accent — deep teal "wave". Links, secondary highlights. */
-  secondary: '#46A69C',
-  /** Rare tertiary wash, background ripples only — never used for text/UI. */
-  bloom: '#B8735C',
-  /** Primary copy. */
-  textPrimary: '#F5F2EA',
+  surfaceBright: '#1B2924',
+  /** Primary accent — aurora teal. Interactive elements, progress, glow. */
+  primary: '#2FBFAA',
+  /** Secondary accent — soft violet. Secondary highlights, links. */
+  secondary: '#9B8FD9',
+  /** Rare premium accent — star gold. Sanctuary Mode, favourites, badges only. */
+  gold: '#E8C468',
+  /** Primary copy — moon silver. */
+  textPrimary: '#E7EBE6',
   /** Secondary copy on dark surfaces. */
-  textSecondary: '#B7B2A6',
+  textSecondary: '#A7B0A8',
   /** De-emphasised copy: captions, metadata, placeholders. */
-  textMuted: '#7A7568',
+  textMuted: '#6C766C',
 
-  success: '#6FBF8B',
-  danger: '#E2685A',
+  success: '#5FBF8E',
+  danger: '#E0685F',
 } as const;
 
 export const gradients = {
-  /** Signature accent sweep: copper signal into teal wave. Used sparingly. */
+  /** Signature accent sweep: aurora teal into soft violet. Used sparingly. */
   accent: [palette.primary, palette.secondary] as const,
-  /** Full sweep incl. bloom — reserved for one hero moment, not everywhere. */
-  aurora: [palette.primary, palette.bloom, palette.secondary] as const,
-  /** Subtle card wash — barely-lifted neutral stone, no colour tint. */
-  heroCard: ['#17181B', '#1B1C20', '#17181B'] as const,
-  /** Ambient screen background at rest — neutral, no colour undertone. */
-  screenIdle: ['#060607', '#0C0D10', '#0A0B0D'] as const,
-  /** Ambient screen background while the mic is hot — quiet teal drift. */
-  screenListening: ['#0A1615', '#0F1B19', '#0C0D10'] as const,
+  /** Full sweep incl. gold — reserved for Sanctuary Mode and one hero moment. */
+  aurora: [palette.primary, palette.secondary, palette.gold] as const,
+  /** Subtle card wash — barely-lifted midnight green, no loud colour. */
+  heroCard: ['#121C18', '#152420', '#121C18'] as const,
+  /** Ambient screen background at rest — pine black into deep navy. */
+  screenIdle: ['#050805', '#0A0F0D', '#0A120F'] as const,
+  /** Ambient screen background while the mic is hot — aurora drift. */
+  screenListening: ['#08201B', '#0C2620', '#0A0F0D'] as const,
   /** Placeholder cover art wash. */
-  coverFallback: ['#1B1C20', '#17181B'] as const,
+  coverFallback: ['#152420', '#121C18'] as const,
   /** Bottom-of-cover scrim so titles can sit on artwork. */
-  coverScrim: ['rgba(6,6,7,0)', 'rgba(6,6,7,0.55)', 'rgba(6,6,7,0.92)'] as const,
+  coverScrim: ['rgba(5,8,5,0)', 'rgba(5,8,5,0.55)', 'rgba(5,8,5,0.92)'] as const,
 
-  /** Ripple washes — soft, low-opacity rings drifting behind content. */
-  rippleSignal: ['rgba(224,149,79,0.16)', 'rgba(224,149,79,0)'] as const,
-  rippleWave: ['rgba(70,166,156,0.14)', 'rgba(70,166,156,0)'] as const,
+  /** Ripple/aurora washes — soft, low-opacity light drifting behind content. */
+  rippleSignal: ['rgba(47,191,170,0.16)', 'rgba(47,191,170,0)'] as const,
+  rippleWave: ['rgba(155,143,217,0.14)', 'rgba(155,143,217,0)'] as const,
 } as const;
 
 export const layout = {
@@ -80,6 +75,9 @@ export const layout = {
 
   /** Clearance scroll content needs so it can float up from behind the glass dock + mini player. */
   tabBarClearance: 200,
+
+  /** Sidebar rail width on desktop. */
+  sidebarWidth: 248,
 } as const;
 
 export const typeScale = {
@@ -116,18 +114,26 @@ export const shadows = {
   /** Soft ambient card shadow — depth without hard lines. */
   card: {
     shadowColor: '#000000',
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.4,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 12 },
     elevation: 8,
   },
-  /** Restrained signal glow — reserved for the single active/primary control. */
+  /** Restrained aurora glow — reserved for the single active/primary control. */
   glowPrimary: {
     shadowColor: palette.primary,
-    shadowOpacity: 0.22,
-    shadowRadius: 16,
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
     shadowOffset: { width: 0, height: 0 },
     elevation: 6,
+  },
+  /** Rare gold glow — Sanctuary Mode, favourites, premium badges only. */
+  glowGold: {
+    shadowColor: palette.gold,
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 8,
   },
 } as const;
 

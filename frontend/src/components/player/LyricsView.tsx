@@ -137,10 +137,10 @@ const styles = StyleSheet.create({
     ...typography.subtitle,
     fontSize: 18,
     lineHeight: 26,
-    color: 'rgba(233,229,220,0.6)',
+    color: 'rgba(167,176,168,0.6)',
   },
   linePast: {
-    color: 'rgba(233,229,220,0.35)',
+    color: 'rgba(167,176,168,0.35)',
   },
   lineActive: {
     color: colors.textPrimary,

@@ -1,24 +1,24 @@
 {
   "expo": {
-    "name": "Wavecairn",
-    "slug": "wavecairn",
-    "scheme": "wavecairn",
+    "name": "Duskglen",
+    "slug": "duskglen",
+    "scheme": "duskglen",
     "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0C0D10",
+    "backgroundColor": "#0A0F0D",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.wavecairn.app",
+      "bundleIdentifier": "com.duskglen.app",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Wavecairn listens briefly through the microphone to identify the song playing around you."
+        "NSMicrophoneUsageDescription": "Duskglen listens briefly through the microphone to identify the song playing around you."
       }
     },
     "android": {
-      "package": "com.wavecairn.app",
+      "package": "com.duskglen.app",
       "adaptiveIcon": {
-        "backgroundColor": "#0C0D10",
+        "backgroundColor": "#0A0F0D",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -30,16 +30,16 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "name": "Wavecairn",
-      "shortName": "Wavecairn",
-      "themeColor": "#0C0D10",
-      "backgroundColor": "#0C0D10"
+      "name": "Duskglen",
+      "shortName": "Duskglen",
+      "themeColor": "#0A0F0D",
+      "backgroundColor": "#0A0F0D"
     },
     "plugins": [
       [
         "expo-audio",
         {
-          "microphonePermission": "Wavecairn listens briefly through the microphone to identify the song playing around you."
+          "microphonePermission": "Duskglen listens briefly through the microphone to identify the song playing around you."
         }
       ],
       "expo-asset",
