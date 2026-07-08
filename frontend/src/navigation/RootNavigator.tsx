@@ -9,6 +9,7 @@ import { SettingsScreen } from '../screens/SettingsScreen';
 import { TelegramScreen } from '../screens/TelegramScreen';
 import { AccountPopover } from '../components/ui/AccountPopover';
 import { Sidebar } from '../components/ui/Sidebar';
+import { UpdateBanner } from '../components/ui/UpdateBanner';
 import { GlobalVideoStage } from '../components/video/GlobalVideoStage';
 import { useAuthStore } from '../store/authStore';
 import { colors } from '../theme/tokens';
@@ -61,6 +62,9 @@ export function RootNavigator() {
       ) : (
         <AuthNavigator />
       )}
+      {/* Available before login too — a stale bundle affects the auth
+          screens just as much as the rest of the app. */}
+      <UpdateBanner />
     </NavigationContainer>
   );
 }
