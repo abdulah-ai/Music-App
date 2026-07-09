@@ -2,14 +2,21 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, is_admin_email
 from app.core.config import settings
 from app.core.security import create_access_token, create_refresh_token, decode_token, hash_password, verify_password
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import AccessTokenOut, RefreshRequest, TokenPair, UserLogin, UserOut, UserRegister
+from app.services.admin_events import log_event
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _user_out(user: User) -> UserOut:
+    out = UserOut.model_validate(user)
+    out.is_admin = is_admin_email(user.email)
+    return out
 
 
 @router.post("/register", response_model=TokenPair, status_code=status.HTTP_201_CREATED)
@@ -27,13 +34,15 @@ async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)) ->
         hashed_password=hash_password(payload.password),
     )
     db.add(user)
+    await db.flush()
+    await log_event(db, "user_registered", user_id=user.id, detail=user.email)
     await db.commit()
     await db.refresh(user)
 
     return TokenPair(
         access_token=create_access_token(user.id),
         refresh_token=create_refresh_token(user.id),
-        user=UserOut.model_validate(user),
+        user=_user_out(user),
     )
 
 
@@ -46,7 +55,7 @@ async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)) -> Token
     return TokenPair(
         access_token=create_access_token(user.id),
         refresh_token=create_refresh_token(user.id),
-        user=UserOut.model_validate(user),
+        user=_user_out(user),
     )
 
 
@@ -61,4 +70,4 @@ async def refresh(payload: RefreshRequest) -> AccessTokenOut:
 
 @router.get("/me", response_model=UserOut)
 async def me(current_user: User = Depends(get_current_user)) -> UserOut:
-    return UserOut.model_validate(current_user)
+    return _user_out(current_user)

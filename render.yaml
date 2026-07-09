@@ -70,6 +70,12 @@ services:
       # requires clients to send this invite code.
       - key: SMA_REGISTRATION_INVITE_CODE
         sync: false
+      # Unset by default (nobody is admin). Set this to your own account's
+      # real email on the dashboard to unlock the in-app Admin dashboard for
+      # that account only — sync: false so a future blueprint sync never
+      # overwrites it.
+      - key: SMA_ADMIN_EMAIL
+        sync: false
 
   - type: web
     name: supermediaapp-web

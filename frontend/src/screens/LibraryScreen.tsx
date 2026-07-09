@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -873,7 +873,7 @@ function EditMediaModal({
   );
 }
 
-function GridCard({
+const GridCard = memo(function GridCard({
   media,
   size,
   favorite,
@@ -960,9 +960,9 @@ function GridCard({
       </View>
     </Pressable>
   );
-}
+});
 
-function ListRow({
+const ListRow = memo(function ListRow({
   media,
   favorite,
   selectMode,
@@ -1017,7 +1017,7 @@ function ListRow({
       <Text style={styles.durationText}>{formatDuration(media.duration_seconds)}</Text>
     </Pressable>
   );
-}
+});
 
 /** Shimmering placeholder grid/list shown only during the very first load, before any cached or live data has arrived. */
 function SkeletonGrid({ columns, cellSize, view }: { columns: number; cellSize: number; view: ViewMode }) {

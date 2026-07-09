@@ -9,7 +9,6 @@ import { FadeImage } from '../components/ui/FadeImage';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { GradientText } from '../components/ui/GradientText';
 import { PressableScale } from '../components/ui/PressableScale';
-import { RippleField } from '../components/ui/RippleField';
 import { ScreenContainer } from '../components/ui/ScreenContainer';
 import { useLibraryStore } from '../store/libraryStore';
 import { usePlayerStore } from '../store/playerStore';
@@ -47,7 +46,6 @@ export function ReplayScreen() {
 
   return (
     <View style={styles.root}>
-      <RippleField />
       <ScreenContainer maxWidth={720}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
           <View style={styles.headerRow}>

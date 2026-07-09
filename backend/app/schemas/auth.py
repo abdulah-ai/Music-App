@@ -17,6 +17,10 @@ class UserOut(BaseModel):
     id: str
     email: EmailStr
     display_name: str
+    # Not a DB column — set explicitly by each endpoint that builds this
+    # response (see app.api.deps.is_admin_email). UI-visibility only; every
+    # real /admin/* route is independently protected server-side.
+    is_admin: bool = False
 
     model_config = {"from_attributes": True}
 

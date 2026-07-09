@@ -19,6 +19,10 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = ["*"]
     registration_invite_code: str | None = None
+    # Gates the /admin/* endpoints and the in-app admin dashboard — a normal
+    # registered account whose email matches this one gets admin access, no
+    # separate role/permission system. Unset by default (nobody is admin).
+    admin_email: str | None = None
     ytdlp_cookies_text: str | None = None
     ytdlp_cookies_b64: str | None = None
     ytdlp_cookies_file: str | None = None

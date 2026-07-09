@@ -18,4 +18,5 @@ export type RootStackParamList = {
   Jobs: undefined;
   Settings: undefined;
   Replay: undefined;
+  Admin: undefined;
 };

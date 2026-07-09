@@ -8,6 +8,7 @@ from app.db.session import get_db
 from app.models.job import Job, JobStatus, JobType
 from app.models.user import User
 from app.schemas.job import DownloadCreate, JobOut
+from app.services.admin_events import log_event
 from app.services.downloader import ytdlp_service
 from app.workers import job_engine
 
@@ -30,6 +31,7 @@ async def create_download(
 
     job = Job(user_id=current_user.id, job_type=JobType.DOWNLOAD, source_url=payload.url)
     db.add(job)
+    await log_event(db, "job_created", user_id=current_user.id, detail=f"download: {payload.url}")
     await db.commit()
     await db.refresh(job)
 

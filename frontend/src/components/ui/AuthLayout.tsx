@@ -1,6 +1,7 @@
 import { PropsWithChildren } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useIsFocused } from '@react-navigation/native';
 
 import { RippleField } from './RippleField';
 import { GlassPanel } from './GlassPanel';
@@ -32,11 +33,14 @@ type Props = PropsWithChildren<{
  */
 export function AuthLayout({ eyebrow, title, subtitle, children }: Props) {
   const { isDesktop, height } = useResponsive();
+  // Login/Register both stay mounted in the auth stack — only render the
+  // ambient background + 3D moon for whichever one is actually on screen.
+  const isFocused = useIsFocused();
 
   if (!isDesktop) {
     return (
       <View style={styles.root}>
-        <RippleField />
+        {isFocused && <RippleField />}
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.mobileScroll}
@@ -44,7 +48,7 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: Props) {
         >
           <Reveal>
             <View style={styles.mobileOrb}>
-              <Moonlight state="idle" size={150} />
+              {isFocused && <Moonlight state="idle" size={150} />}
             </View>
             <Text style={styles.eyebrow}>{eyebrow}</Text>
             <GradientText style={styles.mobileTitle}>{title}</GradientText>
@@ -64,7 +68,7 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: Props) {
 
   return (
     <View style={styles.root}>
-      <RippleField />
+      {isFocused && <RippleField />}
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.desktopScroll}
@@ -73,7 +77,7 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: Props) {
         <View style={styles.split}>
           <Reveal style={styles.heroCol}>
             <View style={styles.heroOrbRow}>
-              <Moonlight state="idle" size={roomy ? 180 : 140} />
+              {isFocused && <Moonlight state="idle" size={roomy ? 180 : 140} />}
             </View>
             <Text style={[styles.eyebrow, styles.heroEyebrow]}>{eyebrow}</Text>
             <GradientText style={styles.heroTitle}>{title}</GradientText>

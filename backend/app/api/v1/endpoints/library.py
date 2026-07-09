@@ -13,6 +13,7 @@ from app.db.session import get_db
 from app.models.media import Media
 from app.models.user import User
 from app.schemas.media import MediaOut, MediaUpdate
+from app.services.admin_events import log_event
 from app.services.storage import backend as storage_backend
 
 router = APIRouter(prefix="/library", tags=["library"])
@@ -84,6 +85,7 @@ async def delete_media(
 ) -> None:
     media = await _get_owned_media(media_id, current_user, db)
     await asyncio.to_thread(storage_backend.delete_file, media.file_path)
+    await log_event(db, "media_deleted", user_id=current_user.id, detail=media.title or media.id)
     await db.delete(media)
     await db.commit()
 

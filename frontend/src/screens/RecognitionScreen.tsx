@@ -3,6 +3,7 @@ import { ActivityIndicator, Animated, Easing, Image, Pressable, StyleSheet, Text
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
+import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   requestRecordingPermissionsAsync,
@@ -50,6 +51,9 @@ function meteringToAmplitude(metering: number | undefined): number {
 export function RecognitionScreen() {
   const insets = useSafeAreaInsets();
   const { isDesktop } = useResponsive();
+  // This tab stays mounted when the user switches to Home/Library — without
+  // this, its RippleField + Moonlight instance keeps animating invisibly.
+  const isFocused = useIsFocused();
   const recorder = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
   const recorderState = useAudioRecorderState(recorder, 100);
   const [phase, setPhase] = useState<Phase>('idle');
@@ -247,7 +251,7 @@ export function RecognitionScreen() {
 
   return (
     <View style={styles.root}>
-      <RippleField />
+      {isFocused && <RippleField />}
       <Animated.View
         pointerEvents="none"
         style={[
@@ -347,7 +351,7 @@ export function RecognitionScreen() {
                 style={styles.listenRing}
               >
                 <View style={styles.listenInner}>
-                  <Moonlight state={orbState} amplitude={amplitude} size={BUTTON_SIZE - 46} />
+                  {isFocused && <Moonlight state={orbState} amplitude={amplitude} size={BUTTON_SIZE - 46} />}
                 </View>
               </LinearGradient>
             </View>

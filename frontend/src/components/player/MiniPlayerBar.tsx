@@ -93,7 +93,18 @@ export function MiniPlayerBar() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const { isDesktop } = useResponsive();
-  const { currentMedia, playing, currentTime, duration, amplitude, toggle, playNext, playPrev, queue } = usePlayerStore();
+  // Per-field selectors — this bar is mounted on Home, Library, and Recognize
+  // simultaneously (tabs stay alive in the background), so a whole-store
+  // destructure here means 3 full re-renders per playback tick instead of 1.
+  const currentMedia = usePlayerStore((s) => s.currentMedia);
+  const playing = usePlayerStore((s) => s.playing);
+  const currentTime = usePlayerStore((s) => s.currentTime);
+  const duration = usePlayerStore((s) => s.duration);
+  const amplitude = usePlayerStore((s) => s.amplitude);
+  const toggle = usePlayerStore((s) => s.toggle);
+  const playNext = usePlayerStore((s) => s.playNext);
+  const playPrev = usePlayerStore((s) => s.playPrev);
+  const queue = usePlayerStore((s) => s.queue);
   const [queueOpen, setQueueOpen] = useState(false);
   const accentColor = useTrackAccent(currentMedia?.thumbnail_url);
 

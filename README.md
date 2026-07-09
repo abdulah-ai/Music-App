@@ -51,12 +51,29 @@ If you deploy the frontend and backend manually instead of via Blueprint:
 - Frontend build command: `npm ci && npm run build:web`
 - Frontend publish directory: `dist`
 
-For YouTube downloads on Render, set `SMA_YTDLP_COOKIES_TEXT` to a fresh
-Netscape `cookies.txt` export from a private YouTube session if YouTube shows
-the bot-check error. The Docker deployment also includes Chrome request
-impersonation, yt-dlp's default YouTube helpers, and Node 22 for YouTube
-JavaScript challenges, but YouTube can still require account cookies or a clean
-proxy for cloud IPs.
+### YouTube bot-check cookies
+
+Cloud IPs are often challenged by YouTube ("Sign in to confirm you're not a bot"). If downloads start
+failing with that error, export fresh cookies and set them as a Render secret:
+
+1. Open a private/incognito browser window and sign into YouTube in it.
+2. In the same window, open `https://www.youtube.com/robots.txt` (keeps the session simple to export).
+3. Export only the `youtube.com` cookies as a Netscape `cookies.txt` file (e.g. via a "Get cookies.txt"
+   browser extension).
+4. Close the private window afterward and don't reopen that session.
+
+Paste the full contents of `cookies.txt` into the backend env var `SMA_YTDLP_COOKIES_TEXT`, or base64-encode
+it first and use `SMA_YTDLP_COOKIES_B64` instead (handy for values Render's dashboard mangles):
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\path\to\cookies.txt")) | Set-Clipboard
+```
+
+Redeploy after setting either variable. Cookies are private account credentials — never commit them to
+GitHub, and re-export them if YouTube starts challenging downloads again. yt-dlp's Chrome request
+impersonation (via `curl-cffi`) is already enabled by default (`SMA_YTDLP_IMPERSONATE=chrome`); if cookies
+are fresh but YouTube still rejects the Render IP, set `SMA_YTDLP_PROXY_URL` to a clean residential/ISP
+proxy and redeploy.
 
 ## What's been verified vs. what needs your eyes
 

@@ -2,6 +2,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.security import decode_token
 from app.db.session import get_db
 from app.models.user import User
@@ -41,3 +42,15 @@ async def get_stream_user(
     endpoint also accepts the access token as a ?token= query parameter."""
     raw = credentials.credentials if credentials else token
     return await _resolve_user(raw, db)
+
+
+def is_admin_email(email: str) -> bool:
+    return bool(settings.admin_email) and email.lower() == settings.admin_email.lower()
+
+
+async def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:
+    """A normal user whose email happens to match SMA_ADMIN_EMAIL — no
+    separate role/permission system, nothing stored on the user row."""
+    if not is_admin_email(current_user.email):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Admin access required")
+    return current_user

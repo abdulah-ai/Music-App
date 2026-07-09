@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -191,7 +191,7 @@ export function RecentDownloadsWidget({
   );
 }
 
-export function CoverCard({ media, size, onPress }: { media: Media; size: number; onPress: () => void }) {
+export const CoverCard = memo(function CoverCard({ media, size, onPress }: { media: Media; size: number; onPress: () => void }) {
   return (
     <PressableScale onPress={onPress} scaleTo={0.95}>
       <View style={[styles.coverCard, { width: size, height: size }]}>
@@ -217,7 +217,7 @@ export function CoverCard({ media, size, onPress }: { media: Media; size: number
       </View>
     </PressableScale>
   );
-}
+});
 
 // ---------- Favorites ----------
 export function FavoritesWidget({ density, coverSize, onPlay }: { density: Density; coverSize: number; onPlay: (m: Media) => void }) {

@@ -1,5 +1,6 @@
 import { PropsWithChildren } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RippleField } from './RippleField';
@@ -21,9 +22,14 @@ type Props = PropsWithChildren<{
 export function ScreenContainer({ children, maxWidth = 1100 }: Props) {
   const insets = useSafeAreaInsets();
   const { isDesktop } = useResponsive();
+  // Tab screens stay mounted when backgrounded (React Navigation doesn't
+  // unmount them by default) — without this, every tab a user has ever
+  // visited keeps running RippleField's animation loops forever in the
+  // background. Only the screen actually on top pays that cost.
+  const isFocused = useIsFocused();
   return (
     <View style={styles.root}>
-      <RippleField />
+      {isFocused && <RippleField />}
       <View
         style={[
           styles.content,

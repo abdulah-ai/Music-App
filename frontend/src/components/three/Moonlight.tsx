@@ -79,6 +79,7 @@ function MoonMesh({ state, amplitude = 0, accentColor }: MoonlightProps) {
     [geometry],
   );
   const elapsed = useRef(0);
+  const frameCount = useRef(0);
 
   useFrame((_, delta) => {
     elapsed.current += delta;
@@ -89,24 +90,31 @@ function MoonMesh({ state, amplitude = 0, accentColor }: MoonlightProps) {
     const speed = state === 'idle' ? 0.035 : state === 'listening' ? 0.07 : 0.1;
     mesh.rotation.y += delta * speed;
 
-    // Gentle breathing terrain — slow, low-amplitude, no spikes.
-    const posAttr = geometry.attributes.position as THREE.BufferAttribute;
-    const intensity = state === 'idle' ? 0.015 : 0.02 + amplitude * 0.05;
-    for (let i = 0; i < posAttr.count; i++) {
-      const ix = i * 3;
-      const bx = basePositions[ix];
-      const by = basePositions[ix + 1];
-      const bz = basePositions[ix + 2];
-      const len = Math.sqrt(bx * bx + by * by + bz * bz) || 1;
-      const nx = bx / len;
-      const ny = by / len;
-      const nz = bz / len;
-      const noise = Math.sin(nx * 3 + t * 0.5) * 0.5 + Math.sin(ny * 4 + t * 0.35) * 0.3 + Math.sin(nz * 3.5 + t * 0.4) * 0.4;
-      const displacement = 1 + noise * intensity;
-      posAttr.setXYZ(i, bx * displacement, by * displacement, bz * displacement);
+    // The per-vertex displacement + normal recompute below is the expensive
+    // part of this component (9,300 vertices, 3 trig calls each, every
+    // frame). The terrain breathes slowly on purpose, so recomputing it
+    // every 3rd frame instead of every frame is visually indistinguishable
+    // but cuts this loop's CPU cost by roughly two-thirds.
+    frameCount.current += 1;
+    if (frameCount.current % 3 === 0) {
+      const posAttr = geometry.attributes.position as THREE.BufferAttribute;
+      const intensity = state === 'idle' ? 0.015 : 0.02 + amplitude * 0.05;
+      for (let i = 0; i < posAttr.count; i++) {
+        const ix = i * 3;
+        const bx = basePositions[ix];
+        const by = basePositions[ix + 1];
+        const bz = basePositions[ix + 2];
+        const len = Math.sqrt(bx * bx + by * by + bz * bz) || 1;
+        const nx = bx / len;
+        const ny = by / len;
+        const nz = bz / len;
+        const noise = Math.sin(nx * 3 + t * 0.5) * 0.5 + Math.sin(ny * 4 + t * 0.35) * 0.3 + Math.sin(nz * 3.5 + t * 0.4) * 0.4;
+        const displacement = 1 + noise * intensity;
+        posAttr.setXYZ(i, bx * displacement, by * displacement, bz * displacement);
+      }
+      posAttr.needsUpdate = true;
+      geometry.computeVertexNormals();
     }
-    posAttr.needsUpdate = true;
-    geometry.computeVertexNormals();
 
     const [c1, c2] = accentRgb ? [accentRgb, GOLD] : PALETTE[state];
     const mix = (Math.sin(t * 0.35) + 1) / 2;

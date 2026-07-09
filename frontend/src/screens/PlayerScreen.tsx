@@ -3,7 +3,7 @@ import { Animated, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions
 import Slider from '@react-native-community/slider';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -58,6 +58,10 @@ function PanelTabs({ tab, onChange }: { tab: PanelTab; onChange: (tab: PanelTab)
 
 export function PlayerScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  // Skips the 3D canvas + ambient background entirely when something else is
+  // stacked on top of this modal — invisible either way, but stops paying
+  // for a WebGL canvas the user can't currently see.
+  const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const { isDesktop } = useResponsive();
@@ -67,32 +71,34 @@ export function PlayerScreen() {
   const [chromeVisible, setChromeVisible] = useState(true);
   const chromeOpacity = useRef(new Animated.Value(1)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const {
-    currentMedia,
-    playing,
-    currentTime,
-    duration,
-    isBuffering,
-    amplitude,
-    queue,
-    queueIndex,
-    repeat,
-    shuffle,
-    rate,
-    volume,
-    muted,
-    sleepAt,
-    toggle,
-    seek,
-    playNext,
-    playPrev,
-    toggleRepeat,
-    toggleShuffle,
-    cycleRate,
-    setVolume,
-    toggleMute,
-    cycleSleepTimer,
-  } = usePlayerStore();
+  // Per-field selectors, not a whole-store destructure — currentTime/amplitude
+  // tick on every sub-second playback update, and a single unselectored
+  // destructure would re-render this entire screen (3D canvas, ambient
+  // background, lyrics/queue panel included) on every one of those ticks.
+  const currentMedia = usePlayerStore((s) => s.currentMedia);
+  const playing = usePlayerStore((s) => s.playing);
+  const currentTime = usePlayerStore((s) => s.currentTime);
+  const duration = usePlayerStore((s) => s.duration);
+  const isBuffering = usePlayerStore((s) => s.isBuffering);
+  const amplitude = usePlayerStore((s) => s.amplitude);
+  const queue = usePlayerStore((s) => s.queue);
+  const queueIndex = usePlayerStore((s) => s.queueIndex);
+  const repeat = usePlayerStore((s) => s.repeat);
+  const shuffle = usePlayerStore((s) => s.shuffle);
+  const rate = usePlayerStore((s) => s.rate);
+  const volume = usePlayerStore((s) => s.volume);
+  const muted = usePlayerStore((s) => s.muted);
+  const sleepAt = usePlayerStore((s) => s.sleepAt);
+  const toggle = usePlayerStore((s) => s.toggle);
+  const seek = usePlayerStore((s) => s.seek);
+  const playNext = usePlayerStore((s) => s.playNext);
+  const playPrev = usePlayerStore((s) => s.playPrev);
+  const toggleRepeat = usePlayerStore((s) => s.toggleRepeat);
+  const toggleShuffle = usePlayerStore((s) => s.toggleShuffle);
+  const cycleRate = usePlayerStore((s) => s.cycleRate);
+  const setVolume = usePlayerStore((s) => s.setVolume);
+  const toggleMute = usePlayerStore((s) => s.toggleMute);
+  const cycleSleepTimer = usePlayerStore((s) => s.cycleSleepTimer);
   const accentColor = useTrackAccent(currentMedia?.thumbnail_url);
 
   useEffect(() => {
@@ -286,9 +292,11 @@ export function PlayerScreen() {
     const sanctuarySize = Math.min(width, height) * 0.72;
     return (
       <Pressable style={styles.root} onPress={wakeChrome}>
-        <RippleField />
+        {isFocused && <RippleField />}
         <View style={styles.sanctuaryStage}>
-          <Moonlight state={playing ? 'playing' : 'idle'} amplitude={playing ? amplitude : 0} size={sanctuarySize} accentColor={accentColor ?? undefined} />
+          {isFocused && (
+            <Moonlight state={playing ? 'playing' : 'idle'} amplitude={playing ? amplitude : 0} size={sanctuarySize} accentColor={accentColor ?? undefined} />
+          )}
         </View>
 
         <Animated.View pointerEvents={chromeVisible ? 'auto' : 'none'} style={[styles.sanctuaryChrome, { opacity: chromeOpacity, paddingBottom: insets.bottom + spacing.xl, paddingTop: insets.top + spacing.md }]}>
@@ -336,11 +344,13 @@ export function PlayerScreen() {
   if (isDesktop) {
     return (
       <View style={styles.root}>
-        <RippleField />
+        {isFocused && <RippleField />}
         <View style={[styles.desktopRow, { paddingTop: insets.top + spacing.xl + 40, paddingBottom: insets.bottom + spacing.lg }]}>
           <View style={styles.desktopStageCol}>
             <View style={styles.desktopStage}>
-              <Moonlight state={playing ? 'playing' : 'idle'} amplitude={playing ? amplitude : 0} size={orbSize} accentColor={accentColor ?? undefined} />
+              {isFocused && (
+                <Moonlight state={playing ? 'playing' : 'idle'} amplitude={playing ? amplitude : 0} size={orbSize} accentColor={accentColor ?? undefined} />
+              )}
             </View>
             <View style={styles.desktopDockWrap}>{transport}</View>
           </View>
@@ -359,10 +369,12 @@ export function PlayerScreen() {
 
   return (
     <View style={styles.root}>
-      <RippleField />
+      {isFocused && <RippleField />}
 
       <View style={[styles.stage, { height: stageHeight, paddingTop: insets.top }]}>
-        <Moonlight state={playing ? 'playing' : 'idle'} amplitude={playing ? amplitude : 0} size={orbSize} accentColor={accentColor ?? undefined} />
+        {isFocused && (
+          <Moonlight state={playing ? 'playing' : 'idle'} amplitude={playing ? amplitude : 0} size={orbSize} accentColor={accentColor ?? undefined} />
+        )}
       </View>
 
       {topBar}

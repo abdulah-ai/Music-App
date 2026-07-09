@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Defs, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
@@ -295,7 +295,10 @@ function Ring({ spec }: { spec: RingSpec }) {
   );
 }
 
-export function RippleField() {
+/** Takes no props, so React.memo means a parent re-render (e.g. the screen
+ * above it re-rendering on a playback tick) never cascades into re-running
+ * this component's own 8 animation loops / 48 star views. */
+export const RippleField = memo(function RippleField() {
   const { height } = useWindowDimensions();
   return (
     <View pointerEvents="none" style={styles.root}>
@@ -329,7 +332,7 @@ export function RippleField() {
       <Treeline />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   root: {

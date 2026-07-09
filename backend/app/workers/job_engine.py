@@ -23,6 +23,7 @@ from app.models.media import Media, MediaSource, MediaType
 from app.schemas.job import JobOut
 from app.services.downloader import ytdlp_service
 from app.services.recognition import shazam_service
+from app.services.admin_events import log_event
 from app.services.storage import backend as storage_backend
 from app.services.storage import local_storage
 from app.workers.broadcaster import broadcaster
@@ -53,6 +54,22 @@ async def _touch_job(job_id: str, **fields) -> None:
             return
         for key, value in fields.items():
             setattr(job, key, value)
+        # Every download/telegram-import/recognition job funnels its status
+        # transitions through here, so this is the one place that needs to
+        # log completion/failure for the admin activity feed, rather than
+        # every call site above doing it individually.
+        if fields.get("status") in (JobStatus.COMPLETE, JobStatus.FAILED):
+            completed = fields["status"] == JobStatus.COMPLETE
+            detail = job.error_message if not completed else (job.stage_label or job.source_url)
+            # job_type/status load back as plain strings (the columns are a
+            # plain VARCHAR, not a native SQL enum) — not enum members, so no
+            # `.value` here.
+            await log_event(
+                session,
+                "job_completed" if completed else "job_failed",
+                user_id=job.user_id,
+                detail=f"{job.job_type}: {detail}" if detail else job.job_type,
+            )
         await session.commit()
         await session.refresh(job, attribute_names=["result_media"])
         payload = JobOut.model_validate(job).model_dump(mode="json")

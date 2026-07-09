@@ -15,9 +15,9 @@ import type { MainTabParamList } from '../../navigation/types';
 
 type NavDestination =
   | { kind: 'tab'; tab: keyof MainTabParamList; icon: keyof typeof Ionicons.glyphMap; label: string }
-  | { kind: 'stack'; route: 'Jobs' | 'Telegram' | 'Settings' | 'Player'; icon: keyof typeof Ionicons.glyphMap; label: string };
+  | { kind: 'stack'; route: 'Jobs' | 'Telegram' | 'Settings' | 'Player' | 'Admin'; icon: keyof typeof Ionicons.glyphMap; label: string };
 
-const NAV_ITEMS: NavDestination[] = [
+const BASE_NAV_ITEMS: NavDestination[] = [
   { kind: 'tab', tab: 'Home', icon: 'compass-outline', label: 'Dashboard' },
   { kind: 'tab', tab: 'Library', icon: 'albums-outline', label: 'Library' },
   { kind: 'tab', tab: 'Recognize', icon: 'mic-outline', label: 'Scan a song' },
@@ -25,6 +25,11 @@ const NAV_ITEMS: NavDestination[] = [
   { kind: 'stack', route: 'Telegram', icon: 'paper-plane-outline', label: 'Telegram' },
   { kind: 'stack', route: 'Settings', icon: 'settings-outline', label: 'Settings' },
 ];
+
+// Only ever present for the one account whose email matches the backend's
+// configured admin email — every /admin/* call is independently rejected
+// server-side regardless, this just keeps the entry itself out of sight.
+const ADMIN_NAV_ITEM: NavDestination = { kind: 'stack', route: 'Admin', icon: 'shield-checkmark-outline', label: 'Admin' };
 
 function destKey(dest: NavDestination): string {
   return dest.kind === 'tab' ? dest.tab : dest.route;
@@ -61,6 +66,7 @@ export function AppSidebar({
   const isRail = variant === 'rail';
   const offline = !networkOnline || backendOnline === false;
   const initial = (user?.display_name?.trim()?.[0] ?? user?.email?.[0] ?? '♪').toUpperCase();
+  const navItems = user?.is_admin ? [...BASE_NAV_ITEMS, ADMIN_NAV_ITEM] : BASE_NAV_ITEMS;
 
   function go(dest: NavDestination) {
     if (!navigationRef.isReady()) return;
@@ -90,7 +96,7 @@ export function AppSidebar({
       </View>
 
       <View style={styles.navList}>
-        {NAV_ITEMS.map((dest) => {
+        {navItems.map((dest) => {
           const key = destKey(dest);
           const focused = dest.kind === 'tab' && dest.tab === activeTab;
           const hovered = hoveredKey === key;

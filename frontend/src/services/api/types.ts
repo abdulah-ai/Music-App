@@ -46,4 +46,5 @@ export type User = {
   id: string;
   email: string;
   display_name: string;
+  is_admin: boolean;
 };

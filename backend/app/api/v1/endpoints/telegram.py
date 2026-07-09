@@ -15,6 +15,7 @@ from app.schemas.telegram import (
     TelegramSettingsIn,
     TelegramStatusOut,
 )
+from app.services.admin_events import log_event
 from app.services.telegram import telegram_service
 from app.workers import job_engine
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -88,7 +89,7 @@ async def send_code(
 
 @router.post("/verify-code")
 async def verify_code(
-    payload: TelegramCodeIn, current_user: User = Depends(get_current_user)
+    payload: TelegramCodeIn, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> dict:
     pending = telegram_service.pending_logins.get(current_user.id)
     if not pending:
@@ -103,13 +104,15 @@ async def verify_code(
 
     if await client.is_user_authorized():
         await telegram_service.drop_pending(current_user.id)
+        await log_event(db, "telegram_linked", user_id=current_user.id)
+        await db.commit()
         return {"status": "authorized"}
     return {"status": "code_sent"}
 
 
 @router.post("/verify-password")
 async def verify_password(
-    payload: TelegramPasswordIn, current_user: User = Depends(get_current_user)
+    payload: TelegramPasswordIn, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> dict:
     pending = telegram_service.pending_logins.get(current_user.id)
     if not pending:
@@ -120,6 +123,8 @@ async def verify_password(
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"2FA sign-in failed: {exc}")
     await telegram_service.drop_pending(current_user.id)
+    await log_event(db, "telegram_linked", user_id=current_user.id)
+    await db.commit()
     return {"status": "authorized"}
 
 
@@ -170,6 +175,7 @@ async def start_import(
         source_url=f"telegram:{payload.chat}",
     )
     db.add(job)
+    await log_event(db, "job_created", user_id=current_user.id, detail=f"telegram import: {payload.chat}")
     await db.commit()
     await db.refresh(job)
 
