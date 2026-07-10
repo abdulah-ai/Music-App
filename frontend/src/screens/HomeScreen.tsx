@@ -35,6 +35,7 @@ import { useLibraryStore } from '../store/libraryStore';
 import { usePlayerStore } from '../store/playerStore';
 import { useVideoPlayerStore } from '../store/videoPlayerStore';
 import { toast } from '../store/toastStore';
+import { apiErrorMessage, friendlyJobError } from '../utils/apiError';
 import { colors, layout, radii, spacing, typography } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -111,7 +112,7 @@ export function HomeScreen() {
     const unsubscribe = watchJob(job.id, (update) => {
       updateJob(update);
       if (update.status === 'complete') toast('Added to your library', 'success');
-      if (update.status === 'failed') toast(update.error_message ?? 'Download failed', 'error');
+      if (update.status === 'failed') toast(friendlyJobError(update.error_message), 'error');
       if (update.status === 'complete' || update.status === 'failed' || update.status === 'cancelled') {
         unsubscribers.current.get(job.id)?.();
         unsubscribers.current.delete(job.id);
@@ -128,7 +129,7 @@ export function HomeScreen() {
       await startJob(url.trim());
       setUrl('');
     } catch (err: any) {
-      setError(err?.response?.data?.detail ?? 'Could not start that download.');
+      setError(apiErrorMessage(err, 'Could not start that download.'));
     } finally {
       setSubmitting(false);
     }
@@ -215,6 +216,8 @@ export function HomeScreen() {
                   selectionColor={colors.cyan}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  returnKeyType="go"
+                  onSubmitEditing={handleSubmit}
                   style={styles.input}
                 />
                 <Pressable onPress={handlePaste} hitSlop={8} style={styles.pasteButton}>

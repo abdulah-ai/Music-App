@@ -59,6 +59,18 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: Props) {
               <View style={styles.form}>{children}</View>
             </GlassPanel>
           </Reveal>
+          {/* Phones are the primary install — first-timers deserve the same
+              "what is this app" pitch the desktop hero shows. */}
+          <Reveal delay={200}>
+            <View style={styles.mobileFeatureList}>
+              {FEATURES.map((feature) => (
+                <View key={feature.icon} style={styles.mobileFeatureRow}>
+                  <Ionicons name={feature.icon} size={15} color={colors.cyan} />
+                  <Text style={styles.mobileFeatureLabel}>{feature.label}</Text>
+                </View>
+              ))}
+            </View>
+          </Reveal>
         </ScrollView>
       </View>
     );
@@ -117,6 +129,13 @@ const styles = StyleSheet.create({
   },
   mobileOrb: { alignItems: 'center', marginBottom: spacing.md },
   mobileTitle: { ...typography.mega, textAlign: 'center' },
+  mobileFeatureList: {
+    marginTop: spacing.lg,
+    alignSelf: 'center',
+    gap: spacing.sm,
+  },
+  mobileFeatureRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  mobileFeatureLabel: { ...typography.caption, color: colors.textSecondary },
 
   // ----- Shared -----
   eyebrow: { ...typography.eyebrow, color: colors.cyan, textAlign: 'center', marginBottom: spacing.xs },

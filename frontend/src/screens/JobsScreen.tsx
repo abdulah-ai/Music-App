@@ -13,6 +13,7 @@ import { watchJob } from '../services/api/jobSocket';
 import type { Job } from '../services/api/types';
 import { useLibraryStore } from '../store/libraryStore';
 import { toast } from '../store/toastStore';
+import { friendlyJobError } from '../utils/apiError';
 import { colors, radii, spacing, typography } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -69,7 +70,7 @@ function JobRow({ job, onCancel, onRetry }: { job: Job; onCancel: () => void; on
           </View>
           <Text numberOfLines={1} style={[styles.subtitle, job.status === 'failed' && styles.subtitleError]}>
             {job.status === 'failed' && job.error_message
-              ? job.error_message
+              ? friendlyJobError(job.error_message)
               : `${job.job_type === 'download' ? 'Download' : 'Recognition'} · ${meta.label} · ${timeAgo(job.updated_at)}`}
           </Text>
         </View>

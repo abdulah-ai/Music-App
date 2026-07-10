@@ -21,6 +21,7 @@ import { usePinStore } from '../../store/pinStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { usePlayHistoryStore } from '../../store/playHistoryStore';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import { friendlyJobError } from '../../utils/apiError';
 import { coverGradient, coverGlyphColor, displayArtist, displayTitle, thumbnailUri } from '../../utils/mediaDisplay';
 import { colors, gradients, radii, spacing, typography } from '../../theme/tokens';
 import { WIDGET_LABELS, type WidgetId } from '../../store/dashboardStore';
@@ -146,7 +147,7 @@ export function QueueWidget({
                     <Text numberOfLines={1} style={styles.jobTitle}>{label}</Text>
                   </View>
                   <Text numberOfLines={1} style={[styles.mutedLine, job.status === 'failed' && { color: colors.danger }]}>
-                    {job.status === 'failed' ? job.error_message ?? 'Failed' : job.stage_label ?? job.status}
+                    {job.status === 'failed' ? friendlyJobError(job.error_message) : job.stage_label ?? job.status}
                   </Text>
                 </View>
                 {running && (

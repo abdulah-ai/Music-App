@@ -10,6 +10,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { ScreenContainer } from '../components/ui/ScreenContainer';
 import { toast } from '../store/toastStore';
+import { apiErrorMessage } from '../utils/apiError';
 import { useAuthStore } from '../store/authStore';
 import { colors, radii, spacing, typography } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/types';
@@ -180,7 +181,7 @@ function UsersTab({ users, onChanged }: { users: AdminUser[]; onChanged: (user: 
       const updated = await adminApi.updateUser(user.id, { role: user.is_admin ? 'user' : 'admin' });
       onChanged(updated);
     } catch (err: any) {
-      toast(err?.response?.data?.detail ?? "Couldn't update that user", 'error');
+      toast(apiErrorMessage(err, "Couldn't update that user"), 'error');
     } finally {
       setBusyId(null);
     }
@@ -197,7 +198,7 @@ function UsersTab({ users, onChanged }: { users: AdminUser[]; onChanged: (user: 
       onChanged(updated);
       toast('Email updated', 'success');
     } catch (err: any) {
-      toast(err?.response?.data?.detail ?? "Couldn't update that email", 'error');
+      toast(apiErrorMessage(err, "Couldn't update that email"), 'error');
     } finally {
       setBusyId(null);
       setEditingEmailFor(null);

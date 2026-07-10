@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -23,6 +24,7 @@ import { watchJob } from '../services/api/jobSocket';
 import type { Job } from '../services/api/types';
 import { useLibraryStore } from '../store/libraryStore';
 import { toast } from '../store/toastStore';
+import { apiErrorMessage, friendlyJobError } from '../utils/apiError';
 import { colors, radii, spacing, typography } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -93,8 +95,7 @@ export function TelegramScreen({ navigation }: Props) {
   }, []);
 
   function fail(err: unknown, fallback: string) {
-    const detail = (err as any)?.response?.data?.detail;
-    setError(typeof detail === 'string' ? detail : fallback);
+    setError(apiErrorMessage(err, fallback));
   }
 
   async function handleConnect() {
@@ -180,7 +181,7 @@ export function TelegramScreen({ navigation }: Props) {
           refreshLibrary();
         }
         if (update.status === 'failed') {
-          toast(update.error_message ?? 'Import failed', 'error');
+          toast(friendlyJobError(update.error_message), 'error');
         }
       });
     } catch (err) {
@@ -218,8 +219,26 @@ export function TelegramScreen({ navigation }: Props) {
               <View style={styles.panelContent}>
                 <Text style={styles.panelTitle}>Link your account</Text>
                 <Text style={styles.hint}>
-                  Grab an API ID + hash from my.telegram.org → API development tools, then enter your phone.
+                  Telegram needs a one-time, free API key. It takes about a minute:
                 </Text>
+                <View style={styles.steps}>
+                  <Text style={styles.step}>
+                    <Text style={styles.stepNumber}>1.  </Text>
+                    Open{' '}
+                    <Text style={styles.stepLink} onPress={() => Linking.openURL('https://my.telegram.org/apps')}>
+                      my.telegram.org/apps
+                    </Text>{' '}
+                    and log in with your Telegram phone number.
+                  </Text>
+                  <Text style={styles.step}>
+                    <Text style={styles.stepNumber}>2.  </Text>
+                    Create an app if asked — any name and any platform is fine.
+                  </Text>
+                  <Text style={styles.step}>
+                    <Text style={styles.stepNumber}>3.  </Text>
+                    Copy the api_id and api_hash it shows you into the boxes below.
+                  </Text>
+                </View>
                 <TextField label="API ID" value={apiId} onChangeText={setApiId} keyboardType="numeric" placeholder="1234567" />
                 <TextField label="API Hash" value={apiHash} onChangeText={setApiHash} autoCapitalize="none" placeholder="a1b2c3…" />
                 <TextField label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="+90…" />
@@ -437,7 +456,7 @@ export function TelegramScreen({ navigation }: Props) {
                       </Text>
                       <Text numberOfLines={2} style={styles.hint}>
                         {importJob.status === 'failed'
-                          ? importJob.error_message
+                          ? friendlyJobError(importJob.error_message)
                           : `${importJob.stage_label ?? 'starting'}${importing ? '…' : ''}`}
                       </Text>
                     </View>
@@ -493,6 +512,10 @@ const styles = StyleSheet.create({
   panelContent: { padding: spacing.lg, gap: spacing.md },
   panelTitle: { ...typography.title, fontSize: 19, lineHeight: 24, color: colors.textPrimary },
   hint: { ...typography.caption, color: colors.textMuted },
+  steps: { gap: spacing.sm },
+  step: { ...typography.caption, color: colors.textSecondary, lineHeight: 19 },
+  stepNumber: { color: colors.cyan, fontFamily: 'Sora_600SemiBold' },
+  stepLink: { color: colors.cyan, textDecorationLine: 'underline' },
   error: { ...typography.caption, color: colors.danger },
   action: {
     borderRadius: radii.md,

@@ -29,6 +29,7 @@ import type { Job } from '../services/api/types';
 import { useLibraryStore } from '../store/libraryStore';
 import { useScanHistoryStore } from '../store/scanHistoryStore';
 import { toast } from '../store/toastStore';
+import { friendlyJobError } from '../utils/apiError';
 import { colors, gradients, layout, radii, spacing, typography } from '../theme/tokens';
 
 const LISTEN_SECONDS = 8;
@@ -436,7 +437,7 @@ export function RecognitionScreen() {
                             <Text style={styles.resultArtist}>Added to your library</Text>
                           </View>
                         ) : downloadJob.status === 'failed' ? (
-                          <Text style={[styles.resultArtist, styles.error]}>{downloadJob.error_message}</Text>
+                          <Text style={[styles.resultArtist, styles.error]}>{friendlyJobError(downloadJob.error_message)}</Text>
                         ) : (
                           <>
                             <ProgressBar progress={downloadJob.progress_pct / 100} />
@@ -486,7 +487,7 @@ export function RecognitionScreen() {
                             </Text>
                           </View>
                         ) : downloadJob.status === 'failed' ? (
-                          <Text style={[styles.resultArtist, styles.error]}>{downloadJob.error_message}</Text>
+                          <Text style={[styles.resultArtist, styles.error]}>{friendlyJobError(downloadJob.error_message)}</Text>
                         ) : (
                           <>
                             <ProgressBar progress={downloadJob.progress_pct / 100} />

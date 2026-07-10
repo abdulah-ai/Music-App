@@ -151,7 +151,7 @@ export function AppSidebar({
         <Text style={styles.statusLabel}>
           {backendOnline === null ? 'Checking…' : offline ? 'Offline · cached data' : 'Online'}
         </Text>
-        <Text style={styles.libraryChip}>{items.length} kept</Text>
+        <Text style={styles.libraryChip}>{items.length} in library</Text>
       </View>
 
       <Pressable

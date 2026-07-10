@@ -59,7 +59,21 @@ function formatBytes(bytes: number): string {
   return `${(mb / 1024).toFixed(1)} GB`;
 }
 
-function StatusRow({ label, ok, pending }: { label: string; ok: boolean | null; pending?: boolean }) {
+function StatusRow({
+  label,
+  ok,
+  pending,
+  notConnectedLabel = 'Unavailable',
+  neutralWhenOff = false,
+}: {
+  label: string;
+  ok: boolean | null;
+  pending?: boolean;
+  /** What to call the "not ok" state — e.g. "Not linked" for optional integrations. */
+  notConnectedLabel?: string;
+  /** Optional integrations aren't *broken* when off — show muted, not red. */
+  neutralWhenOff?: boolean;
+}) {
   const state: 'good' | 'bad' | 'unknown' = pending || ok === null ? 'unknown' : ok ? 'good' : 'bad';
   return (
     <View style={styles.statusRow}>
@@ -67,12 +81,12 @@ function StatusRow({ label, ok, pending }: { label: string; ok: boolean | null; 
         style={[
           styles.statusDot,
           state === 'good' && styles.statusDotGood,
-          state === 'bad' && styles.statusDotBad,
+          state === 'bad' && !neutralWhenOff && styles.statusDotBad,
         ]}
       />
       <Text style={styles.statusLabel}>{label}</Text>
-      <Text style={[styles.statusValue, state === 'bad' && styles.statusValueBad]}>
-        {state === 'unknown' ? 'Checking…' : state === 'good' ? 'Connected' : 'Unavailable'}
+      <Text style={[styles.statusValue, state === 'bad' && !neutralWhenOff && styles.statusValueBad]}>
+        {state === 'unknown' ? 'Checking…' : state === 'good' ? 'Connected' : notConnectedLabel}
       </Text>
     </View>
   );
@@ -253,6 +267,8 @@ export function SettingsScreen() {
                 label="Telegram"
                 ok={telegramStatus ? telegramStatus.authorized : null}
                 pending={telegramStatus === null}
+                notConnectedLabel="Not linked yet"
+                neutralWhenOff
               />
               <Button
                 label={telegramStatus?.authorized ? 'Manage Telegram import' : 'Connect Telegram'}
