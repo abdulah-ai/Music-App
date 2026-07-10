@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(10,15,13,0.97)',
+    backgroundColor: 'rgba(16,11,24,0.97)',
   },
   panelContent: {
     flex: 1,

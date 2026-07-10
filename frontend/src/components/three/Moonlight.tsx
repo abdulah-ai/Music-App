@@ -21,16 +21,16 @@ function hexToRgb(hex: string): [number, number, number] {
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 }
 
-// Duskglen accents: aurora teal, soft violet, star gold.
-const TEAL = hexToRgb('#2FBFAA');
-const VIOLET = hexToRgb('#9B8FD9');
+// Duskglen accents: ember coral, twilight lavender, star gold.
+const EMBER = hexToRgb('#FF8A5C');
+const LAVENDER = hexToRgb('#B39DFF');
 const GOLD = hexToRgb('#E8C468');
-const SILVER = hexToRgb('#E7EBE6');
+const SILVER = hexToRgb('#F1EDF7');
 
 const PALETTE: Record<MoonlightState, [[number, number, number], [number, number, number]]> = {
-  idle: [TEAL, VIOLET],
-  listening: [TEAL, GOLD],
-  playing: [VIOLET, GOLD],
+  idle: [EMBER, LAVENDER],
+  listening: [EMBER, GOLD],
+  playing: [LAVENDER, GOLD],
 };
 
 const STAR_COUNT = 42;
@@ -116,7 +116,7 @@ function MoonMesh({ state, amplitude = 0, accentColor }: MoonlightProps) {
       geometry.computeVertexNormals();
     }
 
-    const [c1, c2] = accentRgb ? [accentRgb, GOLD] : PALETTE[state];
+    const [c1, c2] = accentRgb ? ([accentRgb, GOLD] as const) : PALETTE[state];
     const mix = (Math.sin(t * 0.35) + 1) / 2;
     const r = SILVER[0] * 0.7 + (c1[0] + (c2[0] - c1[0]) * mix) * 0.3;
     const g = SILVER[1] * 0.7 + (c1[1] + (c2[1] - c1[1]) * mix) * 0.3;
@@ -172,11 +172,11 @@ function MoonMesh({ state, amplitude = 0, accentColor }: MoonlightProps) {
           side={THREE.BackSide}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
-          color="#2FBFAA"
+          color="#FF8A5C"
         />
       </mesh>
       <mesh ref={meshRef} geometry={geometry}>
-        <meshStandardMaterial ref={materialRef} roughness={0.85} metalness={0.04} emissive="#2FBFAA" />
+        <meshStandardMaterial ref={materialRef} roughness={0.85} metalness={0.04} emissive="#FF8A5C" />
       </mesh>
       <mesh ref={ringRef} geometry={ringGeometry} rotation={[1.15, 0, 0]}>
         <meshBasicMaterial
@@ -185,7 +185,7 @@ function MoonMesh({ state, amplitude = 0, accentColor }: MoonlightProps) {
           opacity={0.35}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
-          color="#9B8FD9"
+          color="#B39DFF"
         />
       </mesh>
       <points ref={starsRef} geometry={starGeometry}>
@@ -197,7 +197,7 @@ function MoonMesh({ state, amplitude = 0, accentColor }: MoonlightProps) {
           opacity={0.6}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
-          color="#E7EBE6"
+          color="#F1EDF7"
         />
       </points>
     </group>
@@ -209,8 +209,8 @@ export function Moonlight({ state, amplitude = 0, size = 220, accentColor }: Moo
     <View style={{ width: size, height: size }}>
       <Canvas camera={{ position: [0, 0, 3.4], fov: 42 }}>
         <ambientLight intensity={0.4} />
-        <pointLight position={[2.2, 2.2, 2]} intensity={1.1} color="#E7EBE6" />
-        <pointLight position={[-2.2, -1.2, -2]} intensity={0.7} color="#9B8FD9" />
+        <pointLight position={[2.2, 2.2, 2]} intensity={1.1} color="#F1EDF7" />
+        <pointLight position={[-2.2, -1.2, -2]} intensity={0.7} color="#B39DFF" />
         <pointLight position={[0, -2.4, 1.5]} intensity={0.5} color="#E8C468" />
         <MoonMesh state={state} amplitude={amplitude} accentColor={accentColor} />
       </Canvas>

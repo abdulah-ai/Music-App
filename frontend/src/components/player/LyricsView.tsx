@@ -137,14 +137,14 @@ const styles = StyleSheet.create({
     ...typography.subtitle,
     fontSize: 18,
     lineHeight: 26,
-    color: 'rgba(167,176,168,0.6)',
+    color: 'rgba(174,165,192,0.6)',
   },
   linePast: {
-    color: 'rgba(167,176,168,0.35)',
+    color: 'rgba(174,165,192,0.35)',
   },
   lineActive: {
     color: colors.textPrimary,
-    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 20,
     lineHeight: 28,
   },

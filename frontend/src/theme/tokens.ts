@@ -10,17 +10,17 @@ export const colors = {
   bgElevated: palette.surface,
   surface: palette.surface,
   surfaceBright: palette.surfaceBright,
-  surfaceBorder: 'rgba(167,176,168,0.10)',
+  surfaceBorder: 'rgba(174,165,192,0.10)',
   textPrimary: palette.textPrimary,
   textSecondary: palette.textSecondary,
   textMuted: palette.textMuted,
 
-  // Accent slots: `violet` carries the soft-violet secondary accent and
-  // `cyan` the aurora-teal primary accent, so old call sites stay on-palette.
+  // Accent slots: `violet` carries the twilight-lavender secondary accent and
+  // `cyan` the ember-coral primary accent, so old call sites stay on-palette.
   violet: palette.secondary,
   cyan: palette.primary,
   gold: palette.gold,
-  pink: '#D98AA8',
+  pink: '#E88AB8',
   coral: palette.danger,
 
   success: palette.success,
@@ -44,9 +44,9 @@ export const spacing = {
 } as const;
 
 export const radii = {
-  sm: layout.radiusCover, // 8 — cover art, deliberately sharper than cards
-  md: layout.radiusControl, // 12 — buttons, inputs
-  lg: layout.radius, // 14 — cards
+  sm: layout.radiusCover, // 10 — cover art, deliberately sharper than cards
+  md: layout.radiusControl, // 14 — buttons, inputs
+  lg: layout.radius, // 20 — cards
   pill: 999,
 } as const;
 
@@ -55,11 +55,11 @@ export const typography = {
   display: typeScale.hero,
   title: typeScale.heading,
   eyebrow: typeScale.eyebrow,
-  subtitle: { fontFamily: 'SpaceGrotesk_500Medium', fontSize: 17, lineHeight: 22, letterSpacing: -0.2 },
+  subtitle: { fontFamily: 'Sora_500Medium', fontSize: 17, lineHeight: 22, letterSpacing: -0.2 },
   body: { fontFamily: 'System', fontSize: 15, lineHeight: 21 },
   caption: { fontFamily: 'System', fontSize: 13, lineHeight: 18 },
 } as const;
 
 export { gradients, layout, shadows, motion } from './theme';
 
-export { SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold } from '@expo-google-fonts/space-grotesk';
+export { Sora_500Medium, Sora_600SemiBold, Sora_700Bold } from '@expo-google-fonts/sora';

@@ -65,12 +65,12 @@ export function thumbnailUri(media: Pick<Media, 'thumbnail_url'>): string | null
  * from the media id so the same track always wears the same color. Muted,
  * dark, on-palette: identity without shouting. */
 const COVER_GRADIENTS: readonly (readonly [string, string])[] = [
-  ['#14342E', '#0B1F1A'], // deep teal
-  ['#22283F', '#12141F'], // midnight violet
+  ['#3A241E', '#1F110C'], // ember clay
+  ['#241E3E', '#131020'], // twilight violet
   ['#33301F', '#1A180F'], // dim gold
-  ['#1D3340', '#0E1A21'], // dusk blue
+  ['#1D2840', '#0E1421'], // dusk blue
   ['#31232F', '#181117'], // mulberry
-  ['#1E3626', '#0F1B13'], // pine
+  ['#2A1E36', '#150F1D'], // deep plum
 ];
 
 export function coverGradient(mediaId: string): readonly [string, string] {

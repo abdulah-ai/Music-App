@@ -1,71 +1,73 @@
 /**
  * "Duskglen" design system — the single source of truth for the app's look.
  *
- * Visual concept: a hollow in a night forest, lit by one glowing moon. Deep
- * pine-black and midnight-green grounds; moon-silver text; an aurora-teal
- * signal accent (the glow itself) with a soft-violet secondary and a rare
- * star-gold reserved for genuinely premium moments (Sanctuary Mode, starred
- * items) — not a UI colour, a highlight.
+ * Visual concept: the glen at true dusk — the minute after the sun slips
+ * below the treeline. An ink-violet night sky deepening overhead; the last
+ * ember of sunset burning low on the horizon. Ember-coral is the signal
+ * accent (interactive, alive, warm); twilight lavender is the secondary
+ * (the sky itself, links, quiet highlights); star-gold stays reserved for
+ * genuinely premium moments (Sanctuary Mode, starred items, fireflies) —
+ * not a UI colour, a highlight.
  */
 
 export const palette = {
-  /** Global app background — pine black, a hair warmer than pure black. */
-  background: '#0A0F0D',
+  /** Global app background — ink violet, a hair warmer than pure black. */
+  background: '#100B18',
   /** Deepest background, behind ambient washes. */
-  void: '#050805',
-  /** Cards, sheets and other raised containers — midnight green-navy. */
-  surface: '#121C18',
+  void: '#09060F',
+  /** Cards, sheets and other raised containers — deep dusk plum. */
+  surface: '#1B1426',
   /** A slightly brighter surface for pressed / highlighted states. */
-  surfaceBright: '#1B2924',
-  /** Primary accent — aurora teal. Interactive elements, progress, glow. */
-  primary: '#2FBFAA',
-  /** Secondary accent — soft violet. Secondary highlights, links. */
-  secondary: '#9B8FD9',
+  surfaceBright: '#281E38',
+  /** Primary accent — ember coral, the last light of the sun. Interactive elements, progress, glow. */
+  primary: '#FF8A5C',
+  /** Secondary accent — twilight lavender. Secondary highlights, links. */
+  secondary: '#B39DFF',
   /** Rare premium accent — star gold. Sanctuary Mode, favourites, badges only. */
   gold: '#E8C468',
-  /** Primary copy — moon silver. */
-  textPrimary: '#E7EBE6',
+  /** Primary copy — moonlit lavender-white. */
+  textPrimary: '#F1EDF7',
   /** Secondary copy on dark surfaces. */
-  textSecondary: '#A7B0A8',
+  textSecondary: '#AEA5C0',
   /** De-emphasised copy: captions, metadata, placeholders. */
-  textMuted: '#6C766C',
+  textMuted: '#746C86',
 
   success: '#5FBF8E',
-  danger: '#E0685F',
+  danger: '#E8506E',
 } as const;
 
 export const gradients = {
-  /** Signature accent sweep: aurora teal into soft violet. Used sparingly. */
+  /** Signature accent sweep: ember coral into twilight lavender. Used sparingly. */
   accent: [palette.primary, palette.secondary] as const,
   /** Full sweep incl. gold — reserved for Sanctuary Mode and one hero moment. */
   aurora: [palette.primary, palette.secondary, palette.gold] as const,
-  /** Subtle card wash — barely-lifted midnight green, no loud colour. */
-  heroCard: ['#121C18', '#152420', '#121C18'] as const,
-  /** Ambient screen background at rest — night-sky navy warming into deep
-   * forest green toward the horizon, so the sky has visible depth instead of
-   * reading as one flat near-black. */
-  screenIdle: ['#04080C', '#081411', '#0D1F17'] as const,
-  /** Ambient screen background while the mic is hot — aurora drift. */
-  screenListening: ['#08201B', '#0C2620', '#0A0F0D'] as const,
+  /** Subtle card wash — barely-lifted dusk plum, no loud colour. */
+  heroCard: ['#1B1426', '#221A30', '#1B1426'] as const,
+  /** Ambient screen background at rest — deep night overhead sinking into a
+   * violet mid-sky, warming into the ember afterglow at the horizon, so the
+   * sky has visible depth instead of reading as one flat near-black. */
+  screenIdle: ['#09060F', '#150D22', '#2A1526'] as const,
+  /** Ambient screen background while the mic is hot — ember drift. */
+  screenListening: ['#2A1220', '#1D1128', '#100B18'] as const,
   /** Placeholder cover art wash. */
-  coverFallback: ['#152420', '#121C18'] as const,
+  coverFallback: ['#221A30', '#1B1426'] as const,
   /** Bottom-of-cover scrim so titles can sit on artwork. */
-  coverScrim: ['rgba(5,8,5,0)', 'rgba(5,8,5,0.55)', 'rgba(5,8,5,0.92)'] as const,
+  coverScrim: ['rgba(9,6,15,0)', 'rgba(9,6,15,0.55)', 'rgba(9,6,15,0.92)'] as const,
 
   /** Ripple/aurora washes — soft, low-opacity light drifting behind content. */
-  rippleSignal: ['rgba(47,191,170,0.16)', 'rgba(47,191,170,0)'] as const,
-  rippleWave: ['rgba(155,143,217,0.14)', 'rgba(155,143,217,0)'] as const,
+  rippleSignal: ['rgba(255,138,92,0.15)', 'rgba(255,138,92,0)'] as const,
+  rippleWave: ['rgba(179,157,255,0.14)', 'rgba(179,157,255,0)'] as const,
 } as const;
 
 export const layout = {
   /** Generous padding for main screen containers. */
   screenPadding: 20,
-  /** Cards and sheets. */
-  radius: 14,
+  /** Cards and sheets — soft, modern, unmistakably rounder than before. */
+  radius: 20,
   /** Buttons and inputs — slightly tighter than cards. */
-  radiusControl: 12,
-  /** Cover art thumbnails — sharper, archival rather than "app icon" round. */
-  radiusCover: 8,
+  radiusControl: 14,
+  /** Cover art thumbnails — sharper than controls, archival rather than "app icon" round. */
+  radiusCover: 10,
 
   /** Floating glass dock (custom tab bar) geometry. */
   dockHeight: 64,
@@ -85,27 +87,27 @@ export const layout = {
 export const typeScale = {
   /** Oversized editorial headline. */
   mega: {
-    fontFamily: 'SpaceGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 40,
     lineHeight: 46,
     letterSpacing: -1.5,
   },
   /** Large screen headers: big, bold, tracked slightly tight. */
   hero: {
-    fontFamily: 'SpaceGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 34,
     lineHeight: 40,
     letterSpacing: -1,
   },
   heading: {
-    fontFamily: 'SpaceGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 24,
     lineHeight: 30,
     letterSpacing: -0.5,
   },
   /** Tiny letterspaced all-caps eyebrow label. */
   eyebrow: {
-    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 12,
     lineHeight: 16,
     letterSpacing: 2.5,
@@ -121,7 +123,7 @@ export const shadows = {
     shadowOffset: { width: 0, height: 12 },
     elevation: 8,
   },
-  /** Restrained aurora glow — reserved for the single active/primary control. */
+  /** Restrained ember glow — reserved for the single active/primary control. */
   glowPrimary: {
     shadowColor: palette.primary,
     shadowOpacity: 0.28,

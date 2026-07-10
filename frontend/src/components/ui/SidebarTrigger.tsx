@@ -46,6 +46,6 @@ const styles = StyleSheet.create({
   },
   initial: {
     ...typography.title,
-    color: '#0A0F0D',
+    color: '#100B18',
   },
 });

@@ -4,7 +4,7 @@ import { Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { useFonts, SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold } from '@expo-google-fonts/space-grotesk';
+import { useFonts, Sora_500Medium, Sora_600SemiBold, Sora_700Bold } from '@expo-google-fonts/sora';
 
 import { BrandMark } from './src/components/ui/BrandMark';
 import { Toaster } from './src/components/ui/Toaster';
@@ -15,14 +15,14 @@ if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getEle
   const style = document.createElement('style');
   style.id = 'duskglen-web-css';
   style.textContent = `
-    html, body { background: #0A0F0D; }
+    html, body { background: #100B18; }
     * { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
-    ::selection { background: rgba(47,191,170,0.35); }
-    * { scrollbar-width: thin; scrollbar-color: rgba(167,176,168,0.28) transparent; }
+    ::selection { background: rgba(255,138,92,0.35); }
+    * { scrollbar-width: thin; scrollbar-color: rgba(174,165,192,0.28) transparent; }
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(167,176,168,0.28); border-radius: 99px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(167,176,168,0.45); }
+    ::-webkit-scrollbar-thumb { background: rgba(174,165,192,0.28); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(174,165,192,0.45); }
     input, textarea { outline: none; }
     /* Ease hover/press colour changes everywhere — transform/opacity stay
        untouched so RN Animated-driven motion isn't slowed down. */
@@ -30,7 +30,7 @@ if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getEle
       transition: background-color 160ms ease, border-color 160ms ease, box-shadow 220ms ease;
     }
     input, textarea { transition: border-color 160ms ease, box-shadow 220ms ease; }
-    :focus-visible { outline: 2px solid rgba(47,191,170,0.55); outline-offset: 2px; }
+    :focus-visible { outline: 2px solid rgba(255,138,92,0.55); outline-offset: 2px; }
   `;
   document.head.appendChild(style);
 }
@@ -82,7 +82,7 @@ function BootScreen() {
 const bootStyles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0A0F0D',
+    backgroundColor: '#100B18',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 18,
@@ -92,14 +92,14 @@ const bootStyles = StyleSheet.create({
     height: 72,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2FBFAA',
+    shadowColor: '#FF8A5C',
     shadowOpacity: 0.4,
     shadowRadius: 30,
     shadowOffset: { width: 0, height: 0 },
     elevation: 16,
   },
   wordmark: {
-    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 13,
     letterSpacing: 6,
     color: colors.textPrimary,
@@ -155,7 +155,7 @@ function useKeyboardShortcuts() {
 }
 
 export default function App() {
-  const [fontsLoaded] = useFonts({ SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold });
+  const [fontsLoaded] = useFonts({ Sora_500Medium, Sora_600SemiBold, Sora_700Bold });
   const bootstrap = useAuthStore((s) => s.bootstrap);
   const isBootstrapping = useAuthStore((s) => s.isBootstrapping);
   const hydrateFavorites = useFavoritesStore((s) => s.hydrate);

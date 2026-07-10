@@ -45,8 +45,8 @@ function SettingSwitch({
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ false: 'rgba(167,176,168,0.2)', true: 'rgba(47,191,170,0.5)' }}
-        thumbColor={value ? colors.cyan : '#A7B0A8'}
+        trackColor={{ false: 'rgba(174,165,192,0.2)', true: 'rgba(255,138,92,0.5)' }}
+        thumbColor={value ? colors.cyan : '#AEA5C0'}
       />
     </View>
   );
@@ -426,7 +426,7 @@ export function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#050805' },
+  root: { flex: 1, backgroundColor: '#09060F' },
   scroll: { paddingBottom: spacing.xxl },
   headerRow: {
     flexDirection: 'row',
@@ -472,9 +472,9 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
-  segmentActive: { backgroundColor: 'rgba(47,191,170,0.16)' },
+  segmentActive: { backgroundColor: 'rgba(255,138,92,0.16)' },
   segmentLabel: { ...typography.caption, color: colors.textMuted },
-  segmentLabelActive: { color: colors.cyan, fontFamily: 'SpaceGrotesk_500Medium' },
+  segmentLabelActive: { color: colors.cyan, fontFamily: 'Sora_500Medium' },
   feedbackInput: {
     ...typography.body,
     color: colors.textPrimary,

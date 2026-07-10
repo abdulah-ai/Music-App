@@ -319,10 +319,10 @@ function Treeline() {
   return (
     <View pointerEvents="none" style={styles.treeline}>
       <Svg width="100%" height="100%" viewBox="0 0 100 40" preserveAspectRatio="none">
-        <Path d={far} fill="#0C1813" opacity={0.65} />
-        <Path d={back} fill="#0A1712" opacity={0.92} />
-        <Path d={front} fill="#050805" />
-        {/* A breath of teal mist resting on the treetops. */}
+        <Path d={far} fill="#1A1128" opacity={0.65} />
+        <Path d={back} fill="#150E20" opacity={0.92} />
+        <Path d={front} fill="#09060F" />
+        {/* A breath of ember mist resting on the treetops. */}
         <Rect x="0" y="10" width="100" height="16" fill={palette.primary} opacity={0.045} />
       </Svg>
     </View>
@@ -393,8 +393,8 @@ type RingSpec = {
 };
 
 const RINGS: RingSpec[] = [
-  { id: 'signal', size: 620, color: '#2FBFAA', opacity: 0.05, x: -180, y: -160 },
-  { id: 'wave', size: 720, color: '#9B8FD9', opacity: 0.045, x: 220, y: 420 },
+  { id: 'signal', size: 620, color: '#FF8A5C', opacity: 0.05, x: -180, y: -160 },
+  { id: 'wave', size: 720, color: '#B39DFF', opacity: 0.045, x: 220, y: 420 },
 ];
 
 /** Static on purpose — the rings' old 32/40-second pulse was invisible in
@@ -420,7 +420,7 @@ function HorizonGlow() {
   return (
     <LinearGradient
       pointerEvents="none"
-      colors={['rgba(47,191,170,0)', 'rgba(47,191,170,0.05)', 'rgba(232,196,104,0.07)']}
+      colors={['rgba(255,138,92,0)', 'rgba(255,138,92,0.05)', 'rgba(232,196,104,0.07)']}
       style={styles.horizon}
     />
   );
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     overflow: 'hidden',
-    backgroundColor: '#050805',
+    backgroundColor: '#09060F',
   },
   rootDimmed: {
     backgroundColor: 'transparent',

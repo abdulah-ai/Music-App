@@ -798,7 +798,7 @@ function PlaylistsPane({ playlists, onOpen }: { playlists: Playlist[]; onOpen: (
           />
           <PressableScale onPress={handleCreate} disabled={creating || !name.trim()} scaleTo={0.9}>
             <LinearGradient colors={colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.createButton}>
-              {creating ? <ActivityIndicator size="small" color="#0A0F0D" /> : <Ionicons name="add" size={20} color="#0A0F0D" />}
+              {creating ? <ActivityIndicator size="small" color="#100B18" /> : <Ionicons name="add" size={20} color="#100B18" />}
             </LinearGradient>
           </PressableScale>
         </View>
@@ -917,7 +917,7 @@ function PlaylistPickerModal({
             />
             <PressableScale onPress={createAndPick} disabled={busy || !name.trim()} scaleTo={0.9}>
               <LinearGradient colors={colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.createButton}>
-                <Ionicons name="add" size={20} color="#0A0F0D" />
+                <Ionicons name="add" size={20} color="#100B18" />
               </LinearGradient>
             </PressableScale>
           </View>
@@ -1132,7 +1132,7 @@ function EditMediaModal({
           <PressableScale onPress={save} disabled={saving} scaleTo={0.97}>
             <LinearGradient colors={colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.editSave}>
               {saving ? (
-                <ActivityIndicator size="small" color="#0A0F0D" />
+                <ActivityIndicator size="small" color="#100B18" />
               ) : (
                 <Text style={styles.editSaveLabel}>Save</Text>
               )}
@@ -1215,7 +1215,7 @@ const GridCard = memo(function GridCard({
 
         {selectMode && (
           <View style={[styles.selectCheck, selected && styles.selectCheckActive]}>
-            {selected && <Ionicons name="checkmark" size={13} color="#0A0F0D" />}
+            {selected && <Ionicons name="checkmark" size={13} color="#100B18" />}
           </View>
         )}
 
@@ -1235,7 +1235,7 @@ const GridCard = memo(function GridCard({
               end={{ x: 1, y: 1 }}
               style={styles.playFab}
             >
-              <Ionicons name="play" size={22} color="#0A0F0D" style={{ marginLeft: 2 }} />
+              <Ionicons name="play" size={22} color="#100B18" style={{ marginLeft: 2 }} />
             </LinearGradient>
           </View>
         )}
@@ -1278,7 +1278,7 @@ const ListRow = memo(function ListRow({
     >
       {selectMode && (
         <View style={[styles.selectCheckInline, selected && styles.selectCheckActive]}>
-          {selected && <Ionicons name="checkmark" size={12} color="#0A0F0D" />}
+          {selected && <Ionicons name="checkmark" size={12} color="#100B18" />}
         </View>
       )}
       {coverUri ? (
@@ -1341,7 +1341,7 @@ function SkeletonGrid({ columns, cellSize, view }: { columns: number; cellSize: 
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#050805' },
+  root: { flex: 1, backgroundColor: '#09060F' },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   headerText: { flex: 1, paddingRight: spacing.md },
   eyebrow: { ...typography.eyebrow, color: colors.cyan, marginBottom: spacing.xs },
@@ -1350,7 +1350,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: 'rgba(18,28,24,0.6)',
+    backgroundColor: 'rgba(27,20,38,0.6)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     height: 48,
@@ -1369,11 +1369,11 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: spacing.md - 2,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(18,28,24,0.55)',
+    backgroundColor: 'rgba(27,20,38,0.55)',
   },
-  tabChipActive: { backgroundColor: 'rgba(47,191,170,0.18)' },
+  tabChipActive: { backgroundColor: 'rgba(255,138,92,0.18)' },
   tabLabel: { ...typography.caption, color: colors.textMuted },
-  tabLabelActive: { color: colors.cyan, fontFamily: 'SpaceGrotesk_500Medium' },
+  tabLabelActive: { color: colors.cyan, fontFamily: 'Sora_500Medium' },
   toolRow: { flexDirection: 'row', gap: 6 },
   toolChip: {
     flexDirection: 'row',
@@ -1382,11 +1382,11 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: spacing.sm + 2,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(18,28,24,0.55)',
+    backgroundColor: 'rgba(27,20,38,0.55)',
   },
   toolLabel: { ...typography.caption, fontSize: 12, color: colors.textSecondary },
-  toolChipActive: { backgroundColor: 'rgba(47,191,170,0.18)' },
-  fixNamesChip: { backgroundColor: 'rgba(47,191,170,0.14)', borderWidth: 1, borderColor: 'rgba(47,191,170,0.3)' },
+  toolChipActive: { backgroundColor: 'rgba(255,138,92,0.18)' },
+  fixNamesChip: { backgroundColor: 'rgba(255,138,92,0.14)', borderWidth: 1, borderColor: 'rgba(255,138,92,0.3)' },
   gridRow: { gap: spacing.md },
   listContent: { gap: spacing.md, paddingBottom: layout.tabBarClearance },
   card: {
@@ -1394,10 +1394,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'flex-end',
     borderWidth: 1,
-    borderColor: 'rgba(167,176,168,0.12)',
+    borderColor: 'rgba(174,165,192,0.12)',
   },
   cardHovered: {
-    borderColor: 'rgba(47,191,170,0.45)',
+    borderColor: 'rgba(255,138,92,0.45)',
   },
   cardSelected: {
     borderColor: colors.cyan,
@@ -1414,7 +1414,7 @@ const styles = StyleSheet.create({
     borderColor: colors.textPrimary,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(5,8,5,0.4)',
+    backgroundColor: 'rgba(9,6,15,0.4)',
   },
   selectCheckInline: {
     width: 20,
@@ -1436,12 +1436,12 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(5,8,5,0.55)',
+    backgroundColor: 'rgba(9,6,15,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 2,
   },
-  moreChipHovered: { backgroundColor: 'rgba(5,8,5,0.85)' },
+  moreChipHovered: { backgroundColor: 'rgba(9,6,15,0.85)' },
   playFabWrap: {
     position: 'absolute',
     right: spacing.sm + 2,
@@ -1462,7 +1462,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(5,8,5,0.55)',
+    backgroundColor: 'rgba(9,6,15,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1478,7 +1478,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(5,8,5,0.65)',
+    backgroundColor: 'rgba(9,6,15,0.65)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
@@ -1487,7 +1487,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.sm,
     left: spacing.sm,
-    backgroundColor: 'rgba(5,8,5,0.65)',
+    backgroundColor: 'rgba(9,6,15,0.65)',
     borderRadius: radii.pill,
     padding: 5,
   },
@@ -1499,25 +1499,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: 'rgba(18,28,24,0.5)',
+    backgroundColor: 'rgba(27,20,38,0.5)',
     borderRadius: radii.md,
     padding: spacing.sm,
   },
-  listRowHovered: { backgroundColor: 'rgba(18,28,24,0.85)' },
-  listRowPressed: { backgroundColor: 'rgba(47,191,170,0.10)' },
+  listRowHovered: { backgroundColor: 'rgba(27,20,38,0.85)' },
+  listRowPressed: { backgroundColor: 'rgba(255,138,92,0.10)' },
   listRowSelected: { borderWidth: 1, borderColor: colors.cyan },
   skeletonGridWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  skeletonCard: { borderRadius: radii.lg, backgroundColor: 'rgba(167,176,168,0.08)' },
-  skeletonRow: { height: 68, borderRadius: radii.md, backgroundColor: 'rgba(167,176,168,0.08)' },
+  skeletonCard: { borderRadius: radii.lg, backgroundColor: 'rgba(174,165,192,0.08)' },
+  skeletonRow: { height: 68, borderRadius: radii.md, backgroundColor: 'rgba(174,165,192,0.08)' },
   bulkBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
-    backgroundColor: 'rgba(18,28,24,0.96)',
+    backgroundColor: 'rgba(27,20,38,0.96)',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(167,176,168,0.14)',
+    borderTopColor: 'rgba(174,165,192,0.14)',
   },
   bulkLabel: { ...typography.subtitle, fontSize: 14, color: colors.textPrimary },
   bulkActions: { flexDirection: 'row', gap: spacing.sm },
@@ -1528,9 +1528,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(5,8,5,0.5)',
+    backgroundColor: 'rgba(9,6,15,0.5)',
   },
-  bulkButtonDanger: { backgroundColor: 'rgba(224,104,95,0.14)' },
+  bulkButtonDanger: { backgroundColor: 'rgba(232,80,110,0.14)' },
   bulkButtonLabel: { ...typography.caption, fontSize: 13, color: colors.textPrimary },
   listCover: {
     width: 48,
@@ -1545,7 +1545,7 @@ const styles = StyleSheet.create({
   modalRootDesktop: { justifyContent: 'center', alignItems: 'center' },
   modalBackdrop: { ...StyleSheet.absoluteFill as object, backgroundColor: 'rgba(3,5,3,0.65)' },
   sheet: {
-    backgroundColor: '#121C18',
+    backgroundColor: '#1B1426',
     borderTopLeftRadius: radii.lg + 8,
     borderTopRightRadius: radii.lg + 8,
     paddingHorizontal: spacing.lg,
@@ -1558,7 +1558,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg + 8,
     paddingTop: spacing.lg,
     borderWidth: 1,
-    borderColor: 'rgba(167,176,168,0.16)',
+    borderColor: 'rgba(174,165,192,0.16)',
     ...shadows.card,
   },
   sheetHandle: {
@@ -1566,7 +1566,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(167,176,168,0.3)',
+    backgroundColor: 'rgba(174,165,192,0.3)',
     marginBottom: spacing.md,
   },
   sheetHeader: {
@@ -1593,7 +1593,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radii.md,
   },
-  sheetRowPressed: { backgroundColor: 'rgba(47,191,170,0.10)' },
+  sheetRowPressed: { backgroundColor: 'rgba(255,138,92,0.10)' },
   sheetRowLabel: { ...typography.body, color: colors.textPrimary },
 
   editTitle: { ...typography.title, fontSize: 20, lineHeight: 26, color: colors.textPrimary, marginBottom: spacing.md },
@@ -1602,7 +1602,7 @@ const styles = StyleSheet.create({
   editInput: {
     ...typography.body,
     color: colors.textPrimary,
-    backgroundColor: 'rgba(5,8,5,0.6)',
+    backgroundColor: 'rgba(9,6,15,0.6)',
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md - 4,
@@ -1613,7 +1613,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  editSaveLabel: { ...typography.subtitle, fontFamily: 'SpaceGrotesk_600SemiBold', color: '#0A0F0D' },
+  editSaveLabel: { ...typography.subtitle, fontFamily: 'Sora_600SemiBold', color: '#100B18' },
 
   createRow: {
     flexDirection: 'row',
@@ -1625,7 +1625,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     flex: 1,
     color: colors.textPrimary,
-    backgroundColor: 'rgba(18,28,24,0.6)',
+    backgroundColor: 'rgba(27,20,38,0.6)',
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md - 6,
@@ -1654,7 +1654,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: spacing.sm + 2,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(224,104,95,0.10)',
+    backgroundColor: 'rgba(232,80,110,0.10)',
   },
   detailDeleteLabel: { ...typography.caption, fontSize: 12, color: colors.danger },
   detailList: {

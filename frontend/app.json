@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0A0F0D",
+    "backgroundColor": "#100B18",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.duskglen.app",
@@ -18,7 +18,7 @@
     "android": {
       "package": "com.duskglen.app",
       "adaptiveIcon": {
-        "backgroundColor": "#0A0F0D",
+        "backgroundColor": "#100B18",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -32,8 +32,8 @@
       "favicon": "./assets/favicon.png",
       "name": "Duskglen",
       "shortName": "Duskglen",
-      "themeColor": "#0A0F0D",
-      "backgroundColor": "#0A0F0D"
+      "themeColor": "#100B18",
+      "backgroundColor": "#100B18"
     },
     "plugins": [
       [

@@ -228,9 +228,9 @@ export function HomeScreen() {
                     style={styles.goButton}
                   >
                     {submitting ? (
-                      <ActivityIndicator size="small" color="#0A0F0D" />
+                      <ActivityIndicator size="small" color="#100B18" />
                     ) : (
-                      <Ionicons name="arrow-forward" size={20} color="#0A0F0D" />
+                      <Ionicons name="arrow-forward" size={20} color="#100B18" />
                     )}
                   </LinearGradient>
                 </PressableScale>
@@ -335,7 +335,7 @@ export function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#050805' },
+  root: { flex: 1, backgroundColor: '#09060F' },
   scroll: { paddingBottom: layout.tabBarClearance },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   headerText: { flex: 1, paddingRight: spacing.md },
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(167,176,168,0.12)',
+    borderColor: 'rgba(174,165,192,0.12)',
   },
   eyebrow: { ...typography.eyebrow, color: colors.cyan, marginBottom: spacing.xs },
   megaTitle: { ...typography.mega },
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: 'rgba(5,8,5,0.6)',
+    backgroundColor: 'rgba(9,6,15,0.6)',
     borderRadius: radii.pill,
     paddingLeft: spacing.md,
     paddingRight: 6,
@@ -393,17 +393,17 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(5,8,5,0.5)',
+    backgroundColor: 'rgba(9,6,15,0.5)',
   },
-  chipActive: { backgroundColor: 'rgba(47,191,170,0.16)' },
+  chipActive: { backgroundColor: 'rgba(255,138,92,0.16)' },
   chipLabel: { ...typography.caption, color: colors.textMuted },
-  chipLabelActive: { color: colors.cyan, fontFamily: 'SpaceGrotesk_500Medium' },
+  chipLabelActive: { color: colors.cyan, fontFamily: 'Sora_500Medium' },
   qualityRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: -spacing.sm },
   qualityChip: {
     paddingVertical: 6,
     paddingHorizontal: spacing.sm + 4,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(5,8,5,0.5)',
+    backgroundColor: 'rgba(9,6,15,0.5)',
   },
   qualityLabel: { ...typography.caption, fontSize: 11, color: colors.textMuted },
   error: { ...typography.caption, color: colors.danger },

@@ -36,17 +36,17 @@ const styles = StyleSheet.create({
   input: {
     ...typography.body,
     color: colors.textPrimary,
-    backgroundColor: 'rgba(10,15,13,0.55)',
+    backgroundColor: 'rgba(16,11,24,0.55)',
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md - 2,
     borderWidth: 1,
-    borderColor: 'rgba(167,176,168,0.12)',
+    borderColor: 'rgba(174,165,192,0.12)',
   },
   inputFocused: {
-    borderColor: 'rgba(47,191,170,0.55)',
-    backgroundColor: 'rgba(10,15,13,0.8)',
+    borderColor: 'rgba(255,138,92,0.55)',
+    backgroundColor: 'rgba(16,11,24,0.8)',
   },
-  inputError: { backgroundColor: 'rgba(224,104,95,0.10)', borderColor: 'rgba(224,104,95,0.4)' },
+  inputError: { backgroundColor: 'rgba(232,80,110,0.10)', borderColor: 'rgba(232,80,110,0.4)' },
   error: { ...typography.caption, color: colors.danger },
 });

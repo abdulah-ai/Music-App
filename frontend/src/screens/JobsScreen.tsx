@@ -190,7 +190,7 @@ export function JobsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#050805' },
+  root: { flex: 1, backgroundColor: '#09060F' },
   scroll: { paddingBottom: spacing.xxl },
   headerRow: {
     flexDirection: 'row',
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   row: { borderRadius: radii.lg },
   rowContent: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
   badge: { width: 40, height: 40, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
-  pct: { ...typography.caption, fontSize: 10, color: colors.cyan, fontFamily: 'SpaceGrotesk_600SemiBold' },
+  pct: { ...typography.caption, fontSize: 10, color: colors.cyan, fontFamily: 'Sora_600SemiBold' },
   rowText: { flex: 1, gap: 3 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   title: { ...typography.subtitle, fontSize: 15, color: colors.textPrimary, flex: 1 },
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(5,8,5,0.5)',
+    backgroundColor: 'rgba(9,6,15,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
   },

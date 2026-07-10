@@ -146,7 +146,7 @@ export function PlayerScreen() {
     : undefined;
 
   const transport = (
-    <GlassPanel style={styles.dock} overlayColor="rgba(10,15,13,0.82)" edgeColor={accentColor ? `${accentColor}3d` : undefined}>
+    <GlassPanel style={styles.dock} overlayColor="rgba(16,11,24,0.82)" edgeColor={accentColor ? `${accentColor}3d` : undefined}>
       <View style={styles.dockContent}>
         <GradientText numberOfLines={1} style={styles.title}>
           {displayTitle(currentMedia)}
@@ -188,7 +188,7 @@ export function PlayerScreen() {
                 <Ionicons
                   name={playing ? 'pause' : 'play'}
                   size={32}
-                  color="#0A0F0D"
+                  color="#100B18"
                   style={playing ? undefined : styles.playGlyphNudge}
                 />
               </LinearGradient>
@@ -269,7 +269,7 @@ export function PlayerScreen() {
             value={muted ? 0 : volume}
             onValueChange={(v) => setVolume(v)}
             minimumTrackTintColor={accentColor ?? colors.cyan}
-            maximumTrackTintColor="rgba(167,176,168,0.25)"
+            maximumTrackTintColor="rgba(174,165,192,0.25)"
             thumbTintColor={accentColor ?? colors.cyan}
           />
         </View>
@@ -338,7 +338,7 @@ export function PlayerScreen() {
               <PressableScale onPress={toggle} scaleTo={0.92}>
                 <View style={styles.playShadow}>
                   <LinearGradient colors={colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.playButton}>
-                    <Ionicons name={playing ? 'pause' : 'play'} size={30} color="#0A0F0D" style={playing ? undefined : styles.playGlyphNudge} />
+                    <Ionicons name={playing ? 'pause' : 'play'} size={30} color="#100B18" style={playing ? undefined : styles.playGlyphNudge} />
                   </LinearGradient>
                 </View>
               </PressableScale>
@@ -411,7 +411,7 @@ export function PlayerScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#050805' },
+  root: { flex: 1, backgroundColor: '#09060F' },
   stage: { alignItems: 'center', justifyContent: 'center' },
   topBar: {
     position: 'absolute',
@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(18,28,24,0.72)',
+    backgroundColor: 'rgba(27,20,38,0.72)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(18,28,24,0.6)',
+    backgroundColor: 'rgba(27,20,38,0.6)',
   },
   liveDot: { width: 6, height: 6, borderRadius: radii.pill, backgroundColor: colors.success },
   liveDotBuffering: { backgroundColor: colors.cyan },
@@ -473,14 +473,14 @@ const styles = StyleSheet.create({
     top: 2,
     right: 4,
     fontSize: 9,
-    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
     color: colors.cyan,
   },
   sideButton: {
     width: SIDE_SIZE,
     height: SIDE_SIZE,
     borderRadius: SIDE_SIZE / 2,
-    backgroundColor: 'rgba(18,28,24,0.7)',
+    backgroundColor: 'rgba(27,20,38,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -514,11 +514,11 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: spacing.sm + 2,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(18,28,24,0.6)',
+    backgroundColor: 'rgba(27,20,38,0.6)',
   },
-  chipActive: { backgroundColor: 'rgba(47,191,170,0.16)' },
+  chipActive: { backgroundColor: 'rgba(255,138,92,0.16)' },
   chipLabel: { ...typography.caption, fontSize: 12, color: colors.textSecondary },
-  chipLabelActive: { ...typography.caption, fontSize: 12, color: colors.cyan, fontFamily: 'SpaceGrotesk_500Medium' },
+  chipLabelActive: { ...typography.caption, fontSize: 12, color: colors.cyan, fontFamily: 'Sora_500Medium' },
   upNextRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -572,18 +572,18 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(18,28,24,0.55)',
+    backgroundColor: 'rgba(27,20,38,0.55)',
   },
-  panelTabActive: { backgroundColor: 'rgba(47,191,170,0.16)' },
+  panelTabActive: { backgroundColor: 'rgba(255,138,92,0.16)' },
   panelTabLabel: { ...typography.caption, fontSize: 12, color: colors.textMuted },
-  panelTabLabelActive: { color: colors.cyan, fontFamily: 'SpaceGrotesk_500Medium' },
+  panelTabLabelActive: { color: colors.cyan, fontFamily: 'Sora_500Medium' },
 
   // ----- Mobile sheet -----
   sheetRoot: { flex: 1, justifyContent: 'flex-end' },
   sheetBackdrop: { ...(StyleSheet.absoluteFill as object), backgroundColor: 'rgba(3,5,3,0.65)' },
   sheet: {
     height: '72%',
-    backgroundColor: '#121C18',
+    backgroundColor: '#1B1426',
     borderTopLeftRadius: radii.lg + 8,
     borderTopRightRadius: radii.lg + 8,
     paddingTop: spacing.sm,
@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(167,176,168,0.3)',
+    backgroundColor: 'rgba(174,165,192,0.3)',
     marginBottom: spacing.sm,
   },
   sheetBody: { flex: 1 },
@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 2,
     borderRadius: 1,
-    backgroundColor: 'rgba(167,176,168,0.2)',
+    backgroundColor: 'rgba(174,165,192,0.2)',
     overflow: 'hidden',
     marginTop: spacing.sm,
   },

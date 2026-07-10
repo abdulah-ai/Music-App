@@ -467,20 +467,20 @@ function ActionButton({
   return (
     <PressableScale onPress={onPress} disabled={busy || disabled} scaleTo={0.97}>
       <LinearGradient colors={colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.action}>
-        {busy ? <ActivityIndicator size="small" color="#0A0F0D" /> : <Text style={styles.actionLabel}>{label}</Text>}
+        {busy ? <ActivityIndicator size="small" color="#100B18" /> : <Text style={styles.actionLabel}>{label}</Text>}
       </LinearGradient>
     </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#050805' },
+  root: { flex: 1, backgroundColor: '#09060F' },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(18,28,24,0.72)',
+    backgroundColor: 'rgba(27,20,38,0.72)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionLabel: { ...typography.subtitle, fontFamily: 'SpaceGrotesk_600SemiBold', color: '#0A0F0D' },
+  actionLabel: { ...typography.subtitle, fontFamily: 'Sora_600SemiBold', color: '#100B18' },
   linkedRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   linkedBadge: {
     width: 40,
@@ -510,12 +510,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  failedBadge: { backgroundColor: 'rgba(224,104,95,0.12)' },
+  failedBadge: { backgroundColor: 'rgba(232,80,110,0.12)' },
   searchCapsule: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: 'rgba(5,8,5,0.6)',
+    backgroundColor: 'rgba(9,6,15,0.6)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     height: 42,
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radii.md,
   },
-  dialogRowActive: { backgroundColor: 'rgba(47,191,170,0.10)' },
+  dialogRowActive: { backgroundColor: 'rgba(255,138,92,0.10)' },
   dialogTitle: { ...typography.body, color: colors.textSecondary, flex: 1 },
   dialogTitleActive: { color: colors.textPrimary },
   dialogHandle: { ...typography.caption, fontSize: 11, color: colors.textMuted },
@@ -542,11 +542,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(5,8,5,0.5)',
+    backgroundColor: 'rgba(9,6,15,0.5)',
   },
-  chipActive: { backgroundColor: 'rgba(47,191,170,0.16)' },
+  chipActive: { backgroundColor: 'rgba(255,138,92,0.16)' },
   chipLabel: { ...typography.caption, color: colors.textMuted },
-  chipLabelActive: { color: colors.cyan, fontFamily: 'SpaceGrotesk_500Medium' },
+  chipLabelActive: { color: colors.cyan, fontFamily: 'Sora_500Medium' },
   jobRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  jobPct: { ...typography.caption, fontSize: 11, color: colors.cyan, fontFamily: 'SpaceGrotesk_600SemiBold' },
+  jobPct: { ...typography.caption, fontSize: 11, color: colors.cyan, fontFamily: 'Sora_600SemiBold' },
 });

@@ -51,10 +51,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: 'rgba(18,28,24,0.96)',
+    backgroundColor: 'rgba(27,20,38,0.96)',
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: 'rgba(47,191,170,0.3)',
+    borderColor: 'rgba(255,138,92,0.3)',
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     maxWidth: 460,
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
   title: {
     ...typography.body,
     fontSize: 13,
-    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
     color: colors.textPrimary,
   },
   detail: {
@@ -82,9 +82,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   actionText: {
-    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 12,
-    color: '#0A0F0D',
+    color: '#100B18',
   },
   dismiss: {
     padding: 2,

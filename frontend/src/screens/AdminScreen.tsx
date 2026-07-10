@@ -285,7 +285,7 @@ function JobsTab({ jobs }: { jobs: AdminJob[] }) {
             <View
               style={[
                 styles.badge,
-                { backgroundColor: job.status === 'failed' ? 'rgba(224,104,95,0.14)' : 'rgba(95,191,142,0.14)' },
+                { backgroundColor: job.status === 'failed' ? 'rgba(232,80,110,0.14)' : 'rgba(95,191,142,0.14)' },
               ]}
             >
               <Ionicons
@@ -387,7 +387,7 @@ function FeedbackTab({ items, onChanged }: { items: AdminFeedback[]; onChanged: 
         <GlassPanel key={item.id} style={styles.row}>
           <View style={[styles.rowContent, { flexDirection: 'column', alignItems: 'stretch', gap: spacing.sm }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <View style={[styles.badge, { backgroundColor: item.status === 'open' ? 'rgba(47,191,170,0.14)' : 'rgba(167,176,168,0.14)' }]}>
+              <View style={[styles.badge, { backgroundColor: item.status === 'open' ? 'rgba(255,138,92,0.14)' : 'rgba(174,165,192,0.14)' }]}>
                 <Ionicons
                   name={item.status === 'open' ? 'ellipse' : 'checkmark-circle'}
                   size={16}
@@ -652,7 +652,7 @@ export function AdminScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#050805' },
+  root: { flex: 1, backgroundColor: '#09060F' },
   scroll: { paddingBottom: spacing.xxl },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
   backButton: {
@@ -672,11 +672,11 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(18,28,24,0.55)',
+    backgroundColor: 'rgba(27,20,38,0.55)',
   },
-  tabChipActive: { backgroundColor: 'rgba(47,191,170,0.16)' },
+  tabChipActive: { backgroundColor: 'rgba(255,138,92,0.16)' },
   tabLabel: { ...typography.caption, fontSize: 12, color: colors.textMuted },
-  tabLabelActive: { color: colors.cyan, fontFamily: 'SpaceGrotesk_500Medium' },
+  tabLabelActive: { color: colors.cyan, fontFamily: 'Sora_500Medium' },
   sectionTitle: {
     ...typography.eyebrow,
     fontSize: 11,
@@ -714,7 +714,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: radii.sm,
-    backgroundColor: 'rgba(47,191,170,0.16)',
+    backgroundColor: 'rgba(255,138,92,0.16)',
   },
   adminBadgeLabel: { ...typography.caption, fontSize: 9, letterSpacing: 1, color: colors.cyan },
   emailInput: {
@@ -731,7 +731,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     backgroundColor: 'rgba(255,255,255,0.06)',
   },
-  roleButtonActive: { backgroundColor: 'rgba(47,191,170,0.16)' },
+  roleButtonActive: { backgroundColor: 'rgba(255,138,92,0.16)' },
   roleButtonLabel: { ...typography.caption, color: colors.textSecondary },
   roleButtonLabelActive: { ...typography.caption, color: colors.cyan },
   feedbackMessage: { ...typography.body, color: colors.textPrimary },

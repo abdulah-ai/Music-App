@@ -95,7 +95,7 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: Props) {
           </Reveal>
 
           <Reveal delay={120} style={styles.formCol}>
-            <GlassPanel intensity={80} overlayColor="rgba(10,15,13,0.62)">
+            <GlassPanel intensity={80} overlayColor="rgba(16,11,24,0.62)">
               <View style={[styles.form, styles.formDesktop]}>{children}</View>
             </GlassPanel>
           </Reveal>
@@ -106,7 +106,7 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: Props) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#050805' },
+  root: { flex: 1, backgroundColor: '#09060F' },
 
   // ----- Mobile -----
   mobileScroll: {
@@ -165,9 +165,9 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(47,191,170,0.12)',
+    backgroundColor: 'rgba(255,138,92,0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(47,191,170,0.22)',
+    borderColor: 'rgba(255,138,92,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },

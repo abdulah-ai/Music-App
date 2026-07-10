@@ -32,15 +32,15 @@ export function GlassPanel({
   children,
   style,
   intensity: _intensity,
-  overlayColor = 'rgba(18,28,24,0.88)',
-  edgeColor = 'rgba(231,235,230,0.09)',
+  overlayColor = 'rgba(27,20,38,0.88)',
+  edgeColor = 'rgba(241,237,247,0.09)',
 }: Props) {
   return (
     <View style={[styles.shell, style]}>
       <View style={[styles.overlay, { backgroundColor: overlayColor }]} />
       {/* Faint vertical light falloff — the depth cue the blur used to give. */}
       <LinearGradient
-        colors={['rgba(231,235,230,0.05)', 'rgba(231,235,230,0.0)', 'rgba(5,8,5,0.10)']}
+        colors={['rgba(241,237,247,0.05)', 'rgba(241,237,247,0.0)', 'rgba(9,6,15,0.10)']}
         style={styles.overlay}
         pointerEvents="none"
       />
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(167,176,168,0.08)',
+    borderColor: 'rgba(174,165,192,0.08)',
     ...shadows.card,
   },
   overlay: {

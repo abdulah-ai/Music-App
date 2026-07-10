@@ -110,7 +110,7 @@ export function WaveformScrubber({ seedKey, progress, onSeekRatio, activeColor =
               styles.bar,
               {
                 height,
-                backgroundColor: played ? activeColor : 'rgba(167,176,168,0.25)',
+                backgroundColor: played ? activeColor : 'rgba(174,165,192,0.25)',
               },
               played && dragRatio !== null ? styles.barDragging : null,
             ]}

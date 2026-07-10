@@ -8,9 +8,9 @@ const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 
-const INK = '#0A0F0D';
-const MOON = '#E7EBE6';
-const GLOW = '#2FBFAA';
+const INK = '#100B18';
+const MOON = '#F1EDF7';
+const GLOW = '#FF8A5C';
 
 // Mark geometry mirrors BrandMark.tsx's 0 0 100 100 viewBox exactly.
 function markGroup({ moon = MOON, trees = INK, star = MOON, glow = true } = {}) {

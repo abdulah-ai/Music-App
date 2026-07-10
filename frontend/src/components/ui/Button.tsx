@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   primaryLabel: {
     ...typography.subtitle,
     color: colors.bg,
-    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
   },
   ghost: {
     borderRadius: radii.md,
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   dangerSurface: {
-    backgroundColor: 'rgba(224,104,95,0.12)',
+    backgroundColor: 'rgba(232,80,110,0.12)',
   },
   dangerLabel: {
     color: colors.danger,

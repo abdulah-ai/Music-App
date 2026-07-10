@@ -64,7 +64,7 @@ export function ContinueListeningWidget({ density, accentColor = colors.cyan }: 
             {thumbnailUri(currentMedia) && (
               <CoverBackdrop uri={thumbnailUri(currentMedia)} opacity={0.9} blurRadius={25} scrimOpacity={0.4} />
             )}
-            <GlassPanel style={styles.panelCompact} overlayColor="rgba(18,28,24,0.32)">
+            <GlassPanel style={styles.panelCompact} overlayColor="rgba(27,20,38,0.32)">
               <View style={styles.continueRow}>
                 <View style={styles.continueCover}>
                   {thumbnailUri(currentMedia) ? (
@@ -455,11 +455,11 @@ const styles = StyleSheet.create({
   jobContent: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   jobTitle: { ...typography.subtitle, fontSize: 14, color: colors.textPrimary, flex: 1 },
-  jobPct: { ...typography.caption, fontSize: 10, color: colors.cyan, fontFamily: 'SpaceGrotesk_600SemiBold' },
+  jobPct: { ...typography.caption, fontSize: 10, color: colors.cyan, fontFamily: 'Sora_600SemiBold' },
   jobBadge: { width: 40, height: 40, borderRadius: radii.pill, backgroundColor: 'rgba(95,191,142,0.12)', alignItems: 'center', justifyContent: 'center' },
-  jobBadgeFailed: { backgroundColor: 'rgba(224,104,95,0.12)' },
-  iconButton: { width: 32, height: 32, borderRadius: radii.pill, backgroundColor: 'rgba(5,8,5,0.5)', alignItems: 'center', justifyContent: 'center' },
-  coverCard: { borderRadius: radii.lg, overflow: 'hidden', justifyContent: 'flex-end', borderWidth: 1, borderColor: 'rgba(167,176,168,0.12)' },
+  jobBadgeFailed: { backgroundColor: 'rgba(232,80,110,0.12)' },
+  iconButton: { width: 32, height: 32, borderRadius: radii.pill, backgroundColor: 'rgba(9,6,15,0.5)', alignItems: 'center', justifyContent: 'center' },
+  coverCard: { borderRadius: radii.lg, overflow: 'hidden', justifyContent: 'flex-end', borderWidth: 1, borderColor: 'rgba(174,165,192,0.12)' },
   coverScrim: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '65%' },
   coverGlyphWrap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   coverMeta: { padding: spacing.sm + 2 },
@@ -473,8 +473,8 @@ const styles = StyleSheet.create({
     gap: spacing.md - 2,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: 'rgba(167,176,168,0.12)',
-    backgroundColor: 'rgba(18,28,24,0.5)',
+    borderColor: 'rgba(174,165,192,0.12)',
+    backgroundColor: 'rgba(27,20,38,0.5)',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
   },
@@ -482,9 +482,9 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(47,191,170,0.10)',
+    backgroundColor: 'rgba(255,138,92,0.10)',
     borderWidth: 1,
-    borderColor: 'rgba(47,191,170,0.2)',
+    borderColor: 'rgba(255,138,92,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -501,8 +501,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: 'rgba(167,176,168,0.12)',
-    backgroundColor: 'rgba(18,28,24,0.5)',
+    borderColor: 'rgba(174,165,192,0.12)',
+    backgroundColor: 'rgba(27,20,38,0.5)',
     paddingVertical: spacing.md - 2,
     paddingHorizontal: spacing.md,
   },

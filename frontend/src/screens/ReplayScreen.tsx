@@ -149,14 +149,14 @@ export function ReplayScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#050805' },
+  root: { flex: 1, backgroundColor: '#09060F' },
   scroll: { paddingBottom: spacing.xxl },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(18,28,24,0.72)',
+    backgroundColor: 'rgba(27,20,38,0.72)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: spacing.sm + 2,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(47,191,170,0.14)',
+    backgroundColor: 'rgba(255,138,92,0.14)',
   },
-  countText: { ...typography.caption, fontSize: 11, color: colors.cyan, fontFamily: 'SpaceGrotesk_600SemiBold' },
+  countText: { ...typography.caption, fontSize: 11, color: colors.cyan, fontFamily: 'Sora_600SemiBold' },
 });

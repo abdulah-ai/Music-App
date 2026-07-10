@@ -100,7 +100,7 @@ function GlassDock({ state, navigation }: BottomTabBarProps) {
               cost). A slightly deeper tint + gradient lift reads the same. */}
           <View style={styles.pillOverlay} />
           <LinearGradient
-            colors={['rgba(231,235,230,0.06)', 'rgba(231,235,230,0)']}
+            colors={['rgba(241,237,247,0.06)', 'rgba(241,237,247,0)']}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
@@ -139,7 +139,7 @@ function GlassDock({ state, navigation }: BottomTabBarProps) {
                 end={{ x: 1, y: 1 }}
                 style={styles.scanButton}
               >
-                <Ionicons name="mic" size={26} color="#0A0F0D" />
+                <Ionicons name="mic" size={26} color="#100B18" />
               </LinearGradient>
             </View>
           </PressableScale>
@@ -174,6 +174,9 @@ export function MainTabs() {
       tabBar={(props) => (isDesktop ? <NavRail {...props} /> : <GlassDock {...props} />)}
       screenOptions={{
         headerShown: false,
+        // Cross-fade between tab scenes — tab switches feel composed instead
+        // of the default hard cut.
+        animation: 'fade',
         sceneStyle: isDesktop ? { paddingLeft: RAIL_WIDTH } : undefined,
       }}
     >
@@ -201,7 +204,7 @@ const styles = StyleSheet.create({
     borderRadius: layout.dockHeight / 2,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(167,176,168,0.14)',
+    borderColor: 'rgba(174,165,192,0.14)',
     ...shadows.card,
   },
   pillOverlay: {
@@ -212,7 +215,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     // Deeper than the old blur-era 0.6 — with no blur behind it, the tint
     // alone has to keep dock labels legible over busy content.
-    backgroundColor: 'rgba(10,15,13,0.85)',
+    backgroundColor: 'rgba(16,11,24,0.85)',
   },
   pillRow: {
     flex: 1,
@@ -226,7 +229,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   dockLabel: {
-    fontFamily: 'SpaceGrotesk_500Medium',
+    fontFamily: 'Sora_500Medium',
     fontSize: 10,
     letterSpacing: 0.4,
     color: colors.textMuted,
@@ -288,11 +291,11 @@ const styles = StyleSheet.create({
     width: RAIL_WIDTH,
     paddingHorizontal: spacing.md,
     borderRightWidth: 1,
-    borderRightColor: 'rgba(167,176,168,0.12)',
+    borderRightColor: 'rgba(174,165,192,0.12)',
     overflow: 'hidden',
   },
   railOverlay: {
     ...(StyleSheet.absoluteFill as object),
-    backgroundColor: 'rgba(5,8,5,0.88)',
+    backgroundColor: 'rgba(9,6,15,0.88)',
   },
 });

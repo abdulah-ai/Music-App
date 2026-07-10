@@ -2,7 +2,7 @@
   "appId": "com.duskglen.app",
   "appName": "Duskglen",
   "webDir": "dist",
-  "backgroundColor": "#0A0F0D",
+  "backgroundColor": "#100B18",
   "android": {
     "allowMixedContent": false
   },

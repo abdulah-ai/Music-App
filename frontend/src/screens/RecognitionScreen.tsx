@@ -300,7 +300,7 @@ export function RecognitionScreen() {
                   cx={RING_SIZE / 2}
                   cy={RING_SIZE / 2}
                   r={(RING_SIZE - RING_STROKE) / 2}
-                  stroke="rgba(47,191,170,0.35)"
+                  stroke="rgba(255,138,92,0.35)"
                   strokeWidth={1.5}
                   strokeDasharray="3 16"
                   strokeLinecap="round"
@@ -345,7 +345,7 @@ export function RecognitionScreen() {
           >
             <View style={styles.listenShadow}>
               <LinearGradient
-                colors={micActive ? colors.gradientPrimary : ['rgba(47,191,170,0.4)', 'rgba(155,143,217,0.4)']}
+                colors={micActive ? colors.gradientPrimary : ['rgba(255,138,92,0.4)', 'rgba(179,157,255,0.4)']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.listenRing}
@@ -420,7 +420,7 @@ export function RecognitionScreen() {
                         <Image source={{ uri: match.match_thumbnail_url }} style={styles.resultCover} />
                       ) : (
                         <LinearGradient colors={colors.gradientPrimary} style={styles.resultCover}>
-                          <Ionicons name="musical-notes" size={26} color="#0A0F0D" />
+                          <Ionicons name="musical-notes" size={26} color="#100B18" />
                         </LinearGradient>
                       )}
                       <View style={styles.resultText}>
@@ -471,7 +471,7 @@ export function RecognitionScreen() {
                         end={{ x: 1, y: 1 }}
                         style={styles.manualGo}
                       >
-                        <Ionicons name="search" size={18} color="#0A0F0D" />
+                        <Ionicons name="search" size={18} color="#100B18" />
                       </LinearGradient>
                     </PressableScale>
                   </View>
@@ -514,7 +514,7 @@ export function RecognitionScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#050805',
+    backgroundColor: '#09060F',
   },
   triggerHolder: {
     position: 'absolute',
@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
   listenInner: {
     flex: 1,
     borderRadius: (BUTTON_SIZE - 6) / 2,
-    backgroundColor: 'rgba(5,8,5,0.92)',
+    backgroundColor: 'rgba(9,6,15,0.92)',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     flex: 1,
     color: colors.textPrimary,
-    backgroundColor: 'rgba(18,28,24,0.6)',
+    backgroundColor: 'rgba(27,20,38,0.6)',
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md - 6,
@@ -651,7 +651,7 @@ const styles = StyleSheet.create({
   },
   historyBlock: {
     alignSelf: 'stretch',
-    backgroundColor: 'rgba(18,28,24,0.35)',
+    backgroundColor: 'rgba(27,20,38,0.35)',
     borderRadius: radii.md,
     padding: spacing.md,
     gap: spacing.sm,
