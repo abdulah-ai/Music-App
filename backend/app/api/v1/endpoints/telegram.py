@@ -10,6 +10,7 @@ from app.schemas.job import JobOut
 from app.schemas.telegram import (
     TelegramCodeIn,
     TelegramDialogOut,
+    TelegramFolderOut,
     TelegramImportIn,
     TelegramPasswordIn,
     TelegramSettingsIn,
@@ -155,6 +156,25 @@ async def list_dialogs(
     return dialogs
 
 
+@router.get("/folders", response_model=list[TelegramFolderOut])
+async def list_folders(
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+) -> list[TelegramFolderOut]:
+    account = await _get_account(current_user.id, db)
+    if account is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Save your Telegram API settings first")
+
+    client = telegram_service.make_client(account)
+    try:
+        await client.connect()
+        if not await client.is_user_authorized():
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Telegram is not linked yet")
+        folders = await telegram_service.list_folders(client)
+    finally:
+        await client.disconnect()
+    return [TelegramFolderOut(id=f["id"], title=f["title"], chat_count=len(f["chat_refs"])) for f in folders]
+
+
 @router.post("/import", response_model=JobOut, status_code=status.HTTP_202_ACCEPTED)
 async def start_import(
     payload: TelegramImportIn,
@@ -164,18 +184,42 @@ async def start_import(
 ) -> JobOut:
     if payload.media_kind not in {"music", "video"}:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "media_kind must be 'music' or 'video'")
+    if not payload.chats and payload.folder_id is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Provide chats or a folder_id")
 
     account = await _get_account(current_user.id, db)
     if account is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Save your Telegram API settings first")
 
+    chat_refs = list(payload.chats)
+    label = f"{len(chat_refs)} chat{'s' if len(chat_refs) != 1 else ''}"
+
+    if payload.folder_id is not None:
+        client = telegram_service.make_client(account)
+        try:
+            await client.connect()
+            if not await client.is_user_authorized():
+                raise HTTPException(status.HTTP_403_FORBIDDEN, "Telegram is not linked yet")
+            folders = await telegram_service.list_folders(client)
+        finally:
+            await client.disconnect()
+        match = next((f for f in folders if f["id"] == payload.folder_id), None)
+        if match is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "That folder no longer exists")
+        chat_refs = match["chat_refs"]
+        label = match["title"]
+        if not chat_refs:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "That folder has no chats")
+
     job = Job(
         user_id=current_user.id,
         job_type=JobType.DOWNLOAD,
-        source_url=f"telegram:{payload.chat}",
+        source_url=f"telegram:{label}",
     )
     db.add(job)
-    await log_event(db, "job_created", user_id=current_user.id, detail=f"telegram import: {payload.chat}")
+    await log_event(
+        db, "job_created", user_id=current_user.id, detail=f"telegram import: {label} ({len(chat_refs)} chat(s))"
+    )
     await db.commit()
     await db.refresh(job)
 
@@ -183,7 +227,7 @@ async def start_import(
         job_engine.run_telegram_import_job,
         job.id,
         current_user.id,
-        payload.chat,
+        chat_refs,
         payload.media_kind,
         payload.limit,
     )

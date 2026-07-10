@@ -48,9 +48,14 @@ def is_admin_email(email: str) -> bool:
     return bool(settings.admin_email) and email.lower() == settings.admin_email.lower()
 
 
+def is_admin_user(user: User) -> bool:
+    """True via either admin path: the deployment-owner env var (always on,
+    can't be revoked through the UI) or a role explicitly granted by an
+    existing admin (see PATCH /admin/users/{id})."""
+    return is_admin_email(user.email) or user.role == "admin"
+
+
 async def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:
-    """A normal user whose email happens to match SMA_ADMIN_EMAIL — no
-    separate role/permission system, nothing stored on the user row."""
-    if not is_admin_email(current_user.email):
+    if not is_admin_user(current_user):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Admin access required")
     return current_user

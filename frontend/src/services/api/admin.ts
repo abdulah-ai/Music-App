@@ -10,18 +10,38 @@ export type AdminStats = {
   recognition_success_rate: number | null;
   telegram_linked_users: number;
   signups_last_30_days: { date: string; count: number }[];
+  open_feedback_count: number;
 };
 
 export type AdminUser = {
   id: string;
   email: string;
   display_name: string;
+  is_admin: boolean;
   created_at: string;
   media_count: number;
   job_count: number;
   storage_bytes: number;
   telegram_linked: boolean;
   last_activity_at: string | null;
+};
+
+export type AdminFeedback = {
+  id: string;
+  user_id: string;
+  user_email: string | null;
+  message: string;
+  status: 'open' | 'resolved';
+  admin_reply: string | null;
+  created_at: string;
+  resolved_at: string | null;
+};
+
+export type Announcement = {
+  id: string;
+  title: string;
+  body: string;
+  created_at: string;
 };
 
 export type AdminJob = {
@@ -66,4 +86,41 @@ export async function getLogs(eventType?: string, limit = 50, offset = 0): Promi
     params: { event_type: eventType, limit, offset },
   });
   return data;
+}
+
+export async function updateUser(
+  userId: string,
+  payload: { role?: 'admin' | 'user'; email?: string },
+): Promise<AdminUser> {
+  const { data } = await apiClient.patch<AdminUser>(`/admin/users/${userId}`, payload);
+  return data;
+}
+
+export async function getFeedback(status?: 'open' | 'resolved', limit = 50, offset = 0): Promise<Page<AdminFeedback>> {
+  const { data } = await apiClient.get<Page<AdminFeedback>>('/admin/feedback', {
+    params: { status, limit, offset },
+  });
+  return data;
+}
+
+export async function updateFeedback(
+  feedbackId: string,
+  payload: { status?: 'open' | 'resolved'; admin_reply?: string },
+): Promise<AdminFeedback> {
+  const { data } = await apiClient.patch<AdminFeedback>(`/admin/feedback/${feedbackId}`, payload);
+  return data;
+}
+
+export async function createAnnouncement(title: string, body: string): Promise<Announcement> {
+  const { data } = await apiClient.post<Announcement>('/admin/announcements', { title, body });
+  return data;
+}
+
+export async function listAnnouncementsAdmin(): Promise<Announcement[]> {
+  const { data } = await apiClient.get<Announcement[]>('/admin/announcements');
+  return data;
+}
+
+export async function deleteAnnouncement(id: string): Promise<void> {
+  await apiClient.delete(`/admin/announcements/${id}`);
 }

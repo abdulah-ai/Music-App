@@ -48,9 +48,13 @@ export type Playlist = {
   items: Media[];
 };
 
+export type StoragePreference = 'auto' | 'local' | 'cloud';
+
 export type User = {
   id: string;
   email: string;
   display_name: string;
   is_admin: boolean;
+  storage_preference: StoragePreference;
+  cloud_storage_available: boolean;
 };

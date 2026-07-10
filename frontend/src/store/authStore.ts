@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import * as authApi from '../services/api/auth';
 import * as offlineMedia from '../services/storage/offlineMedia';
 import { tokenStorage } from '../services/storage/tokenStorage';
-import type { User } from '../services/api/types';
+import type { StoragePreference, User } from '../services/api/types';
 
 type AuthState = {
   user: User | null;
@@ -15,6 +15,7 @@ type AuthState = {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, displayName: string, inviteCode?: string) => Promise<void>;
   logout: () => Promise<void>;
+  setStoragePreference: (preference: StoragePreference) => Promise<void>;
 };
 
 /** True only for a genuine "this token is invalid" rejection — never for "we couldn't reach the server". */
@@ -75,5 +76,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     await tokenStorage.clear();
     await offlineMedia.clearAll();
     set({ user: null, isAuthenticated: false, isOfflineSession: false });
+  },
+
+  async setStoragePreference(preference) {
+    const updated = await authApi.updateStoragePreference(preference);
+    await tokenStorage.setCachedUser(updated);
+    set({ user: updated });
   },
 }));

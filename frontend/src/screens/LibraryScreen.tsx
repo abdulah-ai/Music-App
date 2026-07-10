@@ -126,6 +126,8 @@ export function LibraryScreen() {
   const [playlistPickTarget, setPlaylistPickTarget] = useState<{ ids: string[]; label: string } | null>(null);
   const [offlineIds, setOfflineIds] = useState<Record<string, boolean>>({});
   const [savingOffline, setSavingOffline] = useState(false);
+  const [bulkDownloading, setBulkDownloading] = useState(false);
+  const [bulkDownloadProgress, setBulkDownloadProgress] = useState<{ done: number; total: number } | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Record<string, true>>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -225,6 +227,76 @@ export function LibraryScreen() {
     } finally {
       setSavingOffline(false);
       setSheetMedia(null);
+    }
+  }
+
+  // Native has no offline cache yet (offlineMedia is web-only, see its file
+  // header) — the best "save to device" we can do there is trigger the OS's
+  // own download/share sheet per file, one at a time so rapid Linking.openURL
+  // calls don't fight each other. Capped since firing hundreds of native
+  // download intents back-to-back isn't a real "download all" experience.
+  const NATIVE_DOWNLOAD_CAP = 50;
+
+  async function handleDownloadMany(mediaList: Media[]) {
+    if (bulkDownloading || mediaList.length === 0) return;
+    const webSupported = offlineMedia.isSupported();
+    const targets = webSupported ? mediaList : mediaList.slice(0, NATIVE_DOWNLOAD_CAP);
+    if (!webSupported && mediaList.length > NATIVE_DOWNLOAD_CAP) {
+      toast(`Downloading the first ${NATIVE_DOWNLOAD_CAP} — run this again for the rest`, 'info');
+    }
+
+    setBulkDownloading(true);
+    setBulkDownloadProgress({ done: 0, total: targets.length });
+    const token = await tokenStorage.getAccessToken();
+    let failed = 0;
+
+    try {
+      let cursor = 0;
+      const worker = async (): Promise<void> => {
+        const i = cursor++;
+        if (i >= targets.length) return;
+        const media = targets[i];
+        try {
+          if (webSupported) {
+            if (!offlineIds[media.id]) {
+              const url = token
+                ? `${libraryApi.streamUrl(media.id)}?proxy=1&token=${encodeURIComponent(token)}`
+                : `${libraryApi.streamUrl(media.id)}?proxy=1`;
+              await offlineMedia.saveOffline(media, url);
+              setOfflineIds((prev) => ({ ...prev, [media.id]: true }));
+            }
+          } else {
+            const url = token
+              ? `${libraryApi.streamUrl(media.id)}?token=${encodeURIComponent(token)}`
+              : libraryApi.streamUrl(media.id);
+            await Linking.openURL(url);
+            await new Promise((resolve) => setTimeout(resolve, 400));
+          }
+        } catch {
+          failed += 1;
+        } finally {
+          setBulkDownloadProgress((prev) => (prev ? { done: prev.done + 1, total: prev.total } : prev));
+        }
+        return worker();
+      };
+      // Concurrent fetches are fine for the web cache path; native OS-intent
+      // downloads run one at a time (see comment above).
+      const concurrency = webSupported ? 3 : 1;
+      await Promise.all(Array.from({ length: Math.min(concurrency, targets.length) }, worker));
+
+      if (webSupported) {
+        toast(
+          failed > 0
+            ? `Saved ${targets.length - failed} of ${targets.length} for offline playback`
+            : `Saved ${targets.length} track${targets.length === 1 ? '' : 's'} for offline playback`,
+          failed > 0 ? 'info' : 'success',
+        );
+      } else {
+        toast(`Started ${targets.length} download${targets.length === 1 ? '' : 's'}`, 'success');
+      }
+    } finally {
+      setBulkDownloading(false);
+      setBulkDownloadProgress(null);
     }
   }
 
@@ -410,6 +482,24 @@ export function LibraryScreen() {
                   color={selectMode ? colors.cyan : colors.textSecondary}
                 />
               </Pressable>
+              {visible.length > 0 && (
+                <Pressable
+                  onPress={() => handleDownloadMany(visible)}
+                  disabled={bulkDownloading}
+                  style={[styles.toolChip, bulkDownloading && { opacity: 0.6 }]}
+                >
+                  {bulkDownloading ? (
+                    <ActivityIndicator size="small" color={colors.textSecondary} />
+                  ) : (
+                    <Ionicons name="cloud-download-outline" size={14} color={colors.textSecondary} />
+                  )}
+                  <Text style={styles.toolLabel}>
+                    {bulkDownloadProgress
+                      ? `${bulkDownloadProgress.done}/${bulkDownloadProgress.total}`
+                      : 'Download all'}
+                  </Text>
+                </Pressable>
+              )}
             </View>
           )}
         </View>
@@ -497,6 +587,20 @@ export function LibraryScreen() {
             >
               <Ionicons name="list" size={15} color={colors.textSecondary} />
               <Text style={styles.bulkButtonLabel}>Move to playlist</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => handleDownloadMany(visible.filter((m) => selectedIds[m.id]))}
+              disabled={Object.keys(selectedIds).length === 0 || bulkDownloading}
+              style={[styles.bulkButton, Object.keys(selectedIds).length === 0 && { opacity: 0.4 }]}
+            >
+              {bulkDownloading ? (
+                <ActivityIndicator size="small" color={colors.textSecondary} />
+              ) : (
+                <Ionicons name="cloud-download-outline" size={15} color={colors.textSecondary} />
+              )}
+              <Text style={styles.bulkButtonLabel}>
+                {bulkDownloadProgress ? `${bulkDownloadProgress.done}/${bulkDownloadProgress.total}` : 'Download'}
+              </Text>
             </Pressable>
             <Pressable
               onPress={handleDeleteSelected}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -10,6 +10,7 @@ import { Button } from '../components/ui/Button';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { ScreenContainer } from '../components/ui/ScreenContainer';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import * as feedbackApi from '../services/api/feedback';
 import * as recognitionsApi from '../services/api/recognitions';
 import * as telegramApi from '../services/api/telegram';
 import type { TelegramStatus } from '../services/api/telegram';
@@ -81,10 +82,35 @@ function SectionTitle({ children }: { children: string }) {
   return <Text style={styles.sectionTitle}>{children}</Text>;
 }
 
+const STORAGE_OPTIONS: Array<{ value: 'auto' | 'local' | 'cloud'; label: string; hint: string }> = [
+  { value: 'auto', label: 'Automatic', hint: "This server's default for new downloads." },
+  { value: 'cloud', label: 'Cloud', hint: 'New downloads go to the cloud bucket — survives redeploys.' },
+  {
+    value: 'local',
+    label: 'Server disk',
+    hint: 'New downloads stay on this server’s disk — cleared on redeploy on free hosting tiers, not recommended unless you know this server has persistent storage.',
+  },
+];
+
 export function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const setStoragePreference = useAuthStore((s) => s.setStoragePreference);
+  const [savingStoragePref, setSavingStoragePref] = useState(false);
+
+  async function handleStoragePreference(pref: 'auto' | 'local' | 'cloud') {
+    if (savingStoragePref || pref === (user?.storage_preference ?? 'auto')) return;
+    setSavingStoragePref(true);
+    try {
+      await setStoragePreference(pref);
+      toast('Storage preference updated', 'success');
+    } catch {
+      toast("Couldn't update your storage preference", 'error');
+    } finally {
+      setSavingStoragePref(false);
+    }
+  }
   const items = useLibraryStore((s) => s.items);
   const upsertMedia = useLibraryStore((s) => s.upsert);
   const { networkOnline, backendOnline } = useOnlineStatus();
@@ -97,6 +123,23 @@ export function SettingsScreen() {
   const [offlineEntries, setOfflineEntries] = useState<OfflineEntry[]>([]);
   const [clearing, setClearing] = useState(false);
   const [naming, setNaming] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [sendingFeedback, setSendingFeedback] = useState(false);
+
+  async function handleSendFeedback() {
+    const message = feedbackMessage.trim();
+    if (!message || sendingFeedback) return;
+    setSendingFeedback(true);
+    try {
+      await feedbackApi.submitFeedback(message);
+      setFeedbackMessage('');
+      toast('Thanks — sent to the team', 'success');
+    } catch {
+      toast("Couldn't send that right now", 'error');
+    } finally {
+      setSendingFeedback(false);
+    }
+  }
 
   async function nameLibrary() {
     if (naming) return;
@@ -262,6 +305,31 @@ export function SettingsScreen() {
                 </Text>
               </View>
 
+              <View style={{ gap: spacing.xs }}>
+                <Text style={styles.fieldLabel}>Where new downloads are stored</Text>
+                <View style={styles.segmentRow}>
+                  {STORAGE_OPTIONS.filter((opt) => opt.value !== 'cloud' || user?.cloud_storage_available).map(
+                    (opt) => {
+                      const active = (user?.storage_preference ?? 'auto') === opt.value;
+                      return (
+                        <Pressable
+                          key={opt.value}
+                          onPress={() => handleStoragePreference(opt.value)}
+                          disabled={savingStoragePref}
+                          style={[styles.segment, active && styles.segmentActive]}
+                        >
+                          <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>{opt.label}</Text>
+                        </Pressable>
+                      );
+                    },
+                  )}
+                </View>
+                <Text style={styles.hint}>
+                  {STORAGE_OPTIONS.find((o) => o.value === (user?.storage_preference ?? 'auto'))?.hint}
+                  {' '}Only affects new imports/downloads — your existing library stays where it already is.
+                </Text>
+              </View>
+
               {offlineSupported ? (
                 <>
                   <View style={styles.fieldRow}>
@@ -308,6 +376,29 @@ export function SettingsScreen() {
                 <Ionicons name="download-outline" size={18} color={colors.textSecondary} />
                 <Text style={styles.toolLabel}>Export library as JSON</Text>
               </Pressable>
+            </View>
+          </GlassPanel>
+
+          <SectionTitle>FEEDBACK</SectionTitle>
+          <GlassPanel style={styles.panel}>
+            <View style={styles.panelBody}>
+              <Text style={styles.hint}>Found a bug, or want something changed? Tell us directly.</Text>
+              <TextInput
+                value={feedbackMessage}
+                onChangeText={setFeedbackMessage}
+                placeholder="What's on your mind?"
+                placeholderTextColor={colors.textMuted}
+                multiline
+                style={styles.feedbackInput}
+              />
+              <Button
+                label={sendingFeedback ? 'Sending…' : 'Send feedback'}
+                variant="ghost"
+                loading={sendingFeedback}
+                disabled={!feedbackMessage.trim()}
+                onPress={handleSendFeedback}
+                style={styles.inlineButton}
+              />
             </View>
           </GlassPanel>
 
@@ -373,6 +464,26 @@ const styles = StyleSheet.create({
   fieldRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   fieldLabel: { ...typography.body, color: colors.textMuted },
+  segmentRow: { flexDirection: 'row', gap: spacing.xs },
+  segment: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  segmentActive: { backgroundColor: 'rgba(47,191,170,0.16)' },
+  segmentLabel: { ...typography.caption, color: colors.textMuted },
+  segmentLabelActive: { color: colors.cyan, fontFamily: 'SpaceGrotesk_500Medium' },
+  feedbackInput: {
+    ...typography.body,
+    color: colors.textPrimary,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: radii.md,
+    padding: spacing.sm,
+    minHeight: 72,
+    textAlignVertical: 'top',
+  },
   fieldValue: { ...typography.subtitle, fontSize: 15, color: colors.textPrimary, textAlign: 'right', flexShrink: 1 },
   hint: { ...typography.caption, color: colors.textMuted, lineHeight: 18 },
   aboutRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

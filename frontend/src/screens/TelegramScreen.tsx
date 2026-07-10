@@ -30,7 +30,13 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Telegram'>;
 
 type LinkPhase = 'loading' | 'setup' | 'code' | 'password' | 'linked';
 
-const LIMITS = [10, 25, 50, 100] as const;
+const LIMITS: Array<{ label: string; value: number | null }> = [
+  { label: '25', value: 25 },
+  { label: '100', value: 100 },
+  { label: '500', value: 500 },
+  { label: '2,000', value: 2000 },
+  { label: 'All', value: null },
+];
 
 export function TelegramScreen({ navigation }: Props) {
   const refreshLibrary = useLibraryStore((s) => s.refresh);
@@ -44,13 +50,31 @@ export function TelegramScreen({ navigation }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [pickerTab, setPickerTab] = useState<'chats' | 'folders'>('chats');
   const [dialogs, setDialogs] = useState<telegramApi.TelegramDialog[] | null>(null);
   const [dialogQuery, setDialogQuery] = useState('');
-  const [selectedChat, setSelectedChat] = useState<telegramApi.TelegramDialog | null>(null);
+  const [selectedChats, setSelectedChats] = useState<Record<string, telegramApi.TelegramDialog>>({});
+  const [folders, setFolders] = useState<telegramApi.TelegramFolder[] | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<telegramApi.TelegramFolder | null>(null);
   const [mediaKind, setMediaKind] = useState<'music' | 'video'>('music');
-  const [limit, setLimit] = useState<number>(25);
+  const [limit, setLimit] = useState<number | null>(25);
   const [importJob, setImportJob] = useState<Job | null>(null);
   const unsubscribeImport = useRef<(() => void) | null>(null);
+
+  function toggleChat(dialog: telegramApi.TelegramDialog) {
+    setSelectedFolder(null);
+    setSelectedChats((prev) => {
+      const next = { ...prev };
+      if (next[dialog.id]) delete next[dialog.id];
+      else next[dialog.id] = dialog;
+      return next;
+    });
+  }
+
+  function pickFolder(folder: telegramApi.TelegramFolder) {
+    setSelectedChats({});
+    setSelectedFolder((prev) => (prev?.id === folder.id ? null : folder));
+  }
 
   useEffect(() => {
     let alive = true;
@@ -124,7 +148,12 @@ export function TelegramScreen({ navigation }: Props) {
     setError(null);
     setBusy(true);
     try {
-      setDialogs(await telegramApi.listDialogs());
+      const [dialogList, folderList] = await Promise.all([
+        telegramApi.listDialogs(),
+        telegramApi.listFolders().catch(() => []),
+      ]);
+      setDialogs(dialogList);
+      setFolders(folderList);
     } catch (err) {
       fail(err, "Couldn't load your chats.");
     } finally {
@@ -132,15 +161,16 @@ export function TelegramScreen({ navigation }: Props) {
     }
   }
 
+  const selectedChatList = useMemo(() => Object.values(selectedChats), [selectedChats]);
+
   async function handleImport() {
-    if (!selectedChat) return;
+    if (!selectedFolder && selectedChatList.length === 0) return;
     setError(null);
     try {
-      const job = await telegramApi.startImport(
-        selectedChat.username ?? selectedChat.id,
-        mediaKind,
-        limit,
-      );
+      const target: telegramApi.ImportTarget = selectedFolder
+        ? { folderId: selectedFolder.id }
+        : { chats: selectedChatList.map((d) => d.username ?? d.id) };
+      const job = await telegramApi.startImport(target, mediaKind, limit);
       setImportJob(job);
       unsubscribeImport.current?.();
       unsubscribeImport.current = watchJob(job.id, (update) => {
@@ -246,50 +276,107 @@ export function TelegramScreen({ navigation }: Props) {
                     <ActionButton label="Load my chats" busy={busy} onPress={loadDialogs} />
                   ) : (
                     <>
-                      <View style={styles.searchCapsule}>
-                        <Ionicons name="search" size={15} color={colors.textMuted} />
-                        <TextInput
-                          value={dialogQuery}
-                          onChangeText={setDialogQuery}
-                          placeholder="Search chats"
-                          placeholderTextColor={colors.textMuted}
-                          selectionColor={colors.cyan}
-                          style={styles.searchInput}
-                        />
+                      <View style={styles.chipRow}>
+                        <Pressable
+                          onPress={() => setPickerTab('chats')}
+                          style={[styles.chip, pickerTab === 'chats' && styles.chipActive]}
+                        >
+                          <Text style={[styles.chipLabel, pickerTab === 'chats' && styles.chipLabelActive]}>
+                            Chats{selectedChatList.length > 0 ? ` (${selectedChatList.length})` : ''}
+                          </Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => setPickerTab('folders')}
+                          style={[styles.chip, pickerTab === 'folders' && styles.chipActive]}
+                        >
+                          <Text style={[styles.chipLabel, pickerTab === 'folders' && styles.chipLabelActive]}>
+                            Folders{folders?.length ? ` (${folders.length})` : ''}
+                          </Text>
+                        </Pressable>
                       </View>
-                      <View style={styles.dialogList}>
-                        {filteredDialogs?.map((dialog) => {
-                          const active = selectedChat?.id === dialog.id;
-                          return (
-                            <Pressable
-                              key={dialog.id}
-                              onPress={() => setSelectedChat(dialog)}
-                              style={[styles.dialogRow, active && styles.dialogRowActive]}
-                            >
-                              <Ionicons
-                                name={active ? 'radio-button-on' : 'radio-button-off'}
-                                size={16}
-                                color={active ? colors.cyan : colors.textMuted}
-                              />
-                              <Text numberOfLines={1} style={[styles.dialogTitle, active && styles.dialogTitleActive]}>
-                                {dialog.title}
-                              </Text>
-                              {dialog.username ? <Text style={styles.dialogHandle}>@{dialog.username}</Text> : null}
-                            </Pressable>
-                          );
-                        })}
-                        {filteredDialogs?.length === 0 && <Text style={styles.hint}>No chats match that search.</Text>}
-                      </View>
+
+                      {pickerTab === 'chats' ? (
+                        <>
+                          <Text style={styles.hint}>Tap to select one or more chats — imports pull from all of them.</Text>
+                          <View style={styles.searchCapsule}>
+                            <Ionicons name="search" size={15} color={colors.textMuted} />
+                            <TextInput
+                              value={dialogQuery}
+                              onChangeText={setDialogQuery}
+                              placeholder="Search chats"
+                              placeholderTextColor={colors.textMuted}
+                              selectionColor={colors.cyan}
+                              style={styles.searchInput}
+                            />
+                          </View>
+                          <View style={styles.dialogList}>
+                            {filteredDialogs?.map((dialog) => {
+                              const active = Boolean(selectedChats[dialog.id]);
+                              return (
+                                <Pressable
+                                  key={dialog.id}
+                                  onPress={() => toggleChat(dialog)}
+                                  style={[styles.dialogRow, active && styles.dialogRowActive]}
+                                >
+                                  <Ionicons
+                                    name={active ? 'checkbox' : 'square-outline'}
+                                    size={16}
+                                    color={active ? colors.cyan : colors.textMuted}
+                                  />
+                                  <Text numberOfLines={1} style={[styles.dialogTitle, active && styles.dialogTitleActive]}>
+                                    {dialog.title}
+                                  </Text>
+                                  {dialog.username ? <Text style={styles.dialogHandle}>@{dialog.username}</Text> : null}
+                                </Pressable>
+                              );
+                            })}
+                            {filteredDialogs?.length === 0 && <Text style={styles.hint}>No chats match that search.</Text>}
+                          </View>
+                        </>
+                      ) : (
+                        <>
+                          <Text style={styles.hint}>Import every chat inside one of your Telegram folders at once.</Text>
+                          <View style={styles.dialogList}>
+                            {folders?.map((folder) => {
+                              const active = selectedFolder?.id === folder.id;
+                              return (
+                                <Pressable
+                                  key={folder.id}
+                                  onPress={() => pickFolder(folder)}
+                                  style={[styles.dialogRow, active && styles.dialogRowActive]}
+                                >
+                                  <Ionicons
+                                    name={active ? 'radio-button-on' : 'radio-button-off'}
+                                    size={16}
+                                    color={active ? colors.cyan : colors.textMuted}
+                                  />
+                                  <Text numberOfLines={1} style={[styles.dialogTitle, active && styles.dialogTitleActive]}>
+                                    {folder.title}
+                                  </Text>
+                                  <Text style={styles.dialogHandle}>{folder.chat_count} chats</Text>
+                                </Pressable>
+                              );
+                            })}
+                            {folders?.length === 0 && (
+                              <Text style={styles.hint}>You don't have any custom folders in Telegram yet.</Text>
+                            )}
+                          </View>
+                        </>
+                      )}
                     </>
                   )}
                 </View>
               </GlassPanel>
 
-              {selectedChat && (
+              {(selectedFolder || selectedChatList.length > 0) && (
                 <GlassPanel style={styles.panel}>
                   <View style={styles.panelContent}>
                     <Text style={styles.panelTitle} numberOfLines={1}>
-                      Import from {selectedChat.title}
+                      {selectedFolder
+                        ? `Import folder "${selectedFolder.title}" (${selectedFolder.chat_count} chats)`
+                        : selectedChatList.length === 1
+                          ? `Import from ${selectedChatList[0].title}`
+                          : `Import from ${selectedChatList.length} chats`}
                     </Text>
                     <View style={styles.chipRow}>
                       {(['music', 'video'] as const).map((kind) => (
@@ -310,9 +397,15 @@ export function TelegramScreen({ navigation }: Props) {
                       ))}
                     </View>
                     <View style={styles.chipRow}>
-                      {LIMITS.map((n) => (
-                        <Pressable key={n} onPress={() => setLimit(n)} style={[styles.chip, limit === n && styles.chipActive]}>
-                          <Text style={[styles.chipLabel, limit === n && styles.chipLabelActive]}>{n} files</Text>
+                      {LIMITS.map(({ label, value }) => (
+                        <Pressable
+                          key={label}
+                          onPress={() => setLimit(value)}
+                          style={[styles.chip, limit === value && styles.chipActive]}
+                        >
+                          <Text style={[styles.chipLabel, limit === value && styles.chipLabelActive]}>
+                            {value === null ? 'All' : `${label} files`}
+                          </Text>
                         </Pressable>
                       ))}
                     </View>

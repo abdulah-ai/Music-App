@@ -51,6 +51,11 @@ class Media(Base):
     file_path: Mapped[str] = mapped_column(Text)
     file_size_bytes: Mapped[int | None] = mapped_column(nullable=True)
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    # Which backend actually holds file_path's bytes ("local" or "s3") — set
+    # once at adopt time. Per-row rather than a single global flag because
+    # storage_preference lets different users' new uploads land on different
+    # backends within the same deployment.
+    storage_backend: Mapped[str | None] = mapped_column(String(10), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 

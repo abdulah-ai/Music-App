@@ -2,20 +2,30 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, is_admin_email
+from app.api.deps import get_current_user, is_admin_user
 from app.core.config import settings
 from app.core.security import create_access_token, create_refresh_token, decode_token, hash_password, verify_password
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.auth import AccessTokenOut, RefreshRequest, TokenPair, UserLogin, UserOut, UserRegister
+from app.schemas.auth import (
+    AccessTokenOut,
+    RefreshRequest,
+    TokenPair,
+    UserLogin,
+    UserOut,
+    UserRegister,
+    UserSettingsUpdate,
+)
 from app.services.admin_events import log_event
+from app.services.storage import backend as storage_backend
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 def _user_out(user: User) -> UserOut:
     out = UserOut.model_validate(user)
-    out.is_admin = is_admin_email(user.email)
+    out.is_admin = is_admin_user(user)
+    out.cloud_storage_available = storage_backend.cloud_available()
     return out
 
 
@@ -70,4 +80,18 @@ async def refresh(payload: RefreshRequest) -> AccessTokenOut:
 
 @router.get("/me", response_model=UserOut)
 async def me(current_user: User = Depends(get_current_user)) -> UserOut:
+    return _user_out(current_user)
+
+
+@router.patch("/me/settings", response_model=UserOut)
+async def update_settings(
+    payload: UserSettingsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserOut:
+    if payload.storage_preference == "cloud" and not storage_backend.cloud_available():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Cloud storage isn't configured on this deployment")
+    current_user.storage_preference = payload.storage_preference
+    await db.commit()
+    await db.refresh(current_user)
     return _user_out(current_user)

@@ -1,24 +1,27 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import * as adminApi from '../services/api/admin';
-import type { AdminEvent, AdminJob, AdminStats, AdminUser } from '../services/api/admin';
+import type { AdminEvent, AdminFeedback, AdminJob, AdminStats, AdminUser, Announcement } from '../services/api/admin';
 import { EmptyState } from '../components/ui/EmptyState';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { ScreenContainer } from '../components/ui/ScreenContainer';
+import { toast } from '../store/toastStore';
 import { useAuthStore } from '../store/authStore';
 import { colors, radii, spacing, typography } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/types';
 
-type Tab = 'overview' | 'users' | 'jobs' | 'logs';
+type Tab = 'overview' | 'users' | 'jobs' | 'feedback' | 'announcements' | 'logs';
 
 const TABS: { key: Tab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'overview', label: 'Overview', icon: 'speedometer-outline' },
   { key: 'users', label: 'Users', icon: 'people-outline' },
   { key: 'jobs', label: 'Jobs', icon: 'download-outline' },
+  { key: 'feedback', label: 'Feedback', icon: 'chatbubble-ellipses-outline' },
+  { key: 'announcements', label: 'Announcements', icon: 'megaphone-outline' },
   { key: 'logs', label: 'Logs', icon: 'list-outline' },
 ];
 
@@ -29,6 +32,10 @@ const EVENT_LABELS: Record<string, string> = {
   job_failed: 'Job failed',
   telegram_linked: 'Telegram linked',
   media_deleted: 'Media deleted',
+  feedback_submitted: 'Feedback submitted',
+  feedback_resolved: 'Feedback resolved',
+  announcement_created: 'Announcement posted',
+  admin_user_updated: 'User updated by admin',
 };
 
 function formatBytes(bytes: number): string {
@@ -76,6 +83,44 @@ function SignupSparkline({ days }: { days: AdminStats['signups_last_30_days'] })
   );
 }
 
+const JOB_STATUS_COLOR: Record<string, string> = {
+  complete: colors.success,
+  failed: colors.danger,
+  in_progress: colors.cyan,
+  pending: colors.textMuted,
+  cancelled: colors.textMuted,
+};
+
+/** Horizontal bar chart, same hand-rolled-Views approach as SignupSparkline — no chart library needed for a handful of categories. */
+function JobsBarChart({ jobsByStatus }: { jobsByStatus: Record<string, number> }) {
+  const entries = Object.entries(jobsByStatus);
+  if (entries.length === 0) {
+    return <Text style={styles.mutedLine}>No jobs yet.</Text>;
+  }
+  const max = Math.max(...entries.map(([, count]) => count));
+  return (
+    <View style={{ gap: spacing.sm }}>
+      {entries.map(([jobStatus, count]) => (
+        <View key={jobStatus} style={styles.barRow}>
+          <Text style={styles.barLabel}>{jobStatus}</Text>
+          <View style={styles.barTrack}>
+            <View
+              style={[
+                styles.barFill,
+                {
+                  width: `${Math.max(4, (count / max) * 100)}%`,
+                  backgroundColor: JOB_STATUS_COLOR[jobStatus] ?? colors.cyan,
+                },
+              ]}
+            />
+          </View>
+          <Text style={styles.barValue}>{count}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function OverviewTab({ stats }: { stats: AdminStats }) {
   return (
     <View>
@@ -84,6 +129,7 @@ function OverviewTab({ stats }: { stats: AdminStats }) {
         <StatTile label="Media items" value={String(stats.total_media)} />
         <StatTile label="Storage used" value={formatBytes(stats.storage_bytes)} />
         <StatTile label="Telegram linked" value={String(stats.telegram_linked_users)} />
+        <StatTile label="Open feedback" value={String(stats.open_feedback_count)} />
       </View>
 
       <Text style={styles.sectionTitle}>LIBRARY BREAKDOWN</Text>
@@ -109,16 +155,7 @@ function OverviewTab({ stats }: { stats: AdminStats }) {
       <Text style={styles.sectionTitle}>JOBS BY STATUS</Text>
       <GlassPanel style={styles.panel}>
         <View style={styles.panelBody}>
-          {Object.entries(stats.jobs_by_status).length === 0 ? (
-            <Text style={styles.mutedLine}>No jobs yet.</Text>
-          ) : (
-            Object.entries(stats.jobs_by_status).map(([status, count]) => (
-              <View key={status} style={styles.fieldRow}>
-                <Text style={styles.fieldLabel}>{status}</Text>
-                <Text style={styles.fieldValue}>{count}</Text>
-              </View>
-            ))
-          )}
+          <JobsBarChart jobsByStatus={stats.jobs_by_status} />
         </View>
       </GlassPanel>
 
@@ -132,7 +169,41 @@ function OverviewTab({ stats }: { stats: AdminStats }) {
   );
 }
 
-function UsersTab({ users }: { users: AdminUser[] }) {
+function UsersTab({ users, onChanged }: { users: AdminUser[]; onChanged: (user: AdminUser) => void }) {
+  const [editingEmailFor, setEditingEmailFor] = useState<string | null>(null);
+  const [emailDraft, setEmailDraft] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  async function toggleRole(user: AdminUser) {
+    setBusyId(user.id);
+    try {
+      const updated = await adminApi.updateUser(user.id, { role: user.is_admin ? 'user' : 'admin' });
+      onChanged(updated);
+    } catch (err: any) {
+      toast(err?.response?.data?.detail ?? "Couldn't update that user", 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function saveEmail(user: AdminUser) {
+    if (!emailDraft.trim() || emailDraft.trim() === user.email) {
+      setEditingEmailFor(null);
+      return;
+    }
+    setBusyId(user.id);
+    try {
+      const updated = await adminApi.updateUser(user.id, { email: emailDraft.trim() });
+      onChanged(updated);
+      toast('Email updated', 'success');
+    } catch (err: any) {
+      toast(err?.response?.data?.detail ?? "Couldn't update that email", 'error');
+    } finally {
+      setBusyId(null);
+      setEditingEmailFor(null);
+    }
+  }
+
   if (users.length === 0) {
     return <EmptyState title="No users yet" subtitle="Registered accounts will show up here." icon="people-outline" />;
   }
@@ -140,22 +211,61 @@ function UsersTab({ users }: { users: AdminUser[] }) {
     <View style={styles.list}>
       {users.map((user) => (
         <GlassPanel key={user.id} style={styles.row}>
-          <View style={styles.rowContent}>
+          <View style={[styles.rowContent, { alignItems: 'flex-start' }]}>
             <View style={{ flex: 1, gap: 3 }}>
-              <Text numberOfLines={1} style={styles.title}>
-                {user.display_name}
-              </Text>
-              <Text numberOfLines={1} style={styles.subtitle}>
-                {user.email}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text numberOfLines={1} style={styles.title}>
+                  {user.display_name}
+                </Text>
+                {user.is_admin && (
+                  <View style={styles.adminBadge}>
+                    <Text style={styles.adminBadgeLabel}>ADMIN</Text>
+                  </View>
+                )}
+              </View>
+              {editingEmailFor === user.id ? (
+                <TextInput
+                  value={emailDraft}
+                  onChangeText={setEmailDraft}
+                  onBlur={() => saveEmail(user)}
+                  onSubmitEditing={() => saveEmail(user)}
+                  autoCapitalize="none"
+                  autoFocus
+                  style={styles.emailInput}
+                />
+              ) : (
+                <Pressable
+                  onPress={() => {
+                    setEditingEmailFor(user.id);
+                    setEmailDraft(user.email);
+                  }}
+                >
+                  <Text numberOfLines={1} style={styles.subtitle}>
+                    {user.email} <Ionicons name="pencil-outline" size={11} color={colors.textMuted} />
+                  </Text>
+                </Pressable>
+              )}
               <Text style={styles.mutedLine}>
                 {user.media_count} media · {user.job_count} jobs · {formatBytes(user.storage_bytes)}
                 {user.telegram_linked ? ' · Telegram linked' : ''}
               </Text>
+              <Text style={styles.mutedLine}>
+                {user.last_activity_at ? timeAgo(user.last_activity_at) : 'no activity'}
+              </Text>
             </View>
-            <Text style={styles.mutedLine}>
-              {user.last_activity_at ? timeAgo(user.last_activity_at) : 'no activity'}
-            </Text>
+            <Pressable
+              onPress={() => toggleRole(user)}
+              disabled={busyId === user.id}
+              style={[styles.roleButton, user.is_admin && styles.roleButtonActive]}
+            >
+              {busyId === user.id ? (
+                <ActivityIndicator size="small" color={colors.textSecondary} />
+              ) : (
+                <Text style={[styles.roleButtonLabel, user.is_admin && styles.roleButtonLabelActive]}>
+                  {user.is_admin ? 'Revoke admin' : 'Make admin'}
+                </Text>
+              )}
+            </Pressable>
           </View>
         </GlassPanel>
       ))}
@@ -235,6 +345,186 @@ function LogsTab({ events }: { events: AdminEvent[] }) {
   );
 }
 
+function FeedbackTab({ items, onChanged }: { items: AdminFeedback[]; onChanged: (item: AdminFeedback) => void }) {
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  async function toggleStatus(item: AdminFeedback) {
+    setBusyId(item.id);
+    try {
+      const updated = await adminApi.updateFeedback(item.id, {
+        status: item.status === 'open' ? 'resolved' : 'open',
+      });
+      onChanged(updated);
+    } catch {
+      toast("Couldn't update that feedback", 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function sendReply(item: AdminFeedback) {
+    const reply = (replyDrafts[item.id] ?? '').trim();
+    if (!reply) return;
+    setBusyId(item.id);
+    try {
+      const updated = await adminApi.updateFeedback(item.id, { admin_reply: reply });
+      onChanged(updated);
+      toast('Reply saved', 'success');
+    } catch {
+      toast("Couldn't save that reply", 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  if (items.length === 0) {
+    return <EmptyState title="No feedback yet" subtitle="Notes and bug reports users send in will show up here." icon="chatbubble-ellipses-outline" />;
+  }
+  return (
+    <View style={styles.list}>
+      {items.map((item) => (
+        <GlassPanel key={item.id} style={styles.row}>
+          <View style={[styles.rowContent, { flexDirection: 'column', alignItems: 'stretch', gap: spacing.sm }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <View style={[styles.badge, { backgroundColor: item.status === 'open' ? 'rgba(47,191,170,0.14)' : 'rgba(167,176,168,0.14)' }]}>
+                <Ionicons
+                  name={item.status === 'open' ? 'ellipse' : 'checkmark-circle'}
+                  size={16}
+                  color={item.status === 'open' ? colors.cyan : colors.textMuted}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text numberOfLines={1} style={styles.subtitle}>
+                  {item.user_email}
+                </Text>
+                <Text style={styles.mutedLine}>{timeAgo(item.created_at)}</Text>
+              </View>
+              <Pressable onPress={() => toggleStatus(item)} disabled={busyId === item.id} style={styles.roleButton}>
+                {busyId === item.id ? (
+                  <ActivityIndicator size="small" color={colors.textSecondary} />
+                ) : (
+                  <Text style={styles.roleButtonLabel}>{item.status === 'open' ? 'Mark resolved' : 'Reopen'}</Text>
+                )}
+              </Pressable>
+            </View>
+            <Text style={styles.feedbackMessage}>{item.message}</Text>
+            {item.admin_reply ? (
+              <Text style={styles.mutedLine}>Reply: {item.admin_reply}</Text>
+            ) : (
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                <TextInput
+                  value={replyDrafts[item.id] ?? ''}
+                  onChangeText={(text) => setReplyDrafts((prev) => ({ ...prev, [item.id]: text }))}
+                  placeholder="Reply (optional)"
+                  placeholderTextColor={colors.textMuted}
+                  style={[styles.emailInput, { flex: 1 }]}
+                />
+                <Pressable onPress={() => sendReply(item)} style={styles.roleButton}>
+                  <Text style={styles.roleButtonLabel}>Send</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        </GlassPanel>
+      ))}
+    </View>
+  );
+}
+
+function AnnouncementsTab({
+  items,
+  onCreated,
+  onDeleted,
+}: {
+  items: Announcement[];
+  onCreated: (item: Announcement) => void;
+  onDeleted: (id: string) => void;
+}) {
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [posting, setPosting] = useState(false);
+
+  async function post() {
+    if (!title.trim() || !body.trim() || posting) return;
+    setPosting(true);
+    try {
+      const created = await adminApi.createAnnouncement(title.trim(), body.trim());
+      onCreated(created);
+      setTitle('');
+      setBody('');
+      toast('Announcement posted', 'success');
+    } catch {
+      toast("Couldn't post that announcement", 'error');
+    } finally {
+      setPosting(false);
+    }
+  }
+
+  async function remove(id: string) {
+    try {
+      await adminApi.deleteAnnouncement(id);
+      onDeleted(id);
+    } catch {
+      toast("Couldn't remove that announcement", 'error');
+    }
+  }
+
+  return (
+    <View>
+      <GlassPanel style={styles.panel}>
+        <View style={styles.panelBody}>
+          <Text style={styles.fieldLabel}>New announcement</Text>
+          <TextInput
+            value={title}
+            onChangeText={setTitle}
+            placeholder="Title"
+            placeholderTextColor={colors.textMuted}
+            style={styles.emailInput}
+          />
+          <TextInput
+            value={body}
+            onChangeText={setBody}
+            placeholder="What do you want users to see?"
+            placeholderTextColor={colors.textMuted}
+            multiline
+            style={[styles.emailInput, { minHeight: 72, textAlignVertical: 'top' }]}
+          />
+          <Pressable
+            onPress={post}
+            disabled={posting || !title.trim() || !body.trim()}
+            style={[styles.roleButton, styles.roleButtonActive, { alignSelf: 'flex-start' }]}
+          >
+            {posting ? <ActivityIndicator size="small" color={colors.cyan} /> : <Text style={styles.roleButtonLabelActive}>Post</Text>}
+          </Pressable>
+        </View>
+      </GlassPanel>
+
+      <Text style={styles.sectionTitle}>POSTED</Text>
+      {items.length === 0 ? (
+        <Text style={styles.mutedLine}>No announcements yet.</Text>
+      ) : (
+        <View style={styles.list}>
+          {items.map((item) => (
+            <GlassPanel key={item.id} style={styles.row}>
+              <View style={[styles.rowContent, { alignItems: 'flex-start' }]}>
+                <View style={{ flex: 1, gap: 3 }}>
+                  <Text style={styles.title}>{item.title}</Text>
+                  <Text style={styles.mutedLine}>{item.body}</Text>
+                  <Text style={styles.mutedLine}>{timeAgo(item.created_at)}</Text>
+                </View>
+                <Pressable onPress={() => remove(item.id)} hitSlop={8}>
+                  <Ionicons name="trash-outline" size={16} color={colors.danger} />
+                </Pressable>
+              </View>
+            </GlassPanel>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
 export function AdminScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const isAdmin = useAuthStore((s) => s.user?.is_admin ?? false);
@@ -244,15 +534,26 @@ export function AdminScreen() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [jobs, setJobs] = useState<AdminJob[]>([]);
   const [events, setEvents] = useState<AdminEvent[]>([]);
+  const [feedback, setFeedback] = useState<AdminFeedback[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
 
   const load = useCallback(() => {
     setLoading(true);
-    Promise.all([adminApi.getStats(), adminApi.getUsers(), adminApi.getJobs(), adminApi.getLogs()])
-      .then(([statsRes, usersRes, jobsRes, logsRes]) => {
+    Promise.all([
+      adminApi.getStats(),
+      adminApi.getUsers(),
+      adminApi.getJobs(),
+      adminApi.getLogs(),
+      adminApi.getFeedback(),
+      adminApi.listAnnouncementsAdmin(),
+    ])
+      .then(([statsRes, usersRes, jobsRes, logsRes, feedbackRes, announcementsRes]) => {
         setStats(statsRes);
         setUsers(usersRes.items);
         setJobs(jobsRes.items);
         setEvents(logsRes.items);
+        setFeedback(feedbackRes.items);
+        setAnnouncements(announcementsRes);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -314,8 +615,33 @@ export function AdminScreen() {
           ) : (
             <>
               {tab === 'overview' && <OverviewTab stats={stats} />}
-              {tab === 'users' && <UsersTab users={users} />}
+              {tab === 'users' && (
+                <UsersTab
+                  users={users}
+                  onChanged={(updated) =>
+                    setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)))
+                  }
+                />
+              )}
               {tab === 'jobs' && <JobsTab jobs={jobs} />}
+              {tab === 'feedback' && (
+                <FeedbackTab
+                  items={feedback}
+                  onChanged={(updated) => {
+                    const next = feedback.map((f) => (f.id === updated.id ? updated : f));
+                    setFeedback(next);
+                    const openCount = next.filter((f) => f.status === 'open').length;
+                    setStats((prev) => (prev ? { ...prev, open_feedback_count: openCount } : prev));
+                  }}
+                />
+              )}
+              {tab === 'announcements' && (
+                <AnnouncementsTab
+                  items={announcements}
+                  onCreated={(created) => setAnnouncements((prev) => [created, ...prev])}
+                  onDeleted={(id) => setAnnouncements((prev) => prev.filter((a) => a.id !== id))}
+                />
+              )}
               {tab === 'logs' && <LogsTab events={events} />}
             </>
           )}
@@ -379,4 +705,34 @@ const styles = StyleSheet.create({
   badge: { width: 40, height: 40, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.subtitle, fontSize: 15, color: colors.textPrimary },
   subtitle: { ...typography.caption, color: colors.textSecondary },
+  barRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  barLabel: { ...typography.caption, color: colors.textMuted, width: 90 },
+  barTrack: { flex: 1, height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
+  barFill: { height: '100%', borderRadius: 5, minWidth: 4 },
+  barValue: { ...typography.caption, color: colors.textPrimary, width: 28, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  adminBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radii.sm,
+    backgroundColor: 'rgba(47,191,170,0.16)',
+  },
+  adminBadgeLabel: { ...typography.caption, fontSize: 9, letterSpacing: 1, color: colors.cyan },
+  emailInput: {
+    ...typography.body,
+    color: colors.textPrimary,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+  },
+  roleButton: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  roleButtonActive: { backgroundColor: 'rgba(47,191,170,0.16)' },
+  roleButtonLabel: { ...typography.caption, color: colors.textSecondary },
+  roleButtonLabelActive: { ...typography.caption, color: colors.cyan },
+  feedbackMessage: { ...typography.body, color: colors.textPrimary },
 });

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SignupDay(BaseModel):
@@ -19,12 +19,14 @@ class AdminStatsOut(BaseModel):
     recognition_success_rate: float | None
     telegram_linked_users: int
     signups_last_30_days: list[SignupDay]
+    open_feedback_count: int
 
 
 class AdminUserOut(BaseModel):
     id: str
     email: str
     display_name: str
+    is_admin: bool
     created_at: datetime
     media_count: int
     job_count: int
@@ -33,6 +35,11 @@ class AdminUserOut(BaseModel):
     last_activity_at: datetime | None
 
     model_config = {"from_attributes": True}
+
+
+class AdminUserUpdate(BaseModel):
+    role: str | None = Field(default=None, pattern="^(admin|user)$")
+    email: str | None = Field(default=None, min_length=3, max_length=255)
 
 
 class AdminUsersPage(BaseModel):

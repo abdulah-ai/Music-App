@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { User } from './types';
+import type { StoragePreference, User } from './types';
 
 export type TokenPair = {
   access_token: string;
@@ -30,5 +30,10 @@ export async function login(email: string, password: string): Promise<TokenPair>
 
 export async function me(options?: { timeoutMs?: number }): Promise<User> {
   const { data } = await apiClient.get<User>('/auth/me', options?.timeoutMs ? { timeout: options.timeoutMs } : undefined);
+  return data;
+}
+
+export async function updateStoragePreference(preference: StoragePreference): Promise<User> {
+  const { data } = await apiClient.patch<User>('/auth/me/settings', { storage_preference: preference });
   return data;
 }

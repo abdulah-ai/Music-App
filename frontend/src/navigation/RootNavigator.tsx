@@ -10,6 +10,7 @@ import { ReplayScreen } from '../screens/ReplayScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { TelegramScreen } from '../screens/TelegramScreen';
 import { AccountPopover } from '../components/ui/AccountPopover';
+import { AnnouncementBanner } from '../components/ui/AnnouncementBanner';
 import { Sidebar } from '../components/ui/Sidebar';
 import { UpdateBanner } from '../components/ui/UpdateBanner';
 import { GlobalVideoStage } from '../components/video/GlobalVideoStage';
@@ -62,6 +63,7 @@ export function RootNavigator() {
           <Sidebar />
           <AccountPopover />
           <GlobalVideoStage />
+          <AnnouncementBanner />
         </>
       ) : (
         <AuthNavigator />

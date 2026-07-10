@@ -47,28 +47,53 @@ async def _add_missing_columns(conn) -> None:
     would silently no-op against a live database that predates it. This adds
     exactly the columns new enough to not be in create_all's original run,
     each guarded so it's a no-op (not an error) once applied. Safe to run
-    every startup; never touches existing data."""
+    every startup; never touches existing data (besides the one-time
+    storage_backend backfill below, which only fills newly-NULL rows)."""
     from sqlalchemy import inspect, text
 
-    def existing_media_columns(sync_conn) -> set[str]:
-        return {col["name"] for col in inspect(sync_conn).get_columns("media")}
+    def existing_columns(sync_conn, table: str) -> set[str]:
+        return {col["name"] for col in inspect(sync_conn).get_columns(table)}
 
-    columns = await conn.run_sync(existing_media_columns)
-    if not columns:
-        return  # table doesn't exist yet — create_all (called right before this) will make it with every column already
     is_sqlite = engine.url.get_backend_name() == "sqlite"
-    additions = {
-        "genre": "VARCHAR(100)",
-        "release_year": "INTEGER",
-        "is_remix": "BOOLEAN",
-    }
-    for column, coltype in additions.items():
-        if column in columns:
-            continue
-        ddl = f"ALTER TABLE media ADD COLUMN {column} {coltype}"
-        if not is_sqlite:
-            ddl = f"ALTER TABLE media ADD COLUMN IF NOT EXISTS {column} {coltype}"
-        await conn.execute(text(ddl))
+
+    async def add_columns(table: str, additions: dict[str, str]) -> set[str]:
+        columns = await conn.run_sync(lambda c: existing_columns(c, table))
+        if not columns:
+            return set()  # table doesn't exist yet — create_all already made it with every column
+        added = set()
+        for column, coltype in additions.items():
+            if column in columns:
+                continue
+            ddl = f"ALTER TABLE {table} ADD COLUMN {column} {coltype}"
+            if not is_sqlite:
+                ddl = f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {coltype}"
+            await conn.execute(text(ddl))
+            added.add(column)
+        return added
+
+    media_added = await add_columns(
+        "media",
+        {
+            "genre": "VARCHAR(100)",
+            "release_year": "INTEGER",
+            "is_remix": "BOOLEAN",
+            "storage_backend": "VARCHAR(10)",
+        },
+    )
+    if "storage_backend" in media_added:
+        # local_storage.adopt_file() returns an absolute filesystem path
+        # ("/…" or "C:\…"); s3_storage.adopt_file() returns a bare
+        # "<user_id>/<uuid><suffix>" key. The two shapes never collide, so
+        # this infers each existing row's real backend instead of guessing.
+        await conn.execute(
+            text(
+                "UPDATE media SET storage_backend = CASE "
+                "WHEN file_path LIKE '/%' OR file_path LIKE '%:%' THEN 'local' "
+                "ELSE 's3' END WHERE storage_backend IS NULL"
+            )
+        )
+
+    await add_columns("users", {"storage_preference": "VARCHAR(10)", "role": "VARCHAR(20)"})
 
 
 async def init_models() -> None:

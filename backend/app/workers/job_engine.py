@@ -84,13 +84,13 @@ async def fail_orphaned_jobs() -> None:
 
 async def ensure_video_thumbnail(media_id: str) -> None:
     """Generate a real poster frame for a video that has no usable thumbnail
-    and point its thumbnail_url at our serving endpoint. No-op in S3 mode
-    (media bytes aren't on local disk) or when ffmpeg can't read the file."""
-    if storage_backend.is_s3():
-        return
+    and point its thumbnail_url at our serving endpoint. No-op for a video
+    stored in S3 (its bytes aren't on local disk) or when ffmpeg can't read
+    the file. Checked per-media, not via the deployment default, since
+    storage_preference can put this particular file on either backend."""
     async with SessionLocal() as session:
         media = await session.get(Media, media_id)
-        if media is None or media.thumbnail_url:
+        if media is None or media.thumbnail_url or media.storage_backend == "s3":
             return
         generated = await asyncio.to_thread(thumbnails.generate_video_thumbnail, media.file_path)
         if generated is None:
@@ -101,9 +101,8 @@ async def ensure_video_thumbnail(media_id: str) -> None:
 
 async def backfill_video_thumbnails() -> None:
     """One-shot startup pass for videos imported before thumbnail generation
-    existed. Small libraries only ever have a handful of these."""
-    if storage_backend.is_s3():
-        return
+    existed. Small libraries only ever have a handful of these. Per-media S3
+    videos are skipped inside ensure_video_thumbnail, not here."""
     async with SessionLocal() as session:
         result = await session.scalars(
             select(Media.id).where(Media.media_type == MediaType.VIDEO, Media.thumbnail_url.is_(None))
@@ -120,9 +119,10 @@ async def auto_name_media(user_id: str, media_ids: list[str]) -> None:
     """Run recognition over freshly imported audio whose titles are garbage
     (base64 blobs, numeric IDs) so new tracks name themselves instead of the
     user finding a wall of gibberish. Sequential on purpose. Creates real Job
-    rows so the runs show up in the Activity feed like any other job."""
-    if storage_backend.is_s3():
-        return
+    rows so the runs show up in the Activity feed like any other job.
+    Skips S3-backed media (checked per-row, not via the deployment default —
+    storage_preference can mix backends) since recognition reads straight
+    off local disk."""
     named = 0
     for media_id in media_ids:
         if named >= AUTO_NAME_CAP:
@@ -131,6 +131,7 @@ async def auto_name_media(user_id: str, media_ids: list[str]) -> None:
             media = await session.get(Media, media_id)
             if (
                 media is None
+                or media.storage_backend == "s3"
                 or media.media_type != MediaType.AUDIO
                 or media.recognized_title is not None
                 or not looks_like_garbage_title(media.title)
@@ -144,6 +145,16 @@ async def auto_name_media(user_id: str, media_ids: list[str]) -> None:
             file_path = Path(media.file_path)
         await run_recognition_job(job_id, user_id, file_path, media_id, cleanup=False)
         named += 1
+
+
+async def _resolve_user_backend(user_id: str) -> str:
+    """The storage backend a *new* file for this user should be adopted
+    into, honoring their per-account override (see storage_backend.resolve_backend)."""
+    from app.models.user import User
+
+    async with SessionLocal() as session:
+        preference = await session.scalar(select(User.storage_preference).where(User.id == user_id))
+    return storage_backend.resolve_backend(preference)
 
 
 def request_cancellation(job_id: str) -> None:
@@ -232,8 +243,9 @@ async def run_download_job(
                 result.file_path.unlink(missing_ok=True)
                 media_id = existing.id
             else:
+                backend = await _resolve_user_backend(user_id)
                 stored = await asyncio.to_thread(
-                    storage_backend.adopt_file, user_id, result.file_path, result.file_path.suffix
+                    storage_backend.adopt_file, user_id, result.file_path, result.file_path.suffix, backend
                 )
                 media = Media(
                     user_id=user_id,
@@ -247,6 +259,7 @@ async def run_download_job(
                     file_path=stored.key,
                     file_size_bytes=stored.size_bytes,
                     content_hash=content_hash,
+                    storage_backend=backend,
                 )
                 session.add(media)
                 await session.commit()
@@ -278,14 +291,29 @@ async def run_download_job(
             tmp_dir.rmdir()
 
 
+# Safety ceiling applied when the caller asks for "no limit" (bulk-folder
+# imports) — without this an unbounded scan across many big channels could
+# run for hours in-process (this worker is plain BackgroundTasks, not a real
+# queue — see the module docstring).
+_UNBOUNDED_IMPORT_CEILING = 20000
+
+# Telethon raises FloodWaitError with a `.seconds` telling us exactly how
+# long Telegram wants us to back off; anything longer than this is not worth
+# blocking a single job on, so the job just gives up on that one call.
+_MAX_FLOOD_WAIT_SECONDS = 300
+
+
 async def run_telegram_import_job(
     job_id: str,
     user_id: str,
-    chat_ref: str,
+    chat_refs: list[str],
     media_kind: str,
-    limit: int,
+    limit: int | None,
 ) -> None:
-    """Pull up to `limit` music/video files from a Telegram chat into the library."""
+    """Pull up to `limit` (or, if None, up to a safety ceiling) music/video
+    files across one or more Telegram chats — e.g. every chat in a folder —
+    into the library."""
+    from telethon.errors import FloodWaitError
     from telethon.tl.types import DocumentAttributeAudio, InputMessagesFilterMusic, InputMessagesFilterVideo
 
     from app.models.telegram_account import TelegramAccount
@@ -299,11 +327,12 @@ async def run_telegram_import_job(
         await _touch_job(job_id, status=JobStatus.FAILED, stage_label="failed", error_message="Telegram is not configured")
         return
 
+    effective_limit = limit if limit is not None else _UNBOUNDED_IMPORT_CEILING
+
     client = telegram_service.make_client(account)
     tmp_dir = settings.media_storage_dir / "_tmp" / job_id
     tmp_dir.mkdir(parents=True, exist_ok=True)
     imported = 0
-    scanned = 0
     last_media_id: str | None = None
     created_media_ids: list[str] = []
 
@@ -313,84 +342,116 @@ async def run_telegram_import_job(
             await _touch_job(job_id, status=JobStatus.FAILED, stage_label="failed", error_message="Telegram is not linked")
             return
 
-        ref = chat_ref.strip()
-        entity = await client.get_entity(int(ref)) if ref.lstrip("-").isdigit() else await client.get_entity(ref)
-        chat_title = getattr(entity, "title", None) or getattr(entity, "first_name", None) or chat_ref
-
         message_filter = InputMessagesFilterMusic if media_kind == "music" else InputMessagesFilterVideo
         target_type = MediaType.AUDIO if media_kind == "music" else MediaType.VIDEO
         default_ext = ".mp3" if media_kind == "music" else ".mp4"
+        backend = await _resolve_user_backend(user_id)
 
-        await _touch_job(job_id, stage_label=f"scanning {chat_title}")
-
-        async for message in client.iter_messages(entity, filter=message_filter):
+        for chat_ref in chat_refs:
+            if imported >= effective_limit:
+                break
             if job_id in _cancelled_job_ids:
                 await _touch_job(job_id, status=JobStatus.CANCELLED, stage_label="cancelled")
                 return
-            if imported >= limit:
-                break
-            if not message.file:
-                continue
-            scanned += 1
 
-            suffix = (message.file.ext or default_ext).lower()
-            tmp_path = tmp_dir / f"{message.id}{suffix}"
+            ref = chat_ref.strip()
             try:
-                await message.download_media(file=str(tmp_path))
-            except Exception:  # noqa: BLE001 - skip broken messages, keep the batch going
+                entity = await client.get_entity(int(ref)) if ref.lstrip("-").isdigit() else await client.get_entity(ref)
+            except Exception:  # noqa: BLE001 - a chat we can no longer resolve shouldn't sink the whole batch
                 continue
-            if not tmp_path.exists() or tmp_path.stat().st_size == 0:
-                tmp_path.unlink(missing_ok=True)
-                continue
+            chat_title = getattr(entity, "title", None) or getattr(entity, "first_name", None) or chat_ref
 
-            title: str | None = None
-            artist: str | None = None
-            duration: float | None = None
-            document = getattr(message, "document", None)
-            if document is not None:
-                for attr in document.attributes:
-                    if isinstance(attr, DocumentAttributeAudio):
-                        title = attr.title or title
-                        artist = attr.performer or artist
-                        duration = float(attr.duration) if attr.duration else duration
-            if not title:
-                name = message.file.name or f"telegram_{message.id}"
-                title = Path(name).stem.replace("_", " ").strip() or f"Telegram {message.id}"
+            await _touch_job(job_id, stage_label=f"scanning {chat_title}")
 
-            content_hash = await asyncio.to_thread(local_storage.sha1_file, tmp_path)
-            async with SessionLocal() as session:
-                existing = await session.scalar(
-                    select(Media).where(Media.user_id == user_id, Media.content_hash == content_hash)
-                )
-                if existing is not None:
+            message_iter = client.iter_messages(entity, filter=message_filter)
+            while imported < effective_limit:
+                try:
+                    message = await message_iter.__anext__()
+                except StopAsyncIteration:
+                    break
+                except FloodWaitError as exc:
+                    wait_s = min(exc.seconds, _MAX_FLOOD_WAIT_SECONDS)
+                    await _touch_job(job_id, stage_label=f"rate-limited by Telegram, waiting {wait_s}s")
+                    await asyncio.sleep(wait_s)
+                    continue
+
+                if job_id in _cancelled_job_ids:
+                    await _touch_job(job_id, status=JobStatus.CANCELLED, stage_label="cancelled")
+                    return
+                if not message.file:
+                    continue
+
+                suffix = (message.file.ext or default_ext).lower()
+                tmp_path = tmp_dir / f"{chat_ref}_{message.id}{suffix}"
+                try:
+                    await message.download_media(file=str(tmp_path))
+                except FloodWaitError as exc:
+                    wait_s = min(exc.seconds, _MAX_FLOOD_WAIT_SECONDS)
+                    await _touch_job(job_id, stage_label=f"rate-limited by Telegram, waiting {wait_s}s")
+                    await asyncio.sleep(wait_s)
+                    try:
+                        await message.download_media(file=str(tmp_path))
+                    except Exception:  # noqa: BLE001 - one retry, then skip this file
+                        continue
+                except Exception:  # noqa: BLE001 - skip broken messages, keep the batch going
+                    continue
+                if not tmp_path.exists() or tmp_path.stat().st_size == 0:
                     tmp_path.unlink(missing_ok=True)
-                    last_media_id = existing.id
-                else:
-                    stored = await asyncio.to_thread(storage_backend.adopt_file, user_id, tmp_path, suffix)
-                    media = Media(
-                        user_id=user_id,
-                        media_type=target_type,
-                        source=MediaSource.TELEGRAM,
-                        source_url=f"telegram:{chat_title}",
-                        title=title,
-                        artist=artist,
-                        duration_seconds=duration,
-                        file_path=stored.key,
-                        file_size_bytes=stored.size_bytes,
-                        content_hash=content_hash,
-                    )
-                    session.add(media)
-                    await session.commit()
-                    await session.refresh(media)
-                    last_media_id = media.id
-                    created_media_ids.append(media.id)
+                    continue
 
-            imported += 1
-            await _touch_job(
-                job_id,
-                progress_pct=min(99, int(imported / limit * 100)),
-                stage_label=f"{imported} of up to {limit} from {chat_title}",
-            )
+                title: str | None = None
+                artist: str | None = None
+                duration: float | None = None
+                document = getattr(message, "document", None)
+                if document is not None:
+                    for attr in document.attributes:
+                        if isinstance(attr, DocumentAttributeAudio):
+                            title = attr.title or title
+                            artist = attr.performer or artist
+                            duration = float(attr.duration) if attr.duration else duration
+                if not title:
+                    name = message.file.name or f"telegram_{message.id}"
+                    title = Path(name).stem.replace("_", " ").strip() or f"Telegram {message.id}"
+
+                content_hash = await asyncio.to_thread(local_storage.sha1_file, tmp_path)
+                async with SessionLocal() as session:
+                    existing = await session.scalar(
+                        select(Media).where(Media.user_id == user_id, Media.content_hash == content_hash)
+                    )
+                    if existing is not None:
+                        tmp_path.unlink(missing_ok=True)
+                        last_media_id = existing.id
+                    else:
+                        stored = await asyncio.to_thread(storage_backend.adopt_file, user_id, tmp_path, suffix, backend)
+                        media = Media(
+                            user_id=user_id,
+                            media_type=target_type,
+                            source=MediaSource.TELEGRAM,
+                            source_url=f"telegram:{chat_title}",
+                            title=title,
+                            artist=artist,
+                            duration_seconds=duration,
+                            file_path=stored.key,
+                            file_size_bytes=stored.size_bytes,
+                            content_hash=content_hash,
+                            storage_backend=backend,
+                        )
+                        session.add(media)
+                        await session.commit()
+                        await session.refresh(media)
+                        last_media_id = media.id
+                        created_media_ids.append(media.id)
+
+                imported += 1
+                progress_denominator = effective_limit if limit is not None else max(imported, 1)
+                await _touch_job(
+                    job_id,
+                    progress_pct=min(99, int(imported / progress_denominator * 100)),
+                    stage_label=(
+                        f"{imported}{f' of up to {effective_limit}' if limit is not None else ''}"
+                        f" across {len(chat_refs)} chat{'s' if len(chat_refs) != 1 else ''}"
+                    ),
+                )
 
         await _touch_job(
             job_id,

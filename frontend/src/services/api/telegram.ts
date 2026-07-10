@@ -13,6 +13,12 @@ export type TelegramDialog = {
   username: string | null;
 };
 
+export type TelegramFolder = {
+  id: number;
+  title: string;
+  chat_count: number;
+};
+
 export type LinkStepResult = { status: 'authorized' | 'code_sent' | 'password_required'; phone?: string };
 
 export async function getStatus(): Promise<TelegramStatus> {
@@ -49,7 +55,22 @@ export async function listDialogs(): Promise<TelegramDialog[]> {
   return data;
 }
 
-export async function startImport(chat: string, mediaKind: 'music' | 'video', limit: number): Promise<Job> {
-  const { data } = await apiClient.post<Job>('/telegram/import', { chat, media_kind: mediaKind, limit });
+export async function listFolders(): Promise<TelegramFolder[]> {
+  const { data } = await apiClient.get<TelegramFolder[]>('/telegram/folders');
+  return data;
+}
+
+export type ImportTarget = { chats: string[] } | { folderId: number };
+
+export async function startImport(
+  target: ImportTarget,
+  mediaKind: 'music' | 'video',
+  limit: number | null,
+): Promise<Job> {
+  const body =
+    'folderId' in target
+      ? { folder_id: target.folderId, media_kind: mediaKind, limit }
+      : { chats: target.chats, media_kind: mediaKind, limit };
+  const { data } = await apiClient.post<Job>('/telegram/import', body);
   return data;
 }

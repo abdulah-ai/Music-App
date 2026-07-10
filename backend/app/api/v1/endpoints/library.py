@@ -85,7 +85,7 @@ async def delete_media(
     media_id: str, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> None:
     media = await _get_owned_media(media_id, current_user, db)
-    await asyncio.to_thread(storage_backend.delete_file, media.file_path)
+    await asyncio.to_thread(storage_backend.delete_file, media.file_path, media.storage_backend or "local")
     thumbnails.thumbnail_path_for(media.file_path).unlink(missing_ok=True)
     await log_event(db, "media_deleted", user_id=current_user.id, detail=media.title or media.id)
     await db.delete(media)
@@ -117,7 +117,7 @@ async def stream_media(
 ) -> Response:
     media = await _get_owned_media(media_id, current_user, db)
 
-    if storage_backend.is_s3():
+    if media.storage_backend == "s3":
         content_type = CONTENT_TYPES.get(Path(media.file_path).suffix.lower(), "application/octet-stream")
 
         if proxy:

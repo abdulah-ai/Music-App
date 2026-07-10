@@ -16,9 +16,13 @@ class TelegramPasswordIn(BaseModel):
 
 
 class TelegramImportIn(BaseModel):
-    chat: str = Field(min_length=1, max_length=200)
+    # Exactly one of `chats` (manually picked dialogs) or `folder_id` (a
+    # whole Telegram chat-list folder, resolved server-side) must be set.
+    chats: list[str] = Field(default_factory=list, max_length=200)
+    folder_id: int | None = None
     media_kind: str = "music"  # "music" | "video"
-    limit: int = Field(default=25, ge=1, le=100)
+    # None means "no cap" — the worker still applies a hard safety ceiling.
+    limit: int | None = Field(default=25, ge=1, le=5000)
 
 
 class TelegramStatusOut(BaseModel):
@@ -31,3 +35,9 @@ class TelegramDialogOut(BaseModel):
     id: str
     title: str
     username: str | None = None
+
+
+class TelegramFolderOut(BaseModel):
+    id: int
+    title: str
+    chat_count: int

@@ -11,6 +11,10 @@ EventType = Literal[
     "job_failed",
     "telegram_linked",
     "media_deleted",
+    "feedback_submitted",
+    "feedback_resolved",
+    "announcement_created",
+    "admin_user_updated",
 ]
 
 
