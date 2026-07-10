@@ -15,7 +15,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { RippleField } from '../ui/RippleField';
 import { GradientText } from '../ui/GradientText';
 import { PressableScale } from '../ui/PressableScale';
 import { streamUrl } from '../../services/api/library';
@@ -119,27 +118,35 @@ export function GlobalVideoStage() {
   }, [pauseRequestedAt, player]);
 
   // Mini window drag — clamped to screen bounds, released position sticks.
+  // Runs on the native driver (JS thread never sees per-frame move events),
+  // which needs the current x/y tracked outside Animated's private `_value`
+  // — a listener mirrors it into this ref instead, since native-driven
+  // values aren't readable synchronously the way JS-driven ones are.
   const pan = useRef(new Animated.ValueXY({ x: 12, y: 80 })).current;
+  const panValueRef = useRef({ x: 12, y: 80 });
+  useEffect(() => {
+    const id = pan.addListener((value) => {
+      panValueRef.current = value;
+    });
+    return () => pan.removeListener(id);
+  }, [pan]);
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 3 || Math.abs(g.dy) > 3,
       onPanResponderGrant: () => {
         pan.stopAnimation();
-        // @ts-expect-error — private fields used only to read the current offset for the grant snapshot.
-        pan.setOffset({ x: pan.x._value, y: pan.y._value });
+        pan.setOffset(panValueRef.current);
         pan.setValue({ x: 0, y: 0 });
       },
-      onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], { useNativeDriver: false }),
+      onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], { useNativeDriver: true }),
       onPanResponderRelease: () => {
         pan.flattenOffset();
         // Snap to the nearest left/right edge (like every OS-level PiP) so
         // the window always rests somewhere intentional, never mid-screen.
-        // @ts-expect-error — reading current values to clamp within the viewport.
-        const rawX = pan.x._value;
+        const rawX = panValueRef.current.x;
         const x = rawX + MINI_WIDTH / 2 < screenWidth / 2 ? 12 : screenWidth - MINI_WIDTH - 12;
-        // @ts-expect-error
-        const y = Math.max(insets.top + 8, Math.min(screenHeight - MINI_HEIGHT - 8, pan.y._value));
-        Animated.spring(pan, { toValue: { x, y }, useNativeDriver: false, friction: 8 }).start();
+        const y = Math.max(insets.top + 8, Math.min(screenHeight - MINI_HEIGHT - 8, panValueRef.current.y));
+        Animated.spring(pan, { toValue: { x, y }, useNativeDriver: true, friction: 8 }).start();
       },
     }),
   ).current;
@@ -175,10 +182,13 @@ export function GlobalVideoStage() {
   }
 
   // ---- expanded (fullscreen) ----
+  // No RippleField here on purpose: its continuous Animated.loop timers were
+  // running the whole time a video played even though the video (contain-fit,
+  // full-screen) covers it almost entirely — pure wasted animation work
+  // stacked directly under the video layer. The plain `root` background
+  // already reads fine for the thin letterbox bars.
   return (
     <View style={styles.root}>
-      <RippleField />
-
       <View pointerEvents="box-none" style={[styles.topBar, { top: insets.top + spacing.sm }]}>
         <Pressable onPress={minimize} hitSlop={12} style={styles.closeButton}>
           <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />

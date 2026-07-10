@@ -1173,14 +1173,22 @@ const GridCard = memo(function GridCard({
       onHoverOut={Platform.OS === 'web' ? () => setHovered(false) : undefined}
     >
       <View style={[styles.card, hovered && styles.cardHovered, selected && styles.cardSelected, { width: size, height: size }]}>
-        {coverUri ? (
-          <FadeImage uri={coverUri} style={StyleSheet.absoluteFill as object} />
-        ) : (
-          <LinearGradient
-            colors={coverGradient(media.id)}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
+        {/* Video posters are 16:9 ffmpeg frame grabs — a plain `cover` crop
+            into this square cell aggressively cuts off the top/bottom of the
+            frame, which reads as messy. Keep the gradient as a permanent
+            backdrop and letterbox the poster with `contain` instead; audio
+            covers (already closer to square) keep the old full-bleed crop. */}
+        <LinearGradient
+          colors={coverGradient(media.id)}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        {coverUri && (
+          <FadeImage
+            uri={coverUri}
+            resizeMode={media.media_type === 'video' ? 'contain' : 'cover'}
+            style={StyleSheet.absoluteFill as object}
           />
         )}
         <LinearGradient colors={gradients.coverScrim} style={styles.scrim} />
