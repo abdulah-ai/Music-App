@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -22,7 +23,7 @@ from app.db.session import SessionLocal
 from app.models.job import Job, JobStatus, JobType
 from app.models.media import Media, MediaSource, MediaType
 from app.schemas.job import JobOut
-from app.services import thumbnails
+from app.services import audio_analysis, thumbnails
 from app.services.downloader import ytdlp_service
 from app.services.recognition import shazam_service
 from app.services.admin_events import log_event
@@ -110,6 +111,51 @@ async def backfill_video_thumbnails() -> None:
         media_ids = list(result.all())
     for media_id in media_ids:
         await ensure_video_thumbnail(media_id)
+
+
+async def analyze_track_fades(media_ids: list[str]) -> None:
+    """Best-effort fade_in_ms/fade_out_ms detection so crossfade timing can
+    adapt to each track's real silence instead of one fixed duration for
+    everyone. Skips S3-backed media (checked per-row, not the deployment
+    default) since ffmpeg needs the bytes on local disk. Always stamps
+    fades_analyzed_at once attempted, even when no edge silence was found —
+    that marker (not the fade values themselves) is what backfill_track_fades
+    checks, so a track that was analyzed and genuinely has none isn't
+    re-scanned by ffmpeg on every future startup."""
+    for media_id in media_ids:
+        async with SessionLocal() as session:
+            media = await session.get(Media, media_id)
+            if (
+                media is None
+                or media.fades_analyzed_at is not None
+                or media.storage_backend == "s3"
+                or not media.duration_seconds
+            ):
+                continue
+            file_path = media.file_path
+            duration = media.duration_seconds
+        result = await asyncio.to_thread(audio_analysis.analyze_track_edges, file_path, duration)
+        if result is None:
+            continue
+        async with SessionLocal() as session:
+            media = await session.get(Media, media_id)
+            if media is None:
+                continue
+            media.fade_in_ms = result["fade_in_ms"]
+            media.fade_out_ms = result["fade_out_ms"]
+            media.fades_analyzed_at = datetime.now(timezone.utc)
+            await session.commit()
+
+
+async def backfill_track_fades() -> None:
+    """One-shot startup pass for audio imported before fade analysis
+    existed. Small libraries only ever have a handful of these."""
+    async with SessionLocal() as session:
+        result = await session.scalars(
+            select(Media.id).where(Media.media_type == MediaType.AUDIO, Media.fades_analyzed_at.is_(None))
+        )
+        media_ids = list(result.all())
+    await analyze_track_fades(media_ids)
 
 
 AUTO_NAME_CAP = 10  # per import batch — shazam lookups are rate-limited
@@ -276,9 +322,10 @@ async def run_download_job(
         if media_type == "video":
             await ensure_video_thumbnail(media_id)
         else:
-            # Fire-and-forget: naming shouldn't hold the job's COMPLETE status
-            # hostage to a slow shazam lookup.
+            # Fire-and-forget: naming/fade analysis shouldn't hold the job's
+            # COMPLETE status hostage to a slow shazam lookup or ffmpeg probe.
             asyncio.create_task(auto_name_media(user_id, [media_id]))
+            asyncio.create_task(analyze_track_fades([media_id]))
     except DownloadCancelled:
         await _touch_job(job_id, status=JobStatus.CANCELLED, stage_label="cancelled")
     except Exception as exc:  # noqa: BLE001 - surfaced to the client as job.error_message
@@ -467,6 +514,7 @@ async def run_telegram_import_job(
             # Telegram music is the main source of gibberish names (filename
             # stems). Fire-and-forget so a slow batch doesn't block anything.
             asyncio.create_task(auto_name_media(user_id, created_media_ids))
+            asyncio.create_task(analyze_track_fades(created_media_ids))
     except Exception as exc:  # noqa: BLE001 - surfaced to the client as job.error_message
         await _touch_job(job_id, status=JobStatus.FAILED, stage_label="failed", error_message=str(exc))
     finally:

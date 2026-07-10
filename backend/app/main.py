@@ -21,11 +21,15 @@ async def lifespan(app: FastAPI):
     # In-process background jobs can't survive a restart — clear the zombies
     # so the client sees "failed, retry" instead of "Running · 16h".
     await job_engine.fail_orphaned_jobs()
-    # Poster frames for videos imported before thumbnail generation existed.
-    # Fire-and-forget: ffmpeg over a few files, no reason to delay startup.
-    backfill = asyncio.create_task(job_engine.backfill_video_thumbnails())
+    # Poster frames for videos imported before thumbnail generation existed,
+    # and fade_in/out silence detection for audio imported before that
+    # existed. Both fire-and-forget: ffmpeg over a few files, no reason to
+    # delay startup.
+    backfill_thumbs = asyncio.create_task(job_engine.backfill_video_thumbnails())
+    backfill_fades = asyncio.create_task(job_engine.backfill_track_fades())
     yield
-    backfill.cancel()
+    backfill_thumbs.cancel()
+    backfill_fades.cancel()
 
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)

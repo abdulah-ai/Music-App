@@ -23,9 +23,11 @@ const SESSION_KEY = 'player-session-v1';
 const SETTINGS_KEY = 'player-settings-v1';
 const PERSIST_INTERVAL_MS = 3000;
 
-/** AutoMix-style crossfade window — Apple Music's own default is in this
- * neighborhood. Fixed rather than user-tunable for now: a single well-chosen
- * value beats an extra settings knob most people never touch. */
+/** Fallback crossfade window for tracks with no analyzed edge silence
+ * (media.fade_out_ms/fade_in_ms — see backend/app/services/audio_analysis.py)
+ * — most tracks get a duration adapted to their own actual silence instead
+ * of this fixed value. Apple Music's own default sits in this neighborhood,
+ * which is why it's still a reasonable floor for unanalyzed tracks. */
 const CROSSFADE_SECONDS = 4;
 
 /** A play only "counts" (for On Repeat / Replay) once genuinely listened to,
@@ -254,20 +256,24 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       }
 
       const dur = status.duration || media.duration_seconds || 0;
+      // This track's own trailing silence, if analyzed — a track that fades
+      // out slowly over 6s gets a 6s-wide crossfade window; one that cuts
+      // off abruptly gets the fixed fallback instead of chopping into audio.
+      const outgoingFadeMs = media.fade_out_ms ?? CROSSFADE_SECONDS * 1000;
       if (
         !crossfadeTriggered &&
         get().crossfadeEnabled &&
         get().repeat !== 'one' &&
         dur > 0 &&
         dur - status.currentTime > 0 &&
-        dur - status.currentTime <= CROSSFADE_SECONDS
+        dur - status.currentTime <= outgoingFadeMs / 1000
       ) {
         const { queue, queueIndex, shuffle, repeat: rep } = get();
         const nextIndex = computeNextIndex(queue, queueIndex, shuffle, rep);
         if (nextIndex !== null) {
           crossfadeTriggered = true;
           set({ crossfading: true });
-          void performCrossfade(nextIndex, dur - status.currentTime);
+          void performCrossfade(nextIndex, dur - status.currentTime, outgoingFadeMs);
         }
       }
 
@@ -294,12 +300,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     attachToPlayer(media, options);
   }
 
-  async function performCrossfade(nextIndex: number, remainingSeconds: number) {
+  async function performCrossfade(nextIndex: number, remainingSeconds: number, outgoingFadeMs: number) {
     const nextMedia = get().queue[nextIndex];
     if (!nextMedia) return;
     const { uri, headers } = await resolvePlaybackSource(nextMedia);
     const targetVolume = get().muted ? 0 : get().volume;
-    const fadeMs = Math.max(500, Math.min(CROSSFADE_SECONDS, remainingSeconds) * 1000);
+    // Bounded by whichever side has less genuine silence to work with — no
+    // point fading for 6s into a track whose own intro starts immediately —
+    // and by however much of the outgoing track is actually still left to play.
+    const incomingFadeMs = nextMedia.fade_in_ms ?? outgoingFadeMs;
+    const fadeMs = Math.max(500, Math.min(outgoingFadeMs, incomingFadeMs, remainingSeconds * 1000));
     await PlayerService.crossfadeTo(uri, headers, fadeMs, targetVolume);
 
     unsubscribePlayback?.();

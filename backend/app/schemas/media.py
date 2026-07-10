@@ -19,6 +19,8 @@ class MediaOut(BaseModel):
     genre: str | None
     release_year: int | None
     is_remix: bool | None
+    fade_in_ms: int | None
+    fade_out_ms: int | None
     duration_seconds: float | None
     created_at: datetime
 

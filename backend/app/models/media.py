@@ -46,6 +46,17 @@ class Media(Base):
     genre: Mapped[str | None] = mapped_column(String(100), nullable=True)
     release_year: Mapped[int | None] = mapped_column(nullable=True)
     is_remix: Mapped[bool | None] = mapped_column(nullable=True)
+    # Milliseconds of genuine silence at the very start/end, from ffmpeg
+    # silencedetect (see app.services.audio_analysis) — lets the crossfade
+    # span each track's actual silence instead of one fixed duration for
+    # everyone. Both null until analyzed, and stay null afterwards if none
+    # was found — fades_analyzed_at is the only thing that distinguishes
+    # "not analyzed yet" from "analyzed, no edge silence" (a plain "is this
+    # null" check on the fade columns themselves can't tell those apart,
+    # which would make the startup backfill re-scan the same tracks forever).
+    fade_in_ms: Mapped[int | None] = mapped_column(nullable=True)
+    fade_out_ms: Mapped[int | None] = mapped_column(nullable=True)
+    fades_analyzed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
     file_path: Mapped[str] = mapped_column(Text)

@@ -78,6 +78,15 @@ async def _add_missing_columns(conn) -> None:
             "release_year": "INTEGER",
             "is_remix": "BOOLEAN",
             "storage_backend": "VARCHAR(10)",
+            "fade_in_ms": "INTEGER",
+            "fade_out_ms": "INTEGER",
+            # TIMESTAMPTZ, not TIMESTAMP — Media.fades_analyzed_at is a
+            # tz-aware DateTime(timezone=True); a plain TIMESTAMP column on
+            # Postgres is timezone-*naive* and asyncpg rejects inserting an
+            # aware datetime into it (the exact bug already hit once with
+            # created_at/updated_at — see the timezone fix in the git log).
+            # SQLite accepts any type-affinity string, so this is safe there too.
+            "fades_analyzed_at": "TIMESTAMPTZ",
         },
     )
     if "storage_backend" in media_added:

@@ -18,6 +18,11 @@ export type Media = {
   genre: string | null;
   release_year: number | null;
   is_remix: boolean | null;
+  /** Milliseconds of genuine silence ffmpeg found at the very start/end —
+   * null means "not analyzed yet" or "none found"; either way, callers
+   * should fall back to a fixed crossfade duration. */
+  fade_in_ms: number | null;
+  fade_out_ms: number | null;
   duration_seconds: number | null;
   created_at: string;
 };
