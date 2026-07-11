@@ -89,7 +89,12 @@ export function RegisterScreen({ navigation }: Props) {
         />
       ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button label="Create account" onPress={handleRegister} loading={loading} disabled={!canSubmit} />
+      <Button
+        label={!displayName.trim() ? 'Enter your name' : !emailLooksValid ? 'Enter a valid email' : !passwordLongEnough ? 'Use at least 8 characters' : REGISTRATION_INVITE_REQUIRED && !inviteCode.trim() ? 'Enter your invite code' : 'Create account'}
+        onPress={handleRegister}
+        loading={loading}
+        disabled={!canSubmit}
+      />
       <Button label="Back to login" variant="ghost" onPress={() => navigation.navigate('Login')} />
     </AuthLayout>
   );

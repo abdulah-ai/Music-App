@@ -22,7 +22,7 @@ export function AnnouncementBanner() {
             {announcement.body}
           </Text>
         </View>
-        <Pressable onPress={dismiss} style={styles.dismiss} hitSlop={8}>
+        <Pressable onPress={dismiss} accessibilityLabel="Dismiss announcement" style={styles.dismiss} hitSlop={8}>
           <Ionicons name="close" size={16} color={colors.textMuted} />
         </Pressable>
       </View>

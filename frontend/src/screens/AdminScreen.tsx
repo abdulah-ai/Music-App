@@ -10,7 +10,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { ScreenContainer } from '../components/ui/ScreenContainer';
 import { toast } from '../store/toastStore';
-import { apiErrorMessage } from '../utils/apiError';
+import { apiErrorMessage, friendlyJobError } from '../utils/apiError';
 import { useAuthStore } from '../store/authStore';
 import { colors, radii, spacing, typography } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/types';
@@ -303,7 +303,7 @@ function JobsTab({ jobs }: { jobs: AdminJob[] }) {
                 {job.user_email}
               </Text>
               <Text numberOfLines={1} style={[styles.mutedLine, job.status === 'failed' && { color: colors.danger }]}>
-                {job.status === 'failed' && job.error_message ? job.error_message : job.source_url ?? '—'}
+                {job.status === 'failed' && job.error_message ? friendlyJobError(job.error_message) : job.source_url ?? '—'}
               </Text>
             </View>
             <Text style={styles.mutedLine}>{timeAgo(job.created_at)}</Text>
@@ -357,8 +357,8 @@ function FeedbackTab({ items, onChanged }: { items: AdminFeedback[]; onChanged: 
         status: item.status === 'open' ? 'resolved' : 'open',
       });
       onChanged(updated);
-    } catch {
-      toast("Couldn't update that feedback", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't update that feedback."), 'error');
     } finally {
       setBusyId(null);
     }
@@ -372,8 +372,8 @@ function FeedbackTab({ items, onChanged }: { items: AdminFeedback[]; onChanged: 
       const updated = await adminApi.updateFeedback(item.id, { admin_reply: reply });
       onChanged(updated);
       toast('Reply saved', 'success');
-    } catch {
-      toast("Couldn't save that reply", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't save that reply."), 'error');
     } finally {
       setBusyId(null);
     }
@@ -455,8 +455,8 @@ function AnnouncementsTab({
       setTitle('');
       setBody('');
       toast('Announcement posted', 'success');
-    } catch {
-      toast("Couldn't post that announcement", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't post that announcement."), 'error');
     } finally {
       setPosting(false);
     }
@@ -466,8 +466,8 @@ function AnnouncementsTab({
     try {
       await adminApi.deleteAnnouncement(id);
       onDeleted(id);
-    } catch {
-      toast("Couldn't remove that announcement", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't remove that announcement."), 'error');
     }
   }
 
@@ -514,7 +514,7 @@ function AnnouncementsTab({
                   <Text style={styles.mutedLine}>{item.body}</Text>
                   <Text style={styles.mutedLine}>{timeAgo(item.created_at)}</Text>
                 </View>
-                <Pressable onPress={() => remove(item.id)} hitSlop={8}>
+                <Pressable onPress={() => remove(item.id)} accessibilityLabel={`Remove announcement ${item.title}`} hitSlop={8}>
                   <Ionicons name="trash-outline" size={16} color={colors.danger} />
                 </Pressable>
               </View>
@@ -572,7 +572,7 @@ export function AdminScreen() {
       <View style={styles.root}>
         <ScreenContainer maxWidth={800}>
           <View style={styles.headerRow}>
-            <Pressable onPress={() => navigation.goBack()} hitSlop={12} style={styles.backButton}>
+            <Pressable onPress={() => navigation.goBack()} accessibilityLabel="Go back" hitSlop={12} style={styles.backButton}>
               <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.headerTitle}>Admin</Text>
@@ -589,11 +589,11 @@ export function AdminScreen() {
       <ScreenContainer maxWidth={800}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
           <View style={styles.headerRow}>
-            <Pressable onPress={() => navigation.goBack()} hitSlop={12} style={styles.backButton}>
+            <Pressable onPress={() => navigation.goBack()} accessibilityLabel="Go back" hitSlop={12} style={styles.backButton}>
               <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.headerTitle}>Admin</Text>
-            <Pressable onPress={load} hitSlop={12} style={styles.backButton}>
+            <Pressable onPress={load} accessibilityLabel="Refresh admin data" hitSlop={12} style={styles.backButton}>
               <Ionicons name="refresh" size={18} color={colors.textPrimary} />
             </Pressable>
           </View>

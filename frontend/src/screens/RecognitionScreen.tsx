@@ -29,7 +29,7 @@ import type { Job } from '../services/api/types';
 import { useLibraryStore } from '../store/libraryStore';
 import { useScanHistoryStore } from '../store/scanHistoryStore';
 import { toast } from '../store/toastStore';
-import { friendlyJobError } from '../utils/apiError';
+import { apiErrorMessage, friendlyJobError, friendlyJobStage } from '../utils/apiError';
 import { colors, gradients, layout, radii, spacing, typography } from '../theme/tokens';
 
 const LISTEN_SECONDS = 8;
@@ -190,8 +190,8 @@ export function RecognitionScreen() {
         artist: job.match_artist,
         thumbnailUrl: job.match_thumbnail_url,
       });
-    } catch {
-      setError("Couldn't reach the recognition service. Check your connection and try again.");
+    } catch (err) {
+      setError(apiErrorMessage(err, "Couldn't reach the recognition service. Check your connection and try again."));
       setPhase('idle');
     }
   }
@@ -216,8 +216,8 @@ export function RecognitionScreen() {
           toast('Added to your library', 'success');
         }
       });
-    } catch {
-      toast("Couldn't start that search", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't start that search."), 'error');
     }
   }
 
@@ -342,6 +342,7 @@ export function RecognitionScreen() {
           <PressableScale
             onPress={phase === 'idle' ? startListening : phase === 'listening' ? stopAndRecognize : undefined}
             disabled={phase === 'analyzing' || phase === 'result'}
+            accessibilityLabel={phase === 'idle' ? 'Start listening' : phase === 'listening' ? 'Stop and identify song' : phase === 'analyzing' ? 'Identifying song' : 'Recognition result shown'}
             scaleTo={0.96}
           >
             <View style={styles.listenShadow}>
@@ -443,7 +444,7 @@ export function RecognitionScreen() {
                             <ProgressBar progress={downloadJob.progress_pct / 100} />
                             <View style={styles.downloadRow}>
                               <ActivityIndicator size="small" color={colors.cyan} />
-                              <Text style={styles.resultArtist}>{downloadJob.stage_label ?? 'starting'}…</Text>
+                              <Text style={styles.resultArtist}>{friendlyJobStage(downloadJob.stage_label, downloadJob.status)}…</Text>
                             </View>
                           </>
                         )}
@@ -493,7 +494,7 @@ export function RecognitionScreen() {
                             <ProgressBar progress={downloadJob.progress_pct / 100} />
                             <View style={styles.downloadRow}>
                               <ActivityIndicator size="small" color={colors.cyan} />
-                              <Text style={styles.resultArtist}>{downloadJob.stage_label ?? 'starting'}…</Text>
+                              <Text style={styles.resultArtist}>{friendlyJobStage(downloadJob.stage_label, downloadJob.status)}…</Text>
                             </View>
                           </>
                         )}

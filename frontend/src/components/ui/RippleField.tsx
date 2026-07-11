@@ -61,7 +61,7 @@ function makeStars(): StarSpec[] {
       // Brighter than the old sky — fewer stars, but each one earns its place.
       baseOpacity: 0.25 + rand() * 0.45,
       twinkles: i % 3 === 0,
-      // Mostly moon-silver, with a rare teal or gold spark.
+      // Mostly moon-silver, with a rare ember or gold spark.
       color: roll > 0.94 ? palette.gold : roll > 0.86 ? palette.primary : palette.textPrimary,
     });
   }
@@ -205,7 +205,7 @@ function MoonGlow({ ampBoost }: { ampBoost: Animated.AnimatedInterpolation<numbe
 /** A soft colored wash centered on the sky, cross-fading in when the current
  * track's extracted accent color is known (web only — see useTrackAccent)
  * and fading back out otherwise. Purely additive: the rest of the sky's
- * teal/violet palette is untouched, this just layers a hint of the track's
+ * ember/violet palette is untouched, this just layers a hint of the track's
  * own color on top. */
 function AccentWash({ accentColor }: { accentColor?: string | null }) {
   const { width, height } = useWindowDimensions();
@@ -435,7 +435,7 @@ type RippleFieldProps = {
   /** The current track's extracted accent color (web only — see
    * useTrackAccent). When present, washes the sky with a hint of that color;
    * when absent (native, or nothing playing) the sky stays its default
-   * teal/violet, unchanged from before this prop existed. */
+   * ember/violet, unchanged from before this prop existed. */
   accentColor?: string | null;
 };
 

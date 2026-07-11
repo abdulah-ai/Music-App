@@ -13,7 +13,7 @@ import { watchJob } from '../services/api/jobSocket';
 import type { Job } from '../services/api/types';
 import { useLibraryStore } from '../store/libraryStore';
 import { toast } from '../store/toastStore';
-import { friendlyJobError } from '../utils/apiError';
+import { apiErrorMessage, friendlyJobError, friendlyJobStage } from '../utils/apiError';
 import { colors, radii, spacing, typography } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -71,16 +71,16 @@ function JobRow({ job, onCancel, onRetry }: { job: Job; onCancel: () => void; on
           <Text numberOfLines={1} style={[styles.subtitle, job.status === 'failed' && styles.subtitleError]}>
             {job.status === 'failed' && job.error_message
               ? friendlyJobError(job.error_message)
-              : `${job.job_type === 'download' ? 'Download' : 'Recognition'} · ${meta.label} · ${timeAgo(job.updated_at)}`}
+              : `${friendlyJobStage(job.stage_label, meta.label)} · ${timeAgo(job.updated_at)}`}
           </Text>
         </View>
         {running && (
-          <Pressable onPress={onCancel} hitSlop={8} style={styles.action}>
+          <Pressable onPress={onCancel} accessibilityLabel="Cancel job" hitSlop={8} style={styles.action}>
             <Ionicons name="close" size={17} color={colors.textMuted} />
           </Pressable>
         )}
         {job.status === 'failed' && job.source_url && (
-          <Pressable onPress={onRetry} hitSlop={8} style={styles.action}>
+          <Pressable onPress={onRetry} accessibilityLabel="Retry job" hitSlop={8} style={styles.action}>
             <Ionicons name="refresh" size={17} color={colors.cyan} />
           </Pressable>
         )}
@@ -121,8 +121,8 @@ export function JobsScreen() {
     try {
       const updated = await downloadsApi.cancelDownload(job.id);
       setJobs((prev) => (prev ? prev.map((j) => (j.id === updated.id ? updated : j)) : prev));
-    } catch {
-      toast("Couldn't cancel that job", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't cancel that job."), 'error');
     }
   }
 
@@ -132,20 +132,25 @@ export function JobsScreen() {
       await downloadsApi.createDownload(job.source_url, job.result_media?.media_type ?? 'audio');
       toast('Restarted', 'success');
       load();
-    } catch {
-      toast("Couldn't restart that job", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't restart that job."), 'error');
     }
   }
 
   const active = jobs?.filter((j) => j.status === 'pending' || j.status === 'in_progress') ?? [];
   const finished = jobs?.filter((j) => j.status !== 'pending' && j.status !== 'in_progress') ?? [];
 
+  function clearFinished() {
+    setJobs((current) => current?.filter((job) => job.status === 'pending' || job.status === 'in_progress') ?? current);
+    toast('Finished jobs cleared', 'info');
+  }
+
   return (
     <View style={styles.root}>
       <ScreenContainer maxWidth={720}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
           <View style={styles.headerRow}>
-            <Pressable onPress={() => navigation.goBack()} hitSlop={12} style={styles.backButton}>
+            <Pressable onPress={() => navigation.goBack()} accessibilityLabel="Go back" hitSlop={12} style={styles.backButton}>
               <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.headerTitle}>Activity</Text>
@@ -174,7 +179,12 @@ export function JobsScreen() {
               )}
               {finished.length > 0 && (
                 <>
-                  <Text style={styles.sectionTitle}>HISTORY</Text>
+                  <View style={styles.sectionHeading}>
+                    <Text style={styles.sectionTitle}>HISTORY</Text>
+                    <Pressable onPress={clearFinished} style={styles.clearButton} accessibilityRole="button">
+                      <Text style={styles.clearButtonText}>Clear finished</Text>
+                    </Pressable>
+                  </View>
                   <View style={styles.list}>
                     {finished.map((job) => (
                       <JobRow key={job.id} job={job} onCancel={() => handleCancel(job)} onRetry={() => handleRetry(job)} />
@@ -216,6 +226,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
+  sectionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  clearButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.sm },
+  clearButtonText: { ...typography.caption, color: colors.cyan },
   list: { gap: spacing.sm },
   row: { borderRadius: radii.lg },
   rowContent: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },

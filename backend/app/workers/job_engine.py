@@ -39,6 +39,39 @@ _cancelled_job_ids: set[str] = set()
 _GARBAGE_TITLE_RE = re.compile(r"^[A-Za-z0-9_-]{16,}$")
 
 
+def clean_job_error(error: object, fallback: str = "That job could not be completed. Try again.") -> str:
+    """Convert third-party exceptions into short, safe text for clients.
+
+    yt-dlp, Telethon and Shazam exceptions can include stack-like prefixes,
+    local paths, URLs with tokens, and multi-line diagnostics. Job rows are a
+    user-facing surface, so none of that belongs in `error_message`.
+    """
+    raw = str(error or "").strip()
+    if not raw:
+        return fallback
+    lower = raw.lower()
+    if "timed out" in lower or "timeout" in lower:
+        return "The service took too long to respond. Try again."
+    if "floodwait" in lower or "too many requests" in lower or "rate limit" in lower:
+        return "The service is rate-limiting requests. Wait a moment and try again."
+    if "not authorized" in lower or "not linked" in lower:
+        return "Telegram is no longer linked. Reconnect it and try again."
+    if "unsupported url" in lower:
+        return "That link does not contain supported media."
+    if "sign in" in lower or "cookies" in lower:
+        return "The media site requires sign-in, so this link cannot be saved right now."
+
+    first_line = raw.splitlines()[0]
+    first_line = re.sub(r"^error:\s*", "", first_line, flags=re.IGNORECASE)
+    first_line = re.sub(r"^\[[^\]]+\]\s*", "", first_line)
+    first_line = re.sub(r"https?://\S+", "that link", first_line)
+    first_line = re.sub(r"(?:[A-Za-z]:\\|/)[^\s:'\"]+", "a local file", first_line)
+    first_line = re.sub(r"\s+", " ", first_line).strip(" :-")
+    if not first_line:
+        return fallback
+    return first_line[:197] + "..." if len(first_line) > 200 else first_line
+
+
 def looks_like_garbage_title(title: str | None) -> bool:
     if not title:
         return True
@@ -224,6 +257,8 @@ async def _touch_job(job_id: str, **fields) -> None:
         job = await session.get(Job, job_id)
         if job is None:
             return
+        if fields.get("status") == JobStatus.FAILED:
+            fields["error_message"] = clean_job_error(fields.get("error_message"))
         for key, value in fields.items():
             setattr(job, key, value)
         # Every download/telegram-import/recognition job funnels its status
@@ -328,8 +363,8 @@ async def run_download_job(
             asyncio.create_task(analyze_track_fades([media_id]))
     except DownloadCancelled:
         await _touch_job(job_id, status=JobStatus.CANCELLED, stage_label="cancelled")
-    except Exception as exc:  # noqa: BLE001 - surfaced to the client as job.error_message
-        await _touch_job(job_id, status=JobStatus.FAILED, stage_label="failed", error_message=str(exc))
+    except Exception as exc:  # noqa: BLE001 - cleaned before it reaches job.error_message
+        await _touch_job(job_id, status=JobStatus.FAILED, stage_label="failed", error_message=clean_job_error(exc))
     finally:
         _cancelled_job_ids.discard(job_id)
         if tmp_dir.exists():
@@ -515,8 +550,8 @@ async def run_telegram_import_job(
             # stems). Fire-and-forget so a slow batch doesn't block anything.
             asyncio.create_task(auto_name_media(user_id, created_media_ids))
             asyncio.create_task(analyze_track_fades(created_media_ids))
-    except Exception as exc:  # noqa: BLE001 - surfaced to the client as job.error_message
-        await _touch_job(job_id, status=JobStatus.FAILED, stage_label="failed", error_message=str(exc))
+    except Exception as exc:  # noqa: BLE001 - cleaned before it reaches job.error_message
+        await _touch_job(job_id, status=JobStatus.FAILED, stage_label="failed", error_message=clean_job_error(exc))
     finally:
         _cancelled_job_ids.discard(job_id)
         await client.disconnect()
@@ -579,7 +614,7 @@ async def run_recognition_job(
                 match_thumbnail_url=match.thumbnail_url,
             )
     except Exception as exc:  # noqa: BLE001
-        await _touch_job(job_id, status=JobStatus.FAILED, stage_label="failed", error_message=str(exc))
+        await _touch_job(job_id, status=JobStatus.FAILED, stage_label="failed", error_message=clean_job_error(exc))
     finally:
         if cleanup:
             tmp_audio_path.unlink(missing_ok=True)

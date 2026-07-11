@@ -43,12 +43,14 @@ import { usePlayerStore } from '../store/playerStore';
 import { usePlaylistStore } from '../store/playlistStore';
 import { useVideoPlayerStore } from '../store/videoPlayerStore';
 import { toast } from '../store/toastStore';
+import { apiErrorMessage } from '../utils/apiError';
 import { colors, gradients, layout, radii, shadows, spacing, typography } from '../theme/tokens';
 import type { MainTabParamList, RootStackParamList } from '../navigation/types';
 
 type Tab = 'all' | 'audio' | 'video' | 'favorites' | 'playlists';
-type SortMode = 'newest' | 'title' | 'artist' | 'longest';
+type SortMode = 'newest' | 'title' | 'artist' | 'genre' | 'year' | 'longest';
 type ViewMode = 'grid' | 'list';
+type RemixFilter = 'all' | 'original' | 'remix';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -62,9 +64,11 @@ const SORT_LABEL: Record<SortMode, string> = {
   newest: 'Newest',
   title: 'Title',
   artist: 'Artist',
+  genre: 'Genre',
+  year: 'Year',
   longest: 'Longest',
 };
-const SORT_ORDER: SortMode[] = ['newest', 'title', 'artist', 'longest'];
+const SORT_ORDER: SortMode[] = ['newest', 'title', 'artist', 'genre', 'year', 'longest'];
 
 function formatDuration(seconds: number | null): string {
   if (!seconds) return '--:--';
@@ -119,6 +123,9 @@ export function LibraryScreen() {
     if (route.params?.tab) setTab(route.params.tab);
   }, [route.params?.tab]);
   const [sort, setSort] = useState<SortMode>('newest');
+  const [genreFilter, setGenreFilter] = useState<string | null>(null);
+  const [yearFilter, setYearFilter] = useState<number | null>(null);
+  const [remixFilter, setRemixFilter] = useState<RemixFilter>('all');
   const [view, setView] = useState<ViewMode>('grid');
   const [sheetMedia, setSheetMedia] = useState<Media | null>(null);
   const [editMedia, setEditMedia] = useState<Media | null>(null);
@@ -150,10 +157,23 @@ export function LibraryScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
+  const genres = useMemo(
+    () => [...new Set(items.map((m) => m.genre?.trim()).filter((value): value is string => !!value))].sort(),
+    [items],
+  );
+  const years = useMemo(
+    () => [...new Set(items.map((m) => m.release_year).filter((value): value is number => value != null))].sort((a, b) => b - a),
+    [items],
+  );
+
   const visible = useMemo(() => {
     let list = items;
     if (tab === 'audio' || tab === 'video') list = list.filter((m) => m.media_type === tab);
     if (tab === 'favorites') list = list.filter((m) => favoriteIds[m.id]);
+    if (genreFilter) list = list.filter((m) => m.genre === genreFilter);
+    if (yearFilter) list = list.filter((m) => m.release_year === yearFilter);
+    if (remixFilter === 'remix') list = list.filter((m) => m.is_remix === true);
+    if (remixFilter === 'original') list = list.filter((m) => m.is_remix !== true);
 
     const sorted = [...list];
     switch (sort) {
@@ -163,6 +183,12 @@ export function LibraryScreen() {
       case 'artist':
         sorted.sort((a, b) => displayArtist(a).localeCompare(displayArtist(b)));
         break;
+      case 'genre':
+        sorted.sort((a, b) => (a.genre ?? 'ZZZ').localeCompare(b.genre ?? 'ZZZ'));
+        break;
+      case 'year':
+        sorted.sort((a, b) => (b.release_year ?? 0) - (a.release_year ?? 0));
+        break;
       case 'longest':
         sorted.sort((a, b) => (b.duration_seconds ?? 0) - (a.duration_seconds ?? 0));
         break;
@@ -171,7 +197,17 @@ export function LibraryScreen() {
         sorted.sort((a, b) => b.created_at.localeCompare(a.created_at));
     }
     return sorted;
-  }, [items, tab, sort, favoriteIds]);
+  }, [items, tab, sort, favoriteIds, genreFilter, yearFilter, remixFilter]);
+
+  function cycleGenre() {
+    const index = genreFilter ? genres.indexOf(genreFilter) : -1;
+    setGenreFilter(index >= genres.length - 1 ? null : genres[index + 1]);
+  }
+
+  function cycleYear() {
+    const index = yearFilter ? years.indexOf(yearFilter) : -1;
+    setYearFilter(index >= years.length - 1 ? null : years[index + 1]);
+  }
 
   async function handlePlay(media: Media) {
     if (media.media_type === 'video') {
@@ -196,8 +232,8 @@ export function LibraryScreen() {
       } else {
         await Linking.openURL(url);
       }
-    } catch {
-      toast("Couldn't open that file", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't open that file."), 'error');
     }
   }
 
@@ -222,8 +258,8 @@ export function LibraryScreen() {
         setOfflineIds((prev) => ({ ...prev, [media.id]: true }));
         toast('Saved for offline playback', 'success');
       }
-    } catch {
-      toast("Couldn't save offline — check your connection and try again", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't save offline. Check your connection and try again."), 'error');
     } finally {
       setSavingOffline(false);
       setSheetMedia(null);
@@ -272,7 +308,8 @@ export function LibraryScreen() {
             await Linking.openURL(url);
             await new Promise((resolve) => setTimeout(resolve, 400));
           }
-        } catch {
+        } catch (err) {
+          apiErrorMessage(err, "Couldn't download that track.");
           failed += 1;
         } finally {
           setBulkDownloadProgress((prev) => (prev ? { done: prev.done + 1, total: prev.total } : prev));
@@ -306,8 +343,8 @@ export function LibraryScreen() {
     try {
       await remove(media.id);
       toast('Removed from your collection', 'success');
-    } catch {
-      toast("Couldn't delete that track", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't delete that track."), 'error');
     }
   }
 
@@ -342,8 +379,8 @@ export function LibraryScreen() {
           }
         });
       });
-    } catch {
-      toast("Couldn't start naming", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't start naming."), 'error');
       setNaming(false);
     }
   }
@@ -380,8 +417,8 @@ export function LibraryScreen() {
     try {
       await Promise.all(ids.map((id) => remove(id)));
       toast(`Removed ${ids.length} track${ids.length === 1 ? '' : 's'}`, 'success');
-    } catch {
-      toast("Couldn't remove every selected track", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't remove every selected track."), 'error');
     } finally {
       exitSelectMode();
     }
@@ -428,7 +465,7 @@ export function LibraryScreen() {
             style={styles.searchInput}
           />
           {query.length > 0 && (
-            <Pressable onPress={() => setQuery('')} hitSlop={8}>
+            <Pressable onPress={() => setQuery('')} accessibilityLabel="Clear search" hitSlop={8}>
               <Ionicons name="close-circle" size={17} color={colors.textMuted} />
             </Pressable>
           )}
@@ -469,11 +506,29 @@ export function LibraryScreen() {
                 <Ionicons name="swap-vertical" size={13} color={colors.textSecondary} />
                 <Text style={styles.toolLabel}>{SORT_LABEL[sort]}</Text>
               </Pressable>
-              <Pressable onPress={() => setView(view === 'grid' ? 'list' : 'grid')} style={styles.toolChip}>
+              {genres.length > 0 && (
+                <Pressable onPress={cycleGenre} style={[styles.toolChip, !!genreFilter && styles.toolChipActive]}>
+                  <Text numberOfLines={1} style={styles.toolLabel}>{genreFilter ?? 'All genres'}</Text>
+                </Pressable>
+              )}
+              {years.length > 0 && (
+                <Pressable onPress={cycleYear} style={[styles.toolChip, !!yearFilter && styles.toolChipActive]}>
+                  <Text style={styles.toolLabel}>{yearFilter ?? 'All years'}</Text>
+                </Pressable>
+              )}
+              <Pressable
+                onPress={() => setRemixFilter(remixFilter === 'all' ? 'original' : remixFilter === 'original' ? 'remix' : 'all')}
+                style={[styles.toolChip, remixFilter !== 'all' && styles.toolChipActive]}
+              >
+                <Text style={styles.toolLabel}>{remixFilter === 'all' ? 'All mixes' : remixFilter === 'remix' ? 'Remixes' : 'Originals'}</Text>
+              </Pressable>
+              <Pressable onPress={() => setView(view === 'grid' ? 'list' : 'grid')} accessibilityLabel={`Switch to ${view === 'grid' ? 'list' : 'grid'} view`} style={styles.toolChip}>
                 <Ionicons name={view === 'grid' ? 'list' : 'grid'} size={14} color={colors.textSecondary} />
               </Pressable>
               <Pressable
                 onPress={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
+                accessibilityRole="button"
+                accessibilityLabel={selectMode ? 'Exit selection mode' : 'Select tracks'}
                 style={[styles.toolChip, selectMode && styles.toolChipActive]}
               >
                 <Ionicons
@@ -772,8 +827,8 @@ function PlaylistsPane({ playlists, onOpen }: { playlists: Playlist[]; onOpen: (
       await createPlaylist(trimmed);
       setName('');
       toast('Playlist created', 'success');
-    } catch {
-      toast("Couldn't create that playlist", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't create that playlist."), 'error');
     } finally {
       setCreating(false);
     }
@@ -872,8 +927,8 @@ function PlaylistPickerModal({
         'success',
       );
       onDone();
-    } catch {
-      toast("Couldn't add to that playlist", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't add to that playlist."), 'error');
       setBusy(false);
     }
   }
@@ -890,8 +945,8 @@ function PlaylistPickerModal({
         'success',
       );
       onDone();
-    } catch {
-      toast("Couldn't create that playlist", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't create that playlist."), 'error');
       setBusy(false);
     }
   }
@@ -972,8 +1027,8 @@ function PlaylistDetailModal({
       await removePlaylist(playlistId);
       toast('Playlist deleted', 'success');
       onClose();
-    } catch {
-      toast("Couldn't delete that playlist", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't delete that playlist."), 'error');
     }
   }
 
@@ -1038,8 +1093,8 @@ function PlaylistDetailModal({
                   onPress={async () => {
                     try {
                       await removeItem(playlistId, item.id);
-                    } catch {
-                      toast("Couldn't remove that track", 'error');
+                    } catch (err) {
+                      toast(apiErrorMessage(err, "Couldn't remove that track."), 'error');
                     }
                   }}
                   hitSlop={8}
@@ -1088,19 +1143,30 @@ function EditMediaModal({
   const [title, setTitle] = useState(media.title ?? media.recognized_title ?? '');
   const [artist, setArtist] = useState(media.artist ?? media.recognized_artist ?? '');
   const [album, setAlbum] = useState(media.album ?? '');
+  const [genre, setGenre] = useState(media.genre ?? '');
+  const [releaseYear, setReleaseYear] = useState(media.release_year ? String(media.release_year) : '');
+  const [isRemix, setIsRemix] = useState(media.is_remix === true);
   const [saving, setSaving] = useState(false);
 
   async function save() {
+    const parsedYear = releaseYear.trim() ? Number(releaseYear) : null;
+    if (parsedYear != null && (!Number.isInteger(parsedYear) || parsedYear < 1000 || parsedYear > 2100)) {
+      toast('Enter a release year between 1000 and 2100.', 'error');
+      return;
+    }
     setSaving(true);
     try {
       const updated = await libraryApi.updateMedia(media.id, {
         title: title.trim() || null,
         artist: artist.trim() || null,
         album: album.trim() || null,
-      } as Partial<Pick<Media, 'title' | 'artist' | 'album'>>);
+        genre: genre.trim() || null,
+        release_year: parsedYear,
+        is_remix: isRemix,
+      });
       onSaved(updated);
-    } catch {
-      toast("Couldn't save changes", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't save changes."), 'error');
       setSaving(false);
     }
   }
@@ -1116,6 +1182,8 @@ function EditMediaModal({
             { label: 'Title', value: title, set: setTitle },
             { label: 'Artist', value: artist, set: setArtist },
             { label: 'Album', value: album, set: setAlbum },
+            { label: 'Genre', value: genre, set: setGenre },
+            { label: 'Release year', value: releaseYear, set: setReleaseYear },
           ].map((field) => (
             <View key={field.label} style={styles.editField}>
               <Text style={styles.editLabel}>{field.label}</Text>
@@ -1129,6 +1197,10 @@ function EditMediaModal({
               />
             </View>
           ))}
+          <Pressable onPress={() => setIsRemix((value) => !value)} style={[styles.remixToggle, isRemix && styles.toolChipActive]}>
+            <Ionicons name={isRemix ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={isRemix ? colors.cyan : colors.textMuted} />
+            <Text style={styles.editLabel}>This track is a remix</Text>
+          </Pressable>
           <PressableScale onPress={save} disabled={saving} scaleTo={0.97}>
             <LinearGradient colors={colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.editSave}>
               {saving ? (
@@ -1168,6 +1240,8 @@ const GridCard = memo(function GridCard({
     <Pressable
       onPress={onPress}
       onLongPress={onLongPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${displayTitle(media)}${artist ? `, ${artist}` : ''}${metadataLine(media) ? `, ${metadataLine(media)}` : ''}`}
       delayLongPress={350}
       onHoverIn={Platform.OS === 'web' ? () => setHovered(true) : undefined}
       onHoverOut={Platform.OS === 'web' ? () => setHovered(false) : undefined}
@@ -1223,7 +1297,7 @@ const GridCard = memo(function GridCard({
             in a touch WebView neither is discoverable; this is the one tap
             target every device gets. */}
         {!selectMode && (
-          <Pressable onPress={onLongPress} style={[styles.moreChip, hovered && styles.moreChipHovered]} hitSlop={8}>
+          <Pressable onPress={onLongPress} accessibilityLabel={`More options for ${displayTitle(media)}`} style={[styles.moreChip, hovered && styles.moreChipHovered]} hitSlop={8}>
             <Ionicons name="ellipsis-horizontal" size={15} color={colors.textPrimary} />
           </Pressable>
         )}
@@ -1243,6 +1317,7 @@ const GridCard = memo(function GridCard({
         <View style={styles.meta}>
           <Text numberOfLines={1} style={styles.cardTitle}>{displayTitle(media)}</Text>
           {artist && <Text numberOfLines={1} style={styles.cardArtist}>{artist}</Text>}
+          {!!metadataLine(media) && <Text numberOfLines={1} style={styles.cardMetadata}>{metadataLine(media)}</Text>}
         </View>
       </View>
     </Pressable>
@@ -1271,6 +1346,8 @@ const ListRow = memo(function ListRow({
     <Pressable
       onPress={onPress}
       onLongPress={onLongPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${displayTitle(media)}${artist ? `, ${artist}` : ''}${metadataLine(media) ? `, ${metadataLine(media)}` : ''}`}
       delayLongPress={350}
       onHoverIn={Platform.OS === 'web' ? () => setHovered(true) : undefined}
       onHoverOut={Platform.OS === 'web' ? () => setHovered(false) : undefined}
@@ -1295,6 +1372,7 @@ const ListRow = memo(function ListRow({
       <View style={styles.listText}>
         <Text numberOfLines={1} style={styles.cardTitle}>{displayTitle(media)}</Text>
         {artist && <Text numberOfLines={1} style={styles.cardArtist}>{artist}</Text>}
+        {!!metadataLine(media) && <Text numberOfLines={1} style={styles.cardMetadata}>{metadataLine(media)}</Text>}
       </View>
       <Ionicons
         name={media.media_type === 'video' ? 'videocam-outline' : 'musical-notes-outline'}
@@ -1303,7 +1381,7 @@ const ListRow = memo(function ListRow({
       />
       {favorite && <Ionicons name="heart" size={14} color={colors.pink} />}
       {!selectMode && (
-        <Pressable onPress={onLongPress} hitSlop={10} style={styles.rowMoreButton}>
+        <Pressable onPress={onLongPress} accessibilityLabel={`More options for ${displayTitle(media)}`} hitSlop={10} style={styles.rowMoreButton}>
           <Ionicons name="ellipsis-horizontal" size={16} color={colors.textSecondary} />
         </Pressable>
       )}
@@ -1359,6 +1437,7 @@ const styles = StyleSheet.create({
   searchInput: { ...typography.body, flex: 1, color: colors.textPrimary, paddingVertical: 0 },
   controlsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: spacing.md,
@@ -1374,7 +1453,7 @@ const styles = StyleSheet.create({
   tabChipActive: { backgroundColor: 'rgba(255,138,92,0.18)' },
   tabLabel: { ...typography.caption, color: colors.textMuted },
   tabLabelActive: { color: colors.cyan, fontFamily: 'Sora_500Medium' },
-  toolRow: { flexDirection: 'row', gap: 6 },
+  toolRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   toolChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1495,6 +1574,7 @@ const styles = StyleSheet.create({
   meta: { padding: spacing.sm + 2 },
   cardTitle: { ...typography.subtitle, fontSize: 15, lineHeight: 19, color: colors.textPrimary },
   cardArtist: { ...typography.caption, fontSize: 12, color: colors.textMuted },
+  cardMetadata: { ...typography.caption, fontSize: 11, color: colors.cyan, opacity: 0.88 },
   listRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1606,6 +1686,16 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md - 4,
+  },
+  remixToggle: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    backgroundColor: 'rgba(9,6,15,0.45)',
   },
   editSave: {
     borderRadius: radii.md,

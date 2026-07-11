@@ -159,7 +159,7 @@ export function GlobalVideoStage() {
         {...panResponder.panHandlers}
         style={[styles.miniWrap, { transform: pan.getTranslateTransform() }]}
       >
-        <Pressable onPress={expand} style={StyleSheet.absoluteFill}>
+        <Pressable onPress={expand} accessibilityLabel="Expand video" style={StyleSheet.absoluteFill}>
           <VideoView player={player} style={styles.miniVideo} contentFit="cover" nativeControls={false} />
         </Pressable>
         <LinearGradient colors={gradients.coverScrim} style={styles.miniScrim} pointerEvents="none" />
@@ -167,13 +167,13 @@ export function GlobalVideoStage() {
           {displayTitle(media)}
         </Text>
         <View style={styles.miniControls}>
-          <Pressable onPress={() => (isPlaying ? player.pause() : player.play())} hitSlop={8} style={styles.miniButton}>
+          <Pressable onPress={() => (isPlaying ? player.pause() : player.play())} accessibilityLabel={isPlaying ? 'Pause video' : 'Play video'} hitSlop={12} style={styles.miniButton}>
             <Ionicons name={isPlaying ? 'pause' : 'play'} size={13} color={colors.textPrimary} />
           </Pressable>
-          <Pressable onPress={expand} hitSlop={8} style={styles.miniButton}>
+          <Pressable onPress={expand} accessibilityLabel="Expand video" hitSlop={12} style={styles.miniButton}>
             <Ionicons name="expand" size={12} color={colors.textPrimary} />
           </Pressable>
-          <Pressable onPress={close} hitSlop={8} style={styles.miniButton}>
+          <Pressable onPress={close} accessibilityLabel="Close video" hitSlop={12} style={styles.miniButton}>
             <Ionicons name="close" size={13} color={colors.textPrimary} />
           </Pressable>
         </View>
@@ -190,7 +190,7 @@ export function GlobalVideoStage() {
   return (
     <View style={styles.root}>
       <View pointerEvents="box-none" style={[styles.topBar, { top: insets.top + spacing.sm }]}>
-        <Pressable onPress={minimize} hitSlop={12} style={styles.closeButton}>
+        <Pressable onPress={minimize} accessibilityLabel="Minimize video" hitSlop={12} style={styles.closeButton}>
           <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
         </Pressable>
         {!theater && (
@@ -200,7 +200,7 @@ export function GlobalVideoStage() {
             </Text>
           </View>
         )}
-        <Pressable onPress={() => setTheater((v) => !v)} hitSlop={12} style={styles.closeButton}>
+        <Pressable onPress={() => setTheater((v) => !v)} accessibilityLabel={theater ? 'Exit theater mode' : 'Enter theater mode'} hitSlop={12} style={styles.closeButton}>
           <Ionicons name={theater ? 'contract' : 'expand'} size={18} color={colors.textSecondary} />
         </Pressable>
       </View>
@@ -228,7 +228,7 @@ export function GlobalVideoStage() {
       {!theater && (
         <View style={[styles.metaBar, { paddingBottom: insets.bottom + spacing.md }]}>
           <View style={styles.metaRow}>
-            <PressableScale onPress={() => prevMedia && setMediaId(prevMedia.id)} disabled={!prevMedia} scaleTo={0.88}>
+            <PressableScale onPress={() => prevMedia && setMediaId(prevMedia.id)} accessibilityLabel="Previous video" accessibilityHint={!prevMedia ? 'No previous video' : undefined} disabled={!prevMedia} scaleTo={0.88}>
               <View style={styles.skipButton}>
                 <Ionicons name="play-skip-back" size={20} color={colors.textSecondary} />
               </View>
@@ -243,7 +243,7 @@ export function GlobalVideoStage() {
               </Text>
             </View>
 
-            <PressableScale onPress={() => nextMedia && setMediaId(nextMedia.id)} disabled={!nextMedia} scaleTo={0.88}>
+            <PressableScale onPress={() => nextMedia && setMediaId(nextMedia.id)} accessibilityLabel="Next video" accessibilityHint={!nextMedia ? 'No next video' : undefined} disabled={!nextMedia} scaleTo={0.88}>
               <View style={styles.skipButton}>
                 <Ionicons name="play-skip-forward" size={20} color={colors.textSecondary} />
               </View>

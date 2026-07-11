@@ -24,7 +24,7 @@ import { watchJob } from '../services/api/jobSocket';
 import type { Job } from '../services/api/types';
 import { useLibraryStore } from '../store/libraryStore';
 import { toast } from '../store/toastStore';
-import { apiErrorMessage, friendlyJobError } from '../utils/apiError';
+import { apiErrorMessage, friendlyJobError, friendlyJobStage } from '../utils/apiError';
 import { colors, radii, spacing, typography } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -177,7 +177,7 @@ export function TelegramScreen({ navigation }: Props) {
       unsubscribeImport.current = watchJob(job.id, (update) => {
         setImportJob(update);
         if (update.status === 'complete') {
-          toast(update.stage_label ?? 'Import complete', 'success');
+          toast(friendlyJobStage(update.stage_label, 'Import complete'), 'success');
           refreshLibrary();
         }
         if (update.status === 'failed') {
@@ -202,7 +202,7 @@ export function TelegramScreen({ navigation }: Props) {
     <View style={styles.root}>
       <ScreenContainer maxWidth={760}>
         <View style={styles.headerRow}>
-          <Pressable onPress={() => navigation.goBack()} hitSlop={12} style={styles.backButton}>
+          <Pressable onPress={() => navigation.goBack()} accessibilityLabel="Go back" hitSlop={12} style={styles.backButton}>
             <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
           </Pressable>
           <View style={styles.headerText}>
@@ -457,7 +457,7 @@ export function TelegramScreen({ navigation }: Props) {
                       <Text numberOfLines={2} style={styles.hint}>
                         {importJob.status === 'failed'
                           ? friendlyJobError(importJob.error_message)
-                          : `${importJob.stage_label ?? 'starting'}${importing ? '…' : ''}`}
+                          : `${friendlyJobStage(importJob.stage_label, importJob.status)}${importing ? '…' : ''}`}
                       </Text>
                     </View>
                     {importing && <ActivityIndicator size="small" color={colors.cyan} />}

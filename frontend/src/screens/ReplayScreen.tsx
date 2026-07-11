@@ -50,7 +50,7 @@ export function ReplayScreen() {
       <ScreenContainer maxWidth={720}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
           <View style={styles.headerRow}>
-            <Pressable onPress={() => navigation.goBack()} hitSlop={12} style={styles.backButton}>
+            <Pressable onPress={() => navigation.goBack()} accessibilityLabel="Go back" hitSlop={12} style={styles.backButton}>
               <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.headerTitle}>Your Replay</Text>

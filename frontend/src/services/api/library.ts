@@ -7,7 +7,15 @@ export async function listLibrary(query?: string): Promise<Media[]> {
   return data;
 }
 
-export async function updateMedia(mediaId: string, patch: Partial<Pick<Media, 'title' | 'artist' | 'album'>>) {
+export async function getMedia(mediaId: string): Promise<Media> {
+  const { data } = await apiClient.get<Media>(`/library/${mediaId}`);
+  return data;
+}
+
+export async function updateMedia(
+  mediaId: string,
+  patch: Partial<Pick<Media, 'title' | 'artist' | 'album' | 'genre' | 'release_year' | 'is_remix'>>,
+) {
   const { data } = await apiClient.patch<Media>(`/library/${mediaId}`, patch);
   return data;
 }

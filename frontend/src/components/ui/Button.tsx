@@ -20,6 +20,9 @@ export function Button({ label, onPress, variant = 'primary', disabled, loading,
       <Pressable
         onPress={onPress}
         disabled={isDisabled}
+        accessibilityRole="button"
+        accessibilityLabel={loading ? `${label}, in progress` : label}
+        accessibilityState={{ disabled: !!isDisabled, busy: !!loading }}
         style={({ pressed }) => [
           styles.primaryShadow,
           { opacity: isDisabled ? 0.5 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
@@ -46,6 +49,9 @@ export function Button({ label, onPress, variant = 'primary', disabled, loading,
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityLabel={loading ? `${label}, in progress` : label}
+      accessibilityState={{ disabled: !!isDisabled, busy: !!loading }}
       style={({ pressed }) => [
         styles.ghost,
         variant === 'danger' && styles.dangerSurface,

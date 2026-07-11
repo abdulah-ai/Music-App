@@ -31,7 +31,7 @@ export function UpdateBanner() {
         <Pressable onPress={update.apply} style={styles.actionButton} hitSlop={8}>
           <Text style={styles.actionText}>{update.actionLabel}</Text>
         </Pressable>
-        <Pressable onPress={() => setDismissedId(update.id)} style={styles.dismiss} hitSlop={8}>
+        <Pressable onPress={() => setDismissedId(update.id)} accessibilityLabel="Dismiss update" style={styles.dismiss} hitSlop={8}>
           <Ionicons name="close" size={16} color={colors.textMuted} />
         </Pressable>
       </View>

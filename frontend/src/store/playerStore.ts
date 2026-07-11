@@ -1,14 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 
-import { streamUrl } from '../services/api/library';
+import { getMedia, streamUrl } from '../services/api/library';
 import type { Media } from '../services/api/types';
 import * as PlayerService from '../services/audio/PlayerService';
 import * as mediaSession from '../services/audio/mediaSession';
 import * as offlineMedia from '../services/storage/offlineMedia';
 import { tokenStorage } from '../services/storage/tokenStorage';
 import { displayArtist, displayTitle, thumbnailUri } from '../utils/mediaDisplay';
+import { apiErrorMessage } from '../utils/apiError';
 import { haptics } from '../utils/haptics';
+import { toast } from './toastStore';
 import { useFavoritesStore } from './favoritesStore';
 import { useLibraryStore } from './libraryStore';
 import { usePlayHistoryStore } from './playHistoryStore';
@@ -105,6 +107,9 @@ type PlayerState = {
 
 let unsubscribePlayback: (() => void) | null = null;
 let unsubscribeAmplitude: (() => void) | null = null;
+let sourceRecoveryAttempts = 0;
+let sourceRecoveryNotified = false;
+let sourceRecoveryInFlight = false;
 let sleepTimer: ReturnType<typeof setTimeout> | null = null;
 let lastPersist = 0;
 
@@ -234,6 +239,37 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     let crossfadeTriggered = false;
 
     unsubscribePlayback = PlayerService.subscribePlayback((status) => {
+      if (status.error && sourceRecoveryAttempts >= 2) {
+        set({ playing: false, isBuffering: false });
+        if (!sourceRecoveryNotified) {
+          sourceRecoveryNotified = true;
+          toast('Playback stopped. Check your connection and tap play to retry.', 'error');
+        }
+        return;
+      }
+      if (status.error) {
+        if (sourceRecoveryInFlight) return;
+        sourceRecoveryInFlight = true;
+        sourceRecoveryAttempts += 1;
+        const resumeAt = status.currentTime || get().currentTime;
+        set({ playing: false, isBuffering: true });
+        void (async () => {
+          try {
+            // This authenticated API request refreshes an expired access token;
+            // load() then hits /stream again and receives a fresh S3 presign.
+            await getMedia(media.id);
+            await load(media, { autoplay: true, startAt: resumeAt }, true);
+          } catch (err) {
+            set({ playing: false, isBuffering: false });
+            sourceRecoveryNotified = true;
+            toast(apiErrorMessage(err, 'Playback stopped. Check your connection and tap play to retry.'), 'error');
+          } finally {
+            sourceRecoveryInFlight = false;
+          }
+        })();
+        return;
+      }
+      if (status.playing) sourceRecoveryAttempts = 0;
       set({
         playing: status.playing,
         currentTime: status.currentTime,
@@ -289,12 +325,17 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     unsubscribeAmplitude = PlayerService.subscribeAmplitude((amplitude) => set({ amplitude }));
   }
 
-  async function load(media: Media, options: PlayerService.LoadOptions = {}) {
+  async function load(media: Media, options: PlayerService.LoadOptions = {}, recovering = false) {
     // Audio and video are never meant to play at once — see GlobalVideoStage,
     // which is the one place actually holding the video player instance.
     useVideoPlayerStore.getState().requestPause();
     unsubscribePlayback?.();
     unsubscribeAmplitude?.();
+    if (!recovering) {
+      sourceRecoveryAttempts = 0;
+      sourceRecoveryNotified = false;
+      sourceRecoveryInFlight = false;
+    }
     const { uri, headers } = await resolvePlaybackSource(media);
     PlayerService.loadAndPlay(uri, headers, options);
     attachToPlayer(media, options);

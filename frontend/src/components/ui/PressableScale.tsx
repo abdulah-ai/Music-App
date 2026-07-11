@@ -1,5 +1,5 @@
 import { PropsWithChildren, useRef } from 'react';
-import { Animated, Platform, Pressable, ViewStyle } from 'react-native';
+import { Animated, Platform, Pressable, StyleSheet, ViewStyle } from 'react-native';
 
 type Props = PropsWithChildren<{
   onPress?: () => void;
@@ -10,6 +10,8 @@ type Props = PropsWithChildren<{
   /** Scale while hovered (web/desktop pointers only). */
   hoverScaleTo?: number;
   hitSlop?: number;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 }>;
 
 /**
@@ -24,6 +26,8 @@ export function PressableScale({
   scaleTo = 0.94,
   hoverScaleTo = 1.03,
   hitSlop,
+  accessibilityLabel,
+  accessibilityHint,
 }: Props) {
   const scale = useRef(new Animated.Value(1)).current;
   const hovered = useRef(false);
@@ -36,6 +40,11 @@ export function PressableScale({
       onPress={onPress}
       disabled={disabled}
       hitSlop={hitSlop}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled: !!disabled }}
+      style={styles.hitTarget}
       onPressIn={() => to(scaleTo)}
       onPressOut={() => to(hovered.current ? hoverScaleTo : 1)}
       onHoverIn={
@@ -61,3 +70,7 @@ export function PressableScale({
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  hitTarget: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+});

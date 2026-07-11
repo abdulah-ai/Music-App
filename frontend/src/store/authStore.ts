@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 
 import * as authApi from '../services/api/auth';
+import { setAuthenticationExpiredHandler } from '../services/api/client';
 import * as offlineMedia from '../services/storage/offlineMedia';
 import { tokenStorage } from '../services/storage/tokenStorage';
+import { toast } from './toastStore';
 import type { StoragePreference, User } from '../services/api/types';
 
 type AuthState = {
@@ -84,3 +86,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user: updated });
   },
 }));
+
+setAuthenticationExpiredHandler(() => {
+  useAuthStore.setState({ user: null, isAuthenticated: false, isOfflineSession: false, isBootstrapping: false });
+  toast('Your session expired. Log in to keep listening.', 'info');
+});

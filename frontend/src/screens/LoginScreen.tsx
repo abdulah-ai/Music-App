@@ -6,6 +6,7 @@ import { AuthLayout } from '../components/ui/AuthLayout';
 import { Button } from '../components/ui/Button';
 import { TextField } from '../components/ui/TextField';
 import { useAuthStore } from '../store/authStore';
+import { apiErrorMessage } from '../utils/apiError';
 import { colors, typography } from '../theme/tokens';
 import type { AuthStackParamList } from '../navigation/types';
 
@@ -23,8 +24,8 @@ export function LoginScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await login(email.trim(), password);
-    } catch {
-      setError('Incorrect email or password.');
+    } catch (err) {
+      setError(apiErrorMessage(err, 'Could not log you in. Check your connection and try again.'));
     } finally {
       setLoading(false);
     }
@@ -50,7 +51,7 @@ export function LoginScreen({ navigation }: Props) {
         onSubmitEditing={handleLogin}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button label="Log in" onPress={handleLogin} loading={loading} disabled={!email || !password} />
+      <Button label={!email || !password ? 'Enter email and password' : 'Log in'} onPress={handleLogin} loading={loading} disabled={!email || !password} />
       <Button label="Create an account" variant="ghost" onPress={() => navigation.navigate('Register')} />
     </AuthLayout>
   );

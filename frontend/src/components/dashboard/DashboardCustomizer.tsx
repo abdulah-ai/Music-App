@@ -50,7 +50,7 @@ export function DashboardCustomizer({ visible, onClose }: { visible: boolean; on
           <View style={styles.handle} />
           <View style={styles.headerRow}>
             <Text style={styles.title}>Customize dashboard</Text>
-            <Pressable onPress={onClose} hitSlop={8}>
+            <Pressable onPress={onClose} accessibilityLabel="Close dashboard customizer" hitSlop={8}>
               <Ionicons name="close" size={22} color={colors.textMuted} />
             </Pressable>
           </View>
@@ -80,7 +80,7 @@ export function DashboardCustomizer({ visible, onClose }: { visible: boolean; on
             <View style={{ gap: spacing.xs }}>
               {order.map((widget, index) => (
                 <View key={widget.id} style={[styles.widgetRow, !widget.visible && styles.widgetRowHidden]}>
-                  <Pressable onPress={() => toggleWidget(widget.id)} style={styles.visibilityToggle} hitSlop={8}>
+                  <Pressable onPress={() => toggleWidget(widget.id)} accessibilityLabel={`${widget.visible ? 'Hide' : 'Show'} ${WIDGET_LABELS[widget.id].title}`} style={styles.visibilityToggle} hitSlop={8}>
                     <Ionicons
                       name={widget.visible ? 'eye-outline' : 'eye-off-outline'}
                       size={18}
@@ -93,6 +93,8 @@ export function DashboardCustomizer({ visible, onClose }: { visible: boolean; on
                   </View>
                   <Pressable
                     onPress={() => moveWidget(widget.id, -1)}
+                    accessibilityLabel={`Move ${WIDGET_LABELS[widget.id].title} up`}
+                    accessibilityHint={index === 0 ? 'Already first' : undefined}
                     disabled={index === 0}
                     hitSlop={8}
                     style={[styles.moveButton, index === 0 && styles.moveButtonDisabled]}
@@ -101,6 +103,8 @@ export function DashboardCustomizer({ visible, onClose }: { visible: boolean; on
                   </Pressable>
                   <Pressable
                     onPress={() => moveWidget(widget.id, 1)}
+                    accessibilityLabel={`Move ${WIDGET_LABELS[widget.id].title} down`}
+                    accessibilityHint={index === order.length - 1 ? 'Already last' : undefined}
                     disabled={index === order.length - 1}
                     hitSlop={8}
                     style={[styles.moveButton, index === order.length - 1 && styles.moveButtonDisabled]}

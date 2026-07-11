@@ -6,6 +6,7 @@ export type PlaybackSnapshot = {
   duration: number;
   isBuffering: boolean;
   didJustFinish: boolean;
+  error: string | null;
 };
 
 type PlaybackListener = (status: PlaybackSnapshot) => void;
@@ -80,6 +81,7 @@ function toSnapshot(status: AudioStatus): PlaybackSnapshot {
     duration: status.duration,
     isBuffering: status.isBuffering,
     didJustFinish: status.didJustFinish,
+    error: status.error,
   };
 }
 

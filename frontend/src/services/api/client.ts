@@ -14,6 +14,11 @@ apiClient.interceptors.request.use(async (config) => {
 });
 
 let refreshPromise: Promise<string | null> | null = null;
+let authenticationExpiredHandler: (() => void) | null = null;
+
+export function setAuthenticationExpiredHandler(handler: () => void) {
+  authenticationExpiredHandler = handler;
+}
 
 async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = await tokenStorage.getRefreshToken();
@@ -22,8 +27,14 @@ async function refreshAccessToken(): Promise<string | null> {
     const { data } = await axios.post(`${API_V1}/auth/refresh`, { refresh_token: refreshToken });
     await tokenStorage.setAccessToken(data.access_token);
     return data.access_token as string;
-  } catch {
-    await tokenStorage.clear();
+  } catch (error: any) {
+    // A rejected refresh token genuinely ends the session. A timeout/offline
+    // failure does not: keep the refresh token so reconnecting can recover.
+    const status = error?.response?.status;
+    if (status === 400 || status === 401 || status === 403) {
+      await tokenStorage.clear();
+      authenticationExpiredHandler?.();
+    }
     return null;
   }
 }

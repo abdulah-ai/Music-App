@@ -5,6 +5,7 @@
 !frontend/.env.example
 __pycache__/
 *.pyc
+.local-*.log
 .frontend_git_backup/
 
 # Python backend
@@ -22,6 +23,8 @@ frontend/dist/
 frontend/web-build/
 frontend/expo-env.d.ts
 frontend/expo*.log
+frontend/test-results/
+frontend/playwright-report/
 frontend/.env
 frontend/.env.*
 !frontend/.env.example

@@ -33,3 +33,4 @@ class MediaUpdate(BaseModel):
     album: str | None = None
     genre: str | None = None
     release_year: int | None = None
+    is_remix: bool | None = None

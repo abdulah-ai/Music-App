@@ -34,7 +34,7 @@ type Props = {
   progress: number;
   /** Called with the chosen 0..1 position when a drag or tap ends. */
   onSeekRatio: (ratio: number) => void;
-  /** Color for the played portion — defaults to the brand teal; PlayerScreen
+  /** Color for the played portion — defaults to the brand ember; PlayerScreen
    * passes the current track's extracted accent color when one is available. */
   activeColor?: string;
 };

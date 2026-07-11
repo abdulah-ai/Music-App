@@ -41,7 +41,13 @@ function DockItem({
   }, [focused, pop]);
 
   return (
-    <Pressable onPress={onPress} style={styles.dockItem}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={icon.label}
+      accessibilityState={{ selected: focused }}
+      style={styles.dockItem}
+    >
       <Animated.View
         style={{
           alignItems: 'center',
@@ -131,7 +137,7 @@ function GlassDock({ state, navigation }: BottomTabBarProps) {
               },
             ]}
           />
-          <PressableScale onPress={() => pressRoute(scanIndex)} scaleTo={0.9}>
+          <PressableScale onPress={() => pressRoute(scanIndex)} accessibilityLabel="Recognize a song" scaleTo={0.9}>
             <View style={[styles.scanShadow, scanFocused && styles.scanShadowActive]}>
               <LinearGradient
                 colors={colors.gradientPrimary}

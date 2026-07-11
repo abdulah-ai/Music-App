@@ -13,6 +13,12 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60 * 24
     refresh_token_expire_minutes: int = 60 * 24 * 30
     jwt_algorithm: str = "HS256"
+    auth_login_attempts: int = 10
+    auth_login_window_seconds: int = 15 * 60
+    auth_register_attempts: int = 5
+    auth_register_window_seconds: int = 60 * 60
+    auth_refresh_attempts: int = 30
+    auth_refresh_window_seconds: int = 60
 
     database_url: str = f"sqlite+aiosqlite:///{BACKEND_ROOT / 'super_media_app.db'}"
     media_storage_dir: Path = BACKEND_ROOT / "media_storage"

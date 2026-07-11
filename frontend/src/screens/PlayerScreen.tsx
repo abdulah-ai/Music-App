@@ -144,6 +144,11 @@ export function PlayerScreen() {
   const nextTrack = !shuffle && hasQueue
     ? queue[queueIndex + 1] ?? (repeat === 'all' ? queue[0] : undefined)
     : undefined;
+  const trackMetadata = [
+    currentMedia.genre,
+    currentMedia.release_year ? String(currentMedia.release_year) : null,
+    currentMedia.is_remix ? 'Remix' : null,
+  ].filter(Boolean).join(' · ');
 
   const transport = (
     <GlassPanel style={styles.dock} overlayColor="rgba(16,11,24,0.82)" edgeColor={accentColor ? `${accentColor}3d` : undefined}>
@@ -154,6 +159,7 @@ export function PlayerScreen() {
         <Text numberOfLines={1} style={styles.artist}>
           {displayArtist(currentMedia) ?? 'Unknown artist'}
         </Text>
+        {!!trackMetadata && <Text numberOfLines={1} style={styles.trackMetadata}>{trackMetadata}</Text>}
 
         <WaveformScrubber
           seedKey={currentMedia.id}
@@ -167,17 +173,17 @@ export function PlayerScreen() {
         </View>
 
         <View style={styles.transportRow}>
-          <Pressable onPress={toggleShuffle} hitSlop={10} style={styles.modeButton}>
+          <Pressable onPress={toggleShuffle} accessibilityLabel={shuffle ? 'Turn shuffle off' : 'Turn shuffle on'} hitSlop={10} style={styles.modeButton}>
             <Ionicons name="shuffle" size={20} color={shuffle ? accentColor ?? colors.cyan : colors.textMuted} />
           </Pressable>
 
-          <PressableScale onPress={() => playPrev()} scaleTo={0.88}>
+          <PressableScale onPress={() => playPrev()} accessibilityLabel="Previous track" scaleTo={0.88}>
             <View style={styles.sideButton}>
               <Ionicons name="play-skip-back" size={22} color={colors.textSecondary} />
             </View>
           </PressableScale>
 
-          <PressableScale onPress={toggle} scaleTo={0.92}>
+          <PressableScale onPress={toggle} accessibilityLabel={playing ? 'Pause' : 'Play'} scaleTo={0.92}>
             <View style={styles.playShadow}>
               <LinearGradient
                 colors={colors.gradientPrimary}
@@ -195,20 +201,20 @@ export function PlayerScreen() {
             </View>
           </PressableScale>
 
-          <PressableScale onPress={() => playNext()} scaleTo={0.88}>
+          <PressableScale onPress={() => playNext()} accessibilityLabel="Next track" scaleTo={0.88}>
             <View style={styles.sideButton}>
               <Ionicons name="play-skip-forward" size={22} color={colors.textSecondary} />
             </View>
           </PressableScale>
 
-          <Pressable onPress={toggleRepeat} hitSlop={10} style={styles.modeButton}>
+          <Pressable onPress={toggleRepeat} accessibilityLabel={`Repeat mode: ${repeat}`} hitSlop={10} style={styles.modeButton}>
             <Ionicons name="repeat" size={20} color={repeat !== 'off' ? accentColor ?? colors.cyan : colors.textMuted} />
             {repeat === 'one' && <Text style={[styles.repeatOne, accentColor && { color: accentColor }]}>1</Text>}
           </Pressable>
         </View>
 
         <View style={styles.chipRow}>
-          <Pressable onPress={() => seek(Math.max(0, currentTime - 10))} style={styles.chip}>
+          <Pressable onPress={() => seek(Math.max(0, currentTime - 10))} accessibilityLabel="Go back 10 seconds" style={styles.chip}>
             <MaterialIcons name="replay-10" size={17} color={colors.textSecondary} />
           </Pressable>
           <Pressable onPress={cycleRate} style={[styles.chip, rate !== 1 && styles.chipActive, rate !== 1 && accentColor && { backgroundColor: `${accentColor}29` }]}>
@@ -221,6 +227,7 @@ export function PlayerScreen() {
                   setPanelTab('queue');
                   setSheetOpen(true);
                 }}
+                accessibilityLabel="Open queue"
                 style={styles.chip}
               >
                 <Ionicons name="list" size={15} color={colors.textSecondary} />
@@ -230,6 +237,7 @@ export function PlayerScreen() {
                   setPanelTab('lyrics');
                   setSheetOpen(true);
                 }}
+                accessibilityLabel="Open lyrics"
                 style={styles.chip}
               >
                 <Ionicons name="text" size={14} color={colors.textSecondary} />
@@ -242,7 +250,7 @@ export function PlayerScreen() {
               <Text style={[styles.chipLabelActive, accentColor && { color: accentColor }]}> {sleepMinutesLeft}m</Text>
             )}
           </Pressable>
-          <Pressable onPress={() => seek(Math.min(duration, currentTime + 10))} style={styles.chip}>
+          <Pressable onPress={() => seek(Math.min(duration, currentTime + 10))} accessibilityLabel="Go forward 10 seconds" style={styles.chip}>
             <MaterialIcons name="forward-10" size={17} color={colors.textSecondary} />
           </Pressable>
         </View>
@@ -257,7 +265,7 @@ export function PlayerScreen() {
         )}
 
         <View style={styles.volumeRow}>
-          <Pressable onPress={toggleMute} hitSlop={10}>
+          <Pressable onPress={toggleMute} accessibilityLabel={muted ? 'Unmute' : 'Mute'} hitSlop={10}>
             <Ionicons
               name={muted || volume === 0 ? 'volume-mute' : volume < 0.5 ? 'volume-low' : 'volume-high'}
               size={18}
@@ -279,7 +287,7 @@ export function PlayerScreen() {
 
   const topBar = (
     <View pointerEvents="box-none" style={[styles.topBar, { top: insets.top + spacing.sm }]}>
-      <Pressable onPress={() => navigation.goBack()} hitSlop={12} style={styles.closeButton}>
+      <Pressable onPress={() => navigation.goBack()} accessibilityLabel="Close player" hitSlop={12} style={styles.closeButton}>
         <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
       </Pressable>
       <View style={styles.nowPlayingChip}>
@@ -288,7 +296,7 @@ export function PlayerScreen() {
           {isBuffering ? 'BUFFERING' : hasQueue ? `TRACK ${queueIndex + 1} OF ${queue.length}` : 'NOW PLAYING'}
         </Text>
       </View>
-      <Pressable onPress={() => setSanctuaryMode(true)} hitSlop={12} style={styles.closeButton}>
+      <Pressable onPress={() => setSanctuaryMode(true)} accessibilityLabel="Enter sanctuary mode" hitSlop={12} style={styles.closeButton}>
         <Ionicons name="leaf-outline" size={18} color={colors.textSecondary} />
       </Pressable>
     </View>
@@ -307,7 +315,7 @@ export function PlayerScreen() {
         </View>
 
         <Animated.View pointerEvents={chromeVisible ? 'auto' : 'none'} style={[styles.sanctuaryChrome, { opacity: chromeOpacity, paddingBottom: insets.bottom + spacing.xl, paddingTop: insets.top + spacing.md }]}>
-          <Pressable onPress={() => setSanctuaryMode(false)} hitSlop={12} style={styles.closeButton}>
+          <Pressable onPress={() => setSanctuaryMode(false)} accessibilityLabel="Exit sanctuary mode" hitSlop={12} style={styles.closeButton}>
             <Ionicons name="contract-outline" size={18} color={colors.textSecondary} />
           </Pressable>
 
@@ -318,6 +326,7 @@ export function PlayerScreen() {
             <Text numberOfLines={1} style={styles.artist}>
               {displayArtist(currentMedia) ?? 'Unknown artist'}
             </Text>
+            {!!trackMetadata && <Text numberOfLines={1} style={styles.trackMetadata}>{trackMetadata}</Text>}
 
             <View style={styles.sanctuaryProgress}>
               <View
@@ -330,19 +339,19 @@ export function PlayerScreen() {
             </View>
 
             <View style={styles.sanctuaryControls}>
-              <PressableScale onPress={() => playPrev()} scaleTo={0.88}>
+              <PressableScale onPress={() => playPrev()} accessibilityLabel="Previous track" scaleTo={0.88}>
                 <View style={styles.sideButton}>
                   <Ionicons name="play-skip-back" size={20} color={colors.textSecondary} />
                 </View>
               </PressableScale>
-              <PressableScale onPress={toggle} scaleTo={0.92}>
+              <PressableScale onPress={toggle} accessibilityLabel={playing ? 'Pause' : 'Play'} scaleTo={0.92}>
                 <View style={styles.playShadow}>
                   <LinearGradient colors={colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.playButton}>
                     <Ionicons name={playing ? 'pause' : 'play'} size={30} color="#100B18" style={playing ? undefined : styles.playGlyphNudge} />
                   </LinearGradient>
                 </View>
               </PressableScale>
-              <PressableScale onPress={() => playNext()} scaleTo={0.88}>
+              <PressableScale onPress={() => playNext()} accessibilityLabel="Next track" scaleTo={0.88}>
                 <View style={styles.sideButton}>
                   <Ionicons name="play-skip-forward" size={20} color={colors.textSecondary} />
                 </View>
@@ -454,6 +463,7 @@ const styles = StyleSheet.create({
   dockContent: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, alignItems: 'center' },
   title: { ...typography.title, fontSize: 22, lineHeight: 28, textAlign: 'center' },
   artist: { ...typography.body, color: colors.textMuted, textAlign: 'center', marginTop: 2 },
+  trackMetadata: { ...typography.caption, color: colors.cyan, textAlign: 'center', marginTop: 3 },
   timeRow: { flexDirection: 'row', justifyContent: 'space-between', alignSelf: 'stretch' },
   time: { ...typography.caption, color: colors.textMuted, fontVariant: ['tabular-nums'] },
   transportRow: {

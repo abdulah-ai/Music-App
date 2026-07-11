@@ -75,3 +75,28 @@ export function friendlyJobError(raw: string | null | undefined): string {
   const firstLine = cleaned.split('\n')[0].trim();
   return firstLine.length > 140 ? `${firstLine.slice(0, 137)}…` : firstLine || 'Download failed — try again in a moment.';
 }
+
+/** Turn backend worker stages into consistent, human-readable activity text. */
+export function friendlyJobStage(stage: string | null | undefined, status?: string): string {
+  const value = (stage ?? status ?? 'starting').trim();
+  const key = value.toLowerCase().replace(/[_-]+/g, ' ');
+  const exact: Record<string, string> = {
+    pending: 'Waiting to start',
+    starting: 'Getting things ready',
+    downloading: 'Downloading media',
+    processing: 'Processing media',
+    complete: 'Ready in your library',
+    listening: 'Listening for a match',
+    matched: 'Match found',
+    'no match': 'No match found',
+    cancelled: 'Cancelled',
+    failed: 'Could not finish',
+    'connecting to telegram': 'Connecting to Telegram',
+  };
+  if (exact[key]) return exact[key];
+  if (/^scanning\s/i.test(value)) return `Scanning ${value.replace(/^scanning\s+/i, '')}`;
+  if (/^imported\s/i.test(value)) return value.charAt(0).toUpperCase() + value.slice(1);
+  if (/^\d+\s+of\s+/i.test(value) || /^\d+\s+across\s+/i.test(value)) return `Importing ${value}`;
+  if (/rate.?limited/i.test(value)) return value.charAt(0).toUpperCase() + value.slice(1);
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}

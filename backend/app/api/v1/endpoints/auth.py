@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, is_admin_user
 from app.core.config import settings
+from app.core.rate_limit import auth_rate_limiter
 from app.core.security import create_access_token, create_refresh_token, decode_token, hash_password, verify_password
 from app.db.session import get_db
 from app.models.user import User
@@ -30,7 +31,10 @@ def _user_out(user: User) -> UserOut:
 
 
 @router.post("/register", response_model=TokenPair, status_code=status.HTTP_201_CREATED)
-async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)) -> TokenPair:
+async def register(payload: UserRegister, request: Request, db: AsyncSession = Depends(get_db)) -> TokenPair:
+    await auth_rate_limiter.check(
+        "register", request, settings.auth_register_attempts, settings.auth_register_window_seconds
+    )
     if settings.registration_invite_code and payload.invite_code != settings.registration_invite_code:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "A valid invite code is required")
 
@@ -57,7 +61,8 @@ async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)) ->
 
 
 @router.post("/login", response_model=TokenPair)
-async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)) -> TokenPair:
+async def login(payload: UserLogin, request: Request, db: AsyncSession = Depends(get_db)) -> TokenPair:
+    await auth_rate_limiter.check("login", request, settings.auth_login_attempts, settings.auth_login_window_seconds)
     user = await db.scalar(select(User).where(User.email == payload.email))
     if user is None or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect email or password")
@@ -70,12 +75,23 @@ async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)) -> Token
 
 
 @router.post("/refresh", response_model=AccessTokenOut)
-async def refresh(payload: RefreshRequest) -> AccessTokenOut:
+async def refresh(
+    payload: RefreshRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> AccessTokenOut:
+    await auth_rate_limiter.check(
+        "refresh", request, settings.auth_refresh_attempts, settings.auth_refresh_window_seconds
+    )
     decoded = decode_token(payload.refresh_token)
     if decoded is None or decoded.get("type") != "refresh":
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired refresh token")
 
-    return AccessTokenOut(access_token=create_access_token(decoded["sub"]))
+    user = await db.get(User, decoded["sub"])
+    if user is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired refresh token")
+
+    return AccessTokenOut(access_token=create_access_token(user.id))
 
 
 @router.get("/me", response_model=UserOut)

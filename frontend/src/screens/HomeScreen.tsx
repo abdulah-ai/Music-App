@@ -140,8 +140,8 @@ export function HomeScreen() {
       const text = await Clipboard.getStringAsync();
       if (text?.trim()) setUrl(text.trim());
       else toast('Clipboard is empty', 'info');
-    } catch {
-      toast("Couldn't read the clipboard", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't read the clipboard."), 'error');
     }
   }
 
@@ -150,8 +150,8 @@ export function HomeScreen() {
       const updated = await downloadsApi.cancelDownload(job.id);
       updateJob(updated);
       toast('Download cancelled', 'info');
-    } catch {
-      toast("Couldn't cancel that download", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't cancel that download."), 'error');
     }
   }
 
@@ -160,8 +160,8 @@ export function HomeScreen() {
     setJobs((prev) => prev.filter((j) => j.id !== job.id));
     try {
       await startJob(job.source_url);
-    } catch {
-      toast("Couldn't restart that download", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't restart that download."), 'error');
     }
   }
 
@@ -195,7 +195,7 @@ export function HomeScreen() {
                 <Text style={styles.tagline}>Bring something in — paste any link.</Text>
               </View>
               <View style={styles.headerActions}>
-                <Pressable onPress={() => setCustomizerOpen(true)} hitSlop={8} style={styles.customizeButton}>
+                <Pressable onPress={() => setCustomizerOpen(true)} accessibilityLabel="Customize dashboard" hitSlop={8} style={styles.customizeButton}>
                   <Ionicons name="options-outline" size={18} color={colors.textSecondary} />
                 </Pressable>
                 <SidebarTrigger />
@@ -220,10 +220,16 @@ export function HomeScreen() {
                   onSubmitEditing={handleSubmit}
                   style={styles.input}
                 />
-                <Pressable onPress={handlePaste} hitSlop={8} style={styles.pasteButton}>
+                <Pressable onPress={handlePaste} accessibilityLabel="Paste link" hitSlop={8} style={styles.pasteButton}>
                   <Ionicons name="clipboard-outline" size={17} color={colors.textMuted} />
                 </Pressable>
-                <PressableScale onPress={handleSubmit} disabled={!url.trim() || submitting} scaleTo={0.88}>
+                <PressableScale
+                  onPress={handleSubmit}
+                  disabled={!url.trim() || submitting}
+                  accessibilityLabel={submitting ? 'Starting download' : 'Start download'}
+                  accessibilityHint={!url.trim() ? 'Paste or enter a media link first' : undefined}
+                  scaleTo={0.88}
+                >
                   <LinearGradient
                     colors={colors.gradientPrimary}
                     start={{ x: 0, y: 0 }}

@@ -164,7 +164,7 @@ export default function App() {
   // Font files are fetched over the network and aren't guaranteed to be cached
   // (especially offline, or on a flaky connection) — never let a stalled font
   // fetch hold the whole app hostage on the boot screen. Worst case it opens
-  // with the system font and swaps in Space Grotesk if/when it lands.
+  // with the system font and swaps in Sora if/when it lands.
   const [fontTimedOut, setFontTimedOut] = useState(false);
 
   useKeyboardShortcuts();

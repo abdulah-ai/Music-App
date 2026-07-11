@@ -78,7 +78,7 @@ export function QueueList() {
             </View>
             <Text style={styles.duration}>{formatDuration(item.duration_seconds)}</Text>
             {!isCurrent && (
-              <Pressable onPress={() => removeFromQueue(index)} hitSlop={8} style={styles.remove}>
+              <Pressable onPress={() => removeFromQueue(index)} accessibilityLabel={`Remove ${displayTitle(item)} from queue`} hitSlop={8} style={styles.remove}>
                 <Ionicons name="close" size={15} color={colors.textMuted} />
               </Pressable>
             )}

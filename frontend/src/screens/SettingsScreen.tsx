@@ -23,6 +23,7 @@ import { usePlayerStore } from '../store/playerStore';
 import { toast } from '../store/toastStore';
 import { colors, radii, spacing, typography } from '../theme/tokens';
 import { displayArtist, displayTitle } from '../utils/mediaDisplay';
+import { apiErrorMessage } from '../utils/apiError';
 import type { RootStackParamList } from '../navigation/types';
 
 function SettingSwitch({
@@ -119,8 +120,8 @@ export function SettingsScreen() {
     try {
       await setStoragePreference(pref);
       toast('Storage preference updated', 'success');
-    } catch {
-      toast("Couldn't update your storage preference", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't update your storage preference."), 'error');
     } finally {
       setSavingStoragePref(false);
     }
@@ -148,8 +149,8 @@ export function SettingsScreen() {
       await feedbackApi.submitFeedback(message);
       setFeedbackMessage('');
       toast('Thanks — sent to the team', 'success');
-    } catch {
-      toast("Couldn't send that right now", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't send that right now."), 'error');
     } finally {
       setSendingFeedback(false);
     }
@@ -184,8 +185,8 @@ export function SettingsScreen() {
           }
         });
       });
-    } catch {
-      toast("Couldn't start library naming", 'error');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't start library naming."), 'error');
       setNaming(false);
     }
   }
@@ -251,7 +252,7 @@ export function SettingsScreen() {
       <ScreenContainer maxWidth={720}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
           <View style={styles.headerRow}>
-            <Pressable onPress={() => navigation.goBack()} hitSlop={12} style={styles.backButton}>
+            <Pressable onPress={() => navigation.goBack()} accessibilityLabel="Go back" hitSlop={12} style={styles.backButton}>
               <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.title}>Settings</Text>

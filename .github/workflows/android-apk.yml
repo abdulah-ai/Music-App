@@ -29,7 +29,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  quality:
+    name: TypeScript quality gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Build production web bundle
+        working-directory: frontend
+        env:
+          EXPO_PUBLIC_API_BASE_URL: http://127.0.0.1:4173
+        run: npm run build:web
+
+      - name: Install Playwright Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Mobile login and dashboard smoke
+        working-directory: frontend
+        run: npm run test:smoke
+
   apk:
+    needs: quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

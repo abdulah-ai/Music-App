@@ -144,20 +144,20 @@ export function MiniPlayerBar() {
               </View>
               <AmplitudeBars playing={playing} amplitude={amplitude} />
               {isDesktop && queue.length > 1 && (
-                <Pressable onPress={() => playPrev()} hitSlop={10} style={styles.skipButton}>
+                <Pressable onPress={() => playPrev()} accessibilityLabel="Previous track" hitSlop={10} style={styles.skipButton}>
                   <Ionicons name="play-skip-back" size={16} color={colors.textSecondary} />
                 </Pressable>
               )}
-              <Pressable onPress={toggle} hitSlop={12} style={[styles.controlButton, accentColor && { backgroundColor: `${accentColor}29` }]}>
+              <Pressable onPress={toggle} accessibilityLabel={playing ? 'Pause' : 'Play'} hitSlop={12} style={[styles.controlButton, accentColor && { backgroundColor: `${accentColor}29` }]}>
                 <Ionicons name={playing ? 'pause' : 'play'} size={18} color={accentColor ?? colors.cyan} />
               </Pressable>
               {queue.length > 1 && (
-                <Pressable onPress={() => playNext()} hitSlop={10} style={styles.skipButton}>
+                <Pressable onPress={() => playNext()} accessibilityLabel="Next track" hitSlop={10} style={styles.skipButton}>
                   <Ionicons name="play-skip-forward" size={16} color={colors.textSecondary} />
                 </Pressable>
               )}
               {queue.length > 1 && (
-                <Pressable onPress={() => setQueueOpen((v) => !v)} hitSlop={10} style={styles.skipButton}>
+                <Pressable onPress={() => setQueueOpen((v) => !v)} accessibilityLabel="Open queue" hitSlop={10} style={styles.skipButton}>
                   <Ionicons name="list" size={17} color={queueOpen ? colors.cyan : colors.textSecondary} />
                 </Pressable>
               )}
