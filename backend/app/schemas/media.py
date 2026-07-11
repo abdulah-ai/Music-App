@@ -22,6 +22,9 @@ class MediaOut(BaseModel):
     fade_in_ms: int | None
     fade_out_ms: int | None
     duration_seconds: float | None
+    file_size_bytes: int | None
+    original_filename: str | None
+    mime_type: str | None
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -14,6 +14,7 @@ from typing import Any
 from telethon import TelegramClient
 
 from app.core.config import settings
+from app.core.secrets import decrypt_secret
 from app.models.telegram_account import TelegramAccount
 
 SESSION_DIR = settings.media_storage_dir / "_telegram_sessions"
@@ -28,7 +29,12 @@ def session_path(user_id: str) -> Path:
 
 
 def make_client(account: TelegramAccount) -> TelegramClient:
-    return TelegramClient(str(session_path(account.user_id)), account.api_id, account.api_hash)
+    api_hash = decrypt_secret(account.api_hash_encrypted or account.api_hash)
+    return TelegramClient(str(session_path(account.user_id)), account.api_id, api_hash)
+
+
+def account_phone(account: TelegramAccount) -> str:
+    return decrypt_secret(account.phone_encrypted or account.phone)
 
 
 async def is_authorized(account: TelegramAccount) -> bool:

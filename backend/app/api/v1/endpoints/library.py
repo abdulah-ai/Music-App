@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import mimetypes
 import re
 from pathlib import Path
 
@@ -19,6 +20,7 @@ from app.schemas.media import MediaOut, MediaUpdate
 from app.services import thumbnails
 from app.services.admin_events import log_event
 from app.services.storage import backend as storage_backend
+from app.services.storage import local_storage
 
 router = APIRouter(prefix="/library", tags=["library"])
 logger = logging.getLogger(__name__)
@@ -39,16 +41,40 @@ CONTENT_TYPES = {
 async def list_library(
     q: str | None = None,
     media_type: str | None = None,
+    source: str | None = None,
+    sort_by: str = "date",
+    sort_order: str = "desc",
+    offset: int = 0,
+    limit: int = 300,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[MediaOut]:
     stmt = select(Media).where(Media.user_id == current_user.id)
     if media_type:
         stmt = stmt.where(Media.media_type == media_type)
+    if source:
+        stmt = stmt.where(Media.source == source)
     if q:
-        like = f"%{q}%"
-        stmt = stmt.where((Media.title.ilike(like)) | (Media.artist.ilike(like)))
-    stmt = stmt.order_by(Media.created_at.desc())
+        safe_query = q.strip()[:200]
+        like = f"%{safe_query}%"
+        stmt = stmt.where(
+            (Media.title.ilike(like))
+            | (Media.artist.ilike(like))
+            | (Media.album.ilike(like))
+            | (Media.original_filename.ilike(like))
+        )
+    columns = {
+        "date": Media.created_at,
+        "size": Media.file_size_bytes,
+        "duration": Media.duration_seconds,
+        "source": Media.source,
+        "title": Media.title,
+    }
+    sort_column = columns.get(sort_by)
+    if sort_column is None or sort_order not in {"asc", "desc"}:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid library sort")
+    stmt = stmt.order_by(sort_column.asc() if sort_order == "asc" else sort_column.desc())
+    stmt = stmt.offset(max(0, offset)).limit(min(max(1, limit), 500))
 
     result = await db.scalars(stmt)
     return [MediaOut.model_validate(item) for item in result.all()]
@@ -91,7 +117,8 @@ async def _delete_media_files_best_effort(file_path: str, backend: str) -> None:
         return
 
     try:
-        await asyncio.to_thread(thumbnails.thumbnail_path_for(file_path).unlink, missing_ok=True)
+        safe_path = local_storage.resolve_path(file_path)
+        await asyncio.to_thread(thumbnails.thumbnail_path_for(safe_path).unlink, missing_ok=True)
     except Exception:
         logger.exception("Media metadata was deleted, but thumbnail cleanup failed")
 
@@ -188,7 +215,7 @@ async def stream_media(
     media = await _get_owned_media(media_id, current_user, db)
 
     if media.storage_backend == "s3":
-        content_type = CONTENT_TYPES.get(Path(media.file_path).suffix.lower(), "application/octet-stream")
+        content_type = CONTENT_TYPES.get(Path(media.file_path).suffix.lower()) or media.mime_type or mimetypes.guess_type(media.file_path)[0] or "application/octet-stream"
 
         if proxy:
             # The PWA's "save offline" path downloads with browser fetch(),
@@ -221,12 +248,16 @@ async def stream_media(
         url = await asyncio.to_thread(storage_backend.presigned_url, media.file_path, content_type)
         return RedirectResponse(url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
-    path = Path(media.file_path)
+    try:
+        path = local_storage.resolve_path(media.file_path)
+    except ValueError:
+        logger.error("Blocked out-of-root media path for media %s", media.id)
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Underlying file is unavailable") from None
     if not path.exists():
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Underlying file is missing")
 
     file_size = path.stat().st_size
-    content_type = CONTENT_TYPES.get(path.suffix.lower(), "application/octet-stream")
+    content_type = CONTENT_TYPES.get(path.suffix.lower()) or media.mime_type or mimetypes.guess_type(path.name)[0] or "application/octet-stream"
 
     range_header = request.headers.get("range")
     start, end = 0, file_size - 1
@@ -236,11 +267,23 @@ async def stream_media(
         match = RANGE_RE.match(range_header)
         if not match:
             raise HTTPException(status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE, "Malformed Range header")
-        start = int(match.group(1)) if match.group(1) else 0
-        end = int(match.group(2)) if match.group(2) else file_size - 1
+        raw_start, raw_end = match.groups()
+        if not raw_start and raw_end:
+            suffix_length = int(raw_end)
+            if suffix_length <= 0:
+                raise HTTPException(status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE, "Invalid range")
+            start = max(0, file_size - suffix_length)
+            end = file_size - 1
+        else:
+            start = int(raw_start) if raw_start else 0
+            end = int(raw_end) if raw_end else file_size - 1
         end = min(end, file_size - 1)
-        if start > end:
-            raise HTTPException(status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE, "Invalid range")
+        if start >= file_size or start > end:
+            raise HTTPException(
+                status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE,
+                "Invalid range",
+                headers={"Content-Range": f"bytes */{file_size}"},
+            )
         status_code = status.HTTP_206_PARTIAL_CONTENT
 
     async def iterator():

@@ -34,6 +34,10 @@ class Job(Base):
 
     source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Durable worker inputs make failures retryable after process restarts.
+    request_payload: Mapped[str | None] = mapped_column(Text, nullable=True)
+    attempt_count: Mapped[int] = mapped_column(default=0)
+    priority: Mapped[int] = mapped_column(default=0, index=True)
 
     # A completed job is historical activity, not an ownership relationship.
     # Deleting the resulting library item must therefore keep the job and only

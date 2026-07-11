@@ -65,12 +65,21 @@ function cacheKey(mediaId: string): string {
 /** Fetches the stream URL once (following the API's redirect to the CDN/S3 origin) and stores the bytes + metadata for offline playback. */
 export async function saveOffline(media: Media, streamUrl: string): Promise<void> {
   if (!isSupported()) return;
-  const response = await fetch(streamUrl);
+  const response = await fetch(streamUrl, { cache: 'no-store' });
   if (!response.ok) throw new Error(`Could not fetch media for offline (${response.status})`);
   const blob = await response.blob();
 
   const cache = await caches.open(CACHE_NAME);
-  await cache.put(cacheKey(media.id), new Response(blob, { headers: response.headers }));
+  await cache.put(
+    cacheKey(media.id),
+    new Response(blob, {
+      headers: {
+        'Content-Type': response.headers.get('Content-Type') ?? 'application/octet-stream',
+        'Content-Length': String(blob.size),
+        'X-Starhollow-Media-Id': media.id,
+      },
+    }),
+  );
 
   const entry: OfflineEntry = {
     id: media.id,

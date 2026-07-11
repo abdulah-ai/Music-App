@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { useEscapeToClose } from '../../hooks/useEscapeToClose';
 import { RAIL_WIDTH } from '../../hooks/useResponsive';
 import { navigationRef } from '../../navigation/navigationRef';
 import { useAuthStore } from '../../store/authStore';
@@ -12,6 +13,8 @@ export function AccountPopover() {
   const close = useUiStore((state) => state.closeAccountMenu);
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+
+  useEscapeToClose(open, close);
 
   if (!open) return null;
 

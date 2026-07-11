@@ -37,6 +37,18 @@ Interactive API docs: `http://127.0.0.1:8095/docs`.
   client can't parse directly.
 - **Library**: list/search/patch/delete, plus byte-range streaming (`/library/{id}/stream`) for seeking.
 - **Playlists**: basic create/list/add-item.
+- **Reliable jobs**: persisted worker inputs, bounded concurrency, immediate
+  cancellation state, retry for failed/cancelled URL and Telegram jobs, and
+  startup recovery for interrupted work.
+- **Activity**: server-side favorites, play counts, last position, recently
+  played, and continue-watching/listening under `/api/v1/activity`.
+- **Dashboard**: aggregate file/storage/type/job/Telegram state at
+  `/api/v1/dashboard/summary`.
+- **Diagnostics**: `/health`, `/version`, and generated OpenAPI docs.
+
+Library search includes title, artist, album, and original filename. It supports
+`media_type`, `source`, `sort_by`, `sort_order`, `offset`, and `limit` (capped at
+500). Local media reads and deletes are confined to `SMA_MEDIA_STORAGE_DIR`.
 
 All of this has been exercised end-to-end against the real network (a real YouTube download, a real
 Shazam recognition call, real WebSocket progress push) — see conversation history for the verified flow.

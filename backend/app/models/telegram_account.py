@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -15,4 +15,6 @@ class TelegramAccount(Base):
     api_id: Mapped[int] = mapped_column()
     api_hash: Mapped[str] = mapped_column(String(200))
     phone: Mapped[str] = mapped_column(String(40))
+    api_hash_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    phone_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

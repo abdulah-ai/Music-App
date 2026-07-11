@@ -61,6 +61,11 @@ async def health() -> dict:
     return {"status": "ok"}
 
 
+@app.get("/version")
+async def version() -> dict:
+    return {"name": settings.app_name, "api_version": "1", "schema_version": 2}
+
+
 @app.get("/{full_path:path}", include_in_schema=False)
 async def serve_frontend(full_path: str):
     if full_path.startswith("api/"):

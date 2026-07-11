@@ -15,11 +15,14 @@ from app.models.media import Media, MediaSource, MediaType
 from app.models.playlist import Playlist, PlaylistItem
 from app.models.user import User
 from app.schemas.media import MediaUpdate
+from app.core.config import settings
 
 
 class MediaIntegrityTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
+        self.original_storage_dir = settings.media_storage_dir
+        settings.media_storage_dir = Path(self.temp_dir.name)
         db_path = Path(self.temp_dir.name) / "integrity.db"
         self.engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
 
@@ -35,6 +38,7 @@ class MediaIntegrityTests(unittest.IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self) -> None:
         await self.engine.dispose()
+        settings.media_storage_dir = self.original_storage_dir
         self.temp_dir.cleanup()
 
     async def _seed_referenced_media(self) -> dict[str, str | Path]:

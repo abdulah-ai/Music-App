@@ -10,6 +10,7 @@ talk in terms of Job rows, not "however the work happens to execute."
 from __future__ import annotations
 
 import asyncio
+import mimetypes
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -32,6 +33,7 @@ from app.services.storage import local_storage
 from app.workers.broadcaster import broadcaster
 
 _cancelled_job_ids: set[str] = set()
+_download_semaphore = asyncio.Semaphore(max(1, settings.max_concurrent_downloads))
 
 # One long unbroken token mixing cases and/or digits — the shape of base64
 # blobs, hex hashes, and numeric IDs that Telegram/yt-dlp sometimes hand back
@@ -291,6 +293,23 @@ async def run_download_job(
     audio_format: str = "mp3-192",
     video_quality: str = "1080p",
 ) -> None:
+    await _touch_job(job_id, status=JobStatus.PENDING, stage_label="queued")
+    async with _download_semaphore:
+        await _run_download_job(job_id, user_id, url, media_type, audio_format, video_quality)
+
+
+async def _run_download_job(
+    job_id: str,
+    user_id: str,
+    url: str,
+    media_type: str,
+    audio_format: str,
+    video_quality: str,
+) -> None:
+    if job_id in _cancelled_job_ids:
+        await _touch_job(job_id, status=JobStatus.CANCELLED, stage_label="cancelled")
+        _cancelled_job_ids.discard(job_id)
+        return
     await _touch_job(job_id, status=JobStatus.IN_PROGRESS, stage_label="starting")
 
     loop = asyncio.get_running_loop()
@@ -340,6 +359,8 @@ async def run_download_job(
                     file_path=stored.key,
                     file_size_bytes=stored.size_bytes,
                     content_hash=content_hash,
+                    original_filename=result.file_path.name,
+                    mime_type=mimetypes.guess_type(result.file_path.name)[0],
                     storage_backend=backend,
                 )
                 session.add(media)
@@ -401,7 +422,7 @@ async def run_telegram_import_job(
     from app.models.telegram_account import TelegramAccount
     from app.services.telegram import telegram_service
 
-    await _touch_job(job_id, status=JobStatus.IN_PROGRESS, stage_label="connecting to Telegram")
+    await _touch_job(job_id, status=JobStatus.PENDING, stage_label="queued")
 
     async with SessionLocal() as session:
         account = await session.get(TelegramAccount, user_id)
@@ -418,7 +439,12 @@ async def run_telegram_import_job(
     last_media_id: str | None = None
     created_media_ids: list[str] = []
 
+    await _download_semaphore.acquire()
     try:
+        if job_id in _cancelled_job_ids:
+            await _touch_job(job_id, status=JobStatus.CANCELLED, stage_label="cancelled")
+            return
+        await _touch_job(job_id, status=JobStatus.IN_PROGRESS, stage_label="connecting to Telegram")
         await client.connect()
         if not await client.is_user_authorized():
             await _touch_job(job_id, status=JobStatus.FAILED, stage_label="failed", error_message="Telegram is not linked")
@@ -464,6 +490,19 @@ async def run_telegram_import_job(
                     continue
 
                 suffix = (message.file.ext or default_ext).lower()
+                telegram_chat_id = str(getattr(entity, "id", chat_ref))
+                telegram_message_id = str(message.id)
+                async with SessionLocal() as session:
+                    already_imported = await session.scalar(
+                        select(Media.id).where(
+                            Media.user_id == user_id,
+                            Media.telegram_chat_id == telegram_chat_id,
+                            Media.telegram_message_id == telegram_message_id,
+                        )
+                    )
+                if already_imported is not None:
+                    last_media_id = already_imported
+                    continue
                 tmp_path = tmp_dir / f"{chat_ref}_{message.id}{suffix}"
                 try:
                     await message.download_media(file=str(tmp_path))
@@ -516,6 +555,10 @@ async def run_telegram_import_job(
                             file_path=stored.key,
                             file_size_bytes=stored.size_bytes,
                             content_hash=content_hash,
+                            original_filename=message.file.name,
+                            mime_type=getattr(message.file, "mime_type", None) or mimetypes.guess_type(tmp_path.name)[0],
+                            telegram_chat_id=telegram_chat_id,
+                            telegram_message_id=telegram_message_id,
                             storage_backend=backend,
                         )
                         session.add(media)
@@ -559,6 +602,7 @@ async def run_telegram_import_job(
             for leftover in tmp_dir.glob("*"):
                 leftover.unlink(missing_ok=True)
             tmp_dir.rmdir()
+        _download_semaphore.release()
 
 
 async def run_recognition_job(

@@ -11,6 +11,7 @@ class DownloadCreate(BaseModel):
     media_type: str = "audio"  # "audio" | "video"
     audio_format: str = "mp3-192"  # "mp3-320" | "mp3-192" | "m4a" | "source"
     video_quality: str = "1080p"  # "2160p" | "1080p" | "720p" | "source"
+    priority: int = 0
 
 
 class JobOut(BaseModel):
@@ -27,5 +28,7 @@ class JobOut(BaseModel):
     match_thumbnail_url: str | None
     created_at: datetime
     updated_at: datetime
+    attempt_count: int
+    priority: int
 
     model_config = {"from_attributes": True}

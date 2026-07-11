@@ -11,9 +11,11 @@ import { SettingsScreen } from '../screens/SettingsScreen';
 import { TelegramScreen } from '../screens/TelegramScreen';
 import { AccountPopover } from '../components/ui/AccountPopover';
 import { AnnouncementBanner } from '../components/ui/AnnouncementBanner';
+import { DesktopSecondaryRail } from '../components/ui/DesktopSecondaryRail';
 import { Sidebar } from '../components/ui/Sidebar';
 import { UpdateBanner } from '../components/ui/UpdateBanner';
 import { GlobalVideoStage } from '../components/video/GlobalVideoStage';
+import { RAIL_WIDTH, useResponsive } from '../hooks/useResponsive';
 import { useAuthStore } from '../store/authStore';
 import { colors } from '../theme/tokens';
 import { MainTabs } from './MainTabs';
@@ -46,6 +48,11 @@ function AuthNavigator() {
 
 export function RootNavigator() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { isDesktop } = useResponsive();
+
+  // On desktop the secondary routes render beside the persistent rail, so
+  // their content is inset by the rail width. Phones keep the full width.
+  const railInset = isDesktop ? { contentStyle: { paddingLeft: RAIL_WIDTH } } : undefined;
 
   return (
     <NavigationContainer ref={navigationRef} theme={navTheme}>
@@ -54,12 +61,13 @@ export function RootNavigator() {
           <RootStack.Navigator screenOptions={{ headerShown: false }}>
             <RootStack.Screen name="Main" component={MainTabs} />
             <RootStack.Screen name="Player" component={PlayerScreen} options={{ presentation: 'fullScreenModal' }} />
-            <RootStack.Screen name="Telegram" component={TelegramScreen} />
-            <RootStack.Screen name="Jobs" component={JobsScreen} />
-            <RootStack.Screen name="Settings" component={SettingsScreen} />
-            <RootStack.Screen name="Replay" component={ReplayScreen} />
-            <RootStack.Screen name="Admin" component={AdminScreen} />
+            <RootStack.Screen name="Telegram" component={TelegramScreen} options={railInset} />
+            <RootStack.Screen name="Jobs" component={JobsScreen} options={railInset} />
+            <RootStack.Screen name="Settings" component={SettingsScreen} options={railInset} />
+            <RootStack.Screen name="Replay" component={ReplayScreen} options={railInset} />
+            <RootStack.Screen name="Admin" component={AdminScreen} options={railInset} />
           </RootStack.Navigator>
+          <DesktopSecondaryRail />
           <Sidebar />
           <AccountPopover />
           <GlobalVideoStage />

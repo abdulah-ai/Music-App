@@ -44,6 +44,23 @@ project. Production APKs are built by `.github/workflows/android-apk.yml` only
 after typechecking, a production export, and the 390×844 Playwright smoke suite
 pass.
 
+For a local/LAN backend the APK permits cleartext HTTP because private home
+servers commonly do not have TLS. Use only a trusted LAN and set
+`EXPO_PUBLIC_API_BASE_URL=http://<pc-lan-ip>:8095` before `build:android-web`.
+Public/remote deployments should always use HTTPS. The APK contains the web
+client, shell cache, and explicitly saved offline media; it does not embed the
+Python API, SQLite database, yt-dlp, ffmpeg, or Telethon. Downloads, Telegram,
+login refresh, and uncached library data therefore require a reachable backend.
+
+Offline capability is deliberately split:
+
+- App shell, cached library snapshot, queue/session state, and explicitly saved
+  media work with no network.
+- The full private library works without internet only while a LAN/local backend
+  remains reachable.
+- New URL downloads, Telegram imports, recognition, and remote object storage
+  require internet access.
+
 ## Product structure
 
 - **Today** — link capture, active work, resume, and recently added music.

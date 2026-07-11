@@ -87,6 +87,10 @@ async def _add_missing_columns(conn) -> None:
             # created_at/updated_at — see the timezone fix in the git log).
             # SQLite accepts any type-affinity string, so this is safe there too.
             "fades_analyzed_at": "TIMESTAMPTZ",
+            "original_filename": "VARCHAR(500)",
+            "mime_type": "VARCHAR(200)",
+            "telegram_chat_id": "VARCHAR(100)",
+            "telegram_message_id": "VARCHAR(100)",
         },
     )
     if "storage_backend" in media_added:
@@ -103,6 +107,28 @@ async def _add_missing_columns(conn) -> None:
         )
 
     await add_columns("users", {"storage_preference": "VARCHAR(10)", "role": "VARCHAR(20)"})
+    await add_columns(
+        "telegram_accounts",
+        {"api_hash_encrypted": "TEXT", "phone_encrypted": "TEXT"},
+    )
+    await add_columns(
+        "jobs",
+        {
+            "request_payload": "TEXT",
+            "attempt_count": "INTEGER DEFAULT 0 NOT NULL",
+            "priority": "INTEGER DEFAULT 0 NOT NULL",
+        },
+    )
+
+    await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_media_user_created ON media (user_id, created_at)"))
+    await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_media_user_type ON media (user_id, media_type)"))
+    await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_jobs_user_status ON jobs (user_id, status)"))
+    await conn.execute(
+        text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_user_telegram_message "
+            "ON media (user_id, telegram_chat_id, telegram_message_id)"
+        )
+    )
 
 
 async def init_models() -> None:

@@ -62,6 +62,10 @@ class Media(Base):
     file_path: Mapped[str] = mapped_column(Text)
     file_size_bytes: Mapped[int | None] = mapped_column(nullable=True)
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    original_filename: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    mime_type: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    telegram_chat_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    telegram_message_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     # Which backend actually holds file_path's bytes ("local" or "s3") — set
     # once at adopt time. Per-row rather than a single global flag because
     # storage_preference lets different users' new uploads land on different
@@ -72,7 +76,12 @@ class Media(Base):
 
     owner: Mapped["User"] = relationship(back_populates="media_items")
 
-    __table_args__ = (UniqueConstraint("user_id", "content_hash", name="uq_user_content_hash"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "content_hash", name="uq_user_content_hash"),
+        UniqueConstraint(
+            "user_id", "telegram_chat_id", "telegram_message_id", name="uq_user_telegram_message"
+        ),
+    )
 
     @property
     def display_title(self) -> str:

@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import admin, auth, downloads, feedback, library, playlists, recognitions, telegram
+from app.api.v1.endpoints import activity, admin, auth, dashboard, downloads, feedback, library, playlists, recognitions, telegram
 
 api_router = APIRouter()
 api_router.include_router(auth.router)
@@ -11,3 +11,5 @@ api_router.include_router(playlists.router)
 api_router.include_router(telegram.router)
 api_router.include_router(feedback.router)
 api_router.include_router(admin.router)
+api_router.include_router(activity.router)
+api_router.include_router(dashboard.router)

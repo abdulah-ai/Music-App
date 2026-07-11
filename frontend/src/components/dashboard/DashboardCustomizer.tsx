@@ -2,6 +2,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, View, useWindowDimensi
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useEscapeToClose } from '../../hooks/useEscapeToClose';
 import {
   DEFAULT_ORDER,
   WIDGET_META,
@@ -35,6 +36,8 @@ export function DashboardCustomizer({ visible, onClose }: Props) {
   const setDensity = useDashboardStore((s) => s.setDensity);
   const setAccent = useDashboardStore((s) => s.setAccent);
   const reset = useDashboardStore((s) => s.reset);
+
+  useEscapeToClose(visible, onClose);
 
   if (!visible) return null;
 

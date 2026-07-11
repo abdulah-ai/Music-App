@@ -94,9 +94,9 @@ export function AppSidebar({
   function renderDestination(destination: NavDestination) {
     const key = destinationKey(destination);
     const focused =
-      destination.kind === 'tab' &&
-      destination.tab === resolvedActiveTab &&
-      destination.label !== 'Playlists';
+      destination.kind === 'tab'
+        ? destination.tab === resolvedActiveTab && destination.label !== 'Playlists'
+        : destination.route === currentRoute;
     const hovered = hoveredKey === key;
 
     return (

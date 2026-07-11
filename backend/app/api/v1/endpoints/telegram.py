@@ -1,7 +1,10 @@
+import json
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from telethon.errors import SessionPasswordNeededError
 
 from app.api.deps import get_current_user
+from app.core.secrets import encrypt_secret
 from app.db.session import get_db
 from app.models.job import Job, JobType
 from app.models.telegram_account import TelegramAccount
@@ -39,7 +42,7 @@ async def telegram_status(
         authorized = await telegram_service.is_authorized(account)
     except Exception:  # noqa: BLE001 - bad credentials shouldn't 500 the status check
         authorized = False
-    return TelegramStatusOut(configured=True, authorized=authorized, phone=account.phone)
+    return TelegramStatusOut(configured=True, authorized=authorized, phone=telegram_service.account_phone(account))
 
 
 @router.post("/settings", response_model=TelegramStatusOut)
@@ -51,15 +54,22 @@ async def save_settings(
     account = await _get_account(current_user.id, db)
     if account is None:
         account = TelegramAccount(
-            user_id=current_user.id, api_id=payload.api_id, api_hash=payload.api_hash, phone=payload.phone
+            user_id=current_user.id,
+            api_id=payload.api_id,
+            api_hash="encrypted",
+            phone="encrypted",
+            api_hash_encrypted=encrypt_secret(payload.api_hash),
+            phone_encrypted=encrypt_secret(payload.phone),
         )
         db.add(account)
     else:
         account.api_id = payload.api_id
-        account.api_hash = payload.api_hash
-        account.phone = payload.phone
+        account.api_hash = "encrypted"
+        account.phone = "encrypted"
+        account.api_hash_encrypted = encrypt_secret(payload.api_hash)
+        account.phone_encrypted = encrypt_secret(payload.phone)
     await db.commit()
-    return TelegramStatusOut(configured=True, authorized=False, phone=account.phone)
+    return TelegramStatusOut(configured=True, authorized=False, phone=payload.phone)
 
 
 @router.post("/send-code")
@@ -79,13 +89,14 @@ async def send_code(
         return {"status": "authorized"}
 
     try:
-        await client.send_code_request(account.phone)
+        phone = telegram_service.account_phone(account)
+        await client.send_code_request(phone)
     except Exception as exc:  # noqa: BLE001 - surface Telegram's reason to the user
         await client.disconnect()
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Telegram rejected the request: {exc}")
 
-    telegram_service.pending_logins[current_user.id] = {"client": client, "phone": account.phone}
-    return {"status": "code_sent", "phone": account.phone}
+    telegram_service.pending_logins[current_user.id] = {"client": client, "phone": phone}
+    return {"status": "code_sent", "phone": phone}
 
 
 @router.post("/verify-code")
@@ -215,6 +226,9 @@ async def start_import(
         user_id=current_user.id,
         job_type=JobType.DOWNLOAD,
         source_url=f"telegram:{label}",
+        request_payload=json.dumps(
+            {"kind": "telegram", "chat_refs": chat_refs, "media_kind": payload.media_kind, "limit": payload.limit}
+        ),
     )
     db.add(job)
     await log_event(

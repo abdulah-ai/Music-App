@@ -33,10 +33,23 @@ def adopt_file(user_id: str, source_path: Path, suffix: str) -> Path:
 
 
 def resolve_path(relative_or_absolute: str) -> Path:
-    return Path(relative_or_absolute)
+    return _validated_media_path(relative_or_absolute)
+
+
+def _validated_media_path(value: str | Path) -> Path:
+    """Reject corrupted/tampered DB paths before any read or delete.
+
+    Local media must always remain below media_storage_dir; resolving first
+    also closes `..` and symlink traversal paths.
+    """
+    root = settings.media_storage_dir.resolve()
+    candidate = Path(value).resolve()
+    if candidate == root or root not in candidate.parents:
+        raise ValueError("Media path is outside the configured storage directory")
+    return candidate
 
 
 def delete_file(path: str) -> None:
-    p = Path(path)
+    p = _validated_media_path(path)
     if p.exists():
         p.unlink(missing_ok=True)

@@ -11,7 +11,8 @@
  *  - Media explicitly saved for offline playback lives in a separate cache
  *    (see offlineMedia.ts) that this worker never touches or evicts.
  */
-const CACHE = 'starhollow-shell-v2';
+const CACHE = 'starhollow-shell-v3';
+const OWNED_SHELL_PREFIX = 'starhollow-shell-';
 const SHELL = ['/', '/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -27,7 +28,15 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
+      .then((keys) =>
+        Promise.all(
+          keys
+            // Only remove superseded shell caches. Explicit offline media is
+            // user data and must survive a service-worker upgrade.
+            .filter((key) => key.startsWith(OWNED_SHELL_PREFIX) && key !== CACHE)
+            .map((key) => caches.delete(key)),
+        ),
+      )
       .then(() => self.clients.claim()),
   );
 });
