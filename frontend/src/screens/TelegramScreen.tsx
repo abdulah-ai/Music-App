@@ -57,12 +57,14 @@ export function TelegramScreen({ navigation }: Props) {
   const [pickerTab, setPickerTab] = useState<'chats' | 'folders'>('chats');
   const [dialogs, setDialogs] = useState<telegramApi.TelegramDialog[] | null>(null);
   const [dialogQuery, setDialogQuery] = useState('');
+  const [visibleDialogCount, setVisibleDialogCount] = useState(30);
   const [selectedChats, setSelectedChats] = useState<Record<string, telegramApi.TelegramDialog>>({});
   const [folders, setFolders] = useState<telegramApi.TelegramFolder[] | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<telegramApi.TelegramFolder | null>(null);
   const [mediaKind, setMediaKind] = useState<'music' | 'video'>('music');
   const [limit, setLimit] = useState<number | null>(25);
   const [importJob, setImportJob] = useState<Job | null>(null);
+  const [importStarting, setImportStarting] = useState(false);
   const unsubscribeImport = useRef<(() => void) | null>(null);
 
   function toggleChat(dialog: telegramApi.TelegramDialog) {
@@ -102,9 +104,14 @@ export function TelegramScreen({ navigation }: Props) {
 
   async function handleConnect() {
     setError(null);
+    const numericApiId = Number(apiId.trim());
+    if (!Number.isInteger(numericApiId) || numericApiId <= 0) {
+      setError('API ID must be a positive number from my.telegram.org.');
+      return;
+    }
     setBusy(true);
     try {
-      await telegramApi.saveSettings(Number(apiId.trim()), apiHash.trim(), phone.trim());
+      await telegramApi.saveSettings(numericApiId, apiHash.trim(), phone.trim());
       const result = await telegramApi.sendCode();
       if (result.status === 'authorized') setPhase('linked');
       else setPhase('code');
@@ -167,8 +174,9 @@ export function TelegramScreen({ navigation }: Props) {
   const selectedChatList = useMemo(() => Object.values(selectedChats), [selectedChats]);
 
   async function handleImport() {
-    if (!selectedFolder && selectedChatList.length === 0) return;
+    if (importStarting || importing || (!selectedFolder && selectedChatList.length === 0)) return;
     setError(null);
+    setImportStarting(true);
     try {
       const target: telegramApi.ImportTarget = selectedFolder
         ? { folderId: selectedFolder.id }
@@ -188,6 +196,8 @@ export function TelegramScreen({ navigation }: Props) {
       });
     } catch (err) {
       fail(err, "Couldn't start that import.");
+    } finally {
+      setImportStarting(false);
     }
   }
 
@@ -195,8 +205,16 @@ export function TelegramScreen({ navigation }: Props) {
     if (!dialogs) return null;
     const q = dialogQuery.trim().toLowerCase();
     const list = q ? dialogs.filter((d) => d.title.toLowerCase().includes(q)) : dialogs;
-    return list.slice(0, 30);
+    return list.slice(0, visibleDialogCount);
+  }, [dialogs, dialogQuery, visibleDialogCount]);
+
+  const matchingDialogCount = useMemo(() => {
+    if (!dialogs) return 0;
+    const q = dialogQuery.trim().toLowerCase();
+    return q ? dialogs.filter((dialog) => dialog.title.toLowerCase().includes(q)).length : dialogs.length;
   }, [dialogs, dialogQuery]);
+
+  useEffect(() => setVisibleDialogCount(30), [dialogQuery]);
 
   const importing = importJob && (importJob.status === 'pending' || importJob.status === 'in_progress');
 
@@ -232,7 +250,7 @@ export function TelegramScreen({ navigation }: Props) {
                   <Text style={styles.step}>
                     <Text style={styles.stepNumber}>1.  </Text>
                     Open{' '}
-                    <Text style={styles.stepLink} onPress={() => Linking.openURL('https://my.telegram.org/apps')}>
+                    <Text accessibilityRole="link" style={styles.stepLink} onPress={() => Linking.openURL('https://my.telegram.org/apps')}>
                       my.telegram.org/apps
                     </Text>{' '}
                     and log in with your Telegram phone number.
@@ -249,11 +267,11 @@ export function TelegramScreen({ navigation }: Props) {
                 <TextField label="API ID" value={apiId} onChangeText={setApiId} keyboardType="numeric" placeholder="1234567" />
                 <TextField label="API Hash" value={apiHash} onChangeText={setApiHash} autoCapitalize="none" placeholder="a1b2c3…" />
                 <TextField label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="+90…" />
-                {error ? <Text accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
+                {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
                 <Button
                   label="Send login code"
                   loading={busy}
-                  disabled={!apiId.trim() || !apiHash.trim() || !phone.trim()}
+                  disabled={!/^\d+$/.test(apiId.trim()) || !apiHash.trim() || !phone.trim()}
                   onPress={handleConnect}
                 />
               </View>
@@ -266,7 +284,7 @@ export function TelegramScreen({ navigation }: Props) {
                 <Text style={styles.panelTitle}>Enter the code</Text>
                 <Text style={styles.hint}>Telegram sent a login code to {phone}.</Text>
                 <TextField label="Code" value={code} onChangeText={setCode} keyboardType="numeric" placeholder="12345" />
-                {error ? <Text accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
+                {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
                 <Button label="Verify" loading={busy} disabled={!code.trim()} onPress={handleVerifyCode} />
               </View>
             </GlassPanel>
@@ -278,7 +296,7 @@ export function TelegramScreen({ navigation }: Props) {
                 <Text style={styles.panelTitle}>Two-step verification</Text>
                 <Text style={styles.hint}>Your account has a 2FA password — enter it to finish linking.</Text>
                 <TextField label="Password" value={password} onChangeText={setPassword} secureTextEntry placeholder="••••••••" />
-                {error ? <Text accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
+                {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
                 <Button label="Unlock" loading={busy} disabled={!password} onPress={handleVerifyPassword} />
               </View>
             </GlassPanel>
@@ -299,7 +317,10 @@ export function TelegramScreen({ navigation }: Props) {
                   </View>
 
                   {!dialogs ? (
-                    <Button label="Load my chats" loading={busy} onPress={loadDialogs} />
+                    <>
+                      <Button label="Load my chats" loading={busy} onPress={loadDialogs} />
+                      {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
+                    </>
                   ) : (
                     <>
                       <SegmentedControl
@@ -353,6 +374,18 @@ export function TelegramScreen({ navigation }: Props) {
                             })}
                             {filteredDialogs?.length === 0 ? (
                               <EmptyState compact icon="search-outline" title="No matching chats" subtitle="Try a different name or clear the search." />
+                            ) : null}
+                            {filteredDialogs && filteredDialogs.length < matchingDialogCount ? (
+                              <Pressable
+                                onPress={() => setVisibleDialogCount((count) => count + 30)}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Show more chats, ${matchingDialogCount - filteredDialogs.length} remaining`}
+                                style={({ pressed }) => [styles.showMoreButton, pressed && { opacity: 0.72 }]}
+                              >
+                                <Text style={styles.showMoreLabel}>
+                                  Show more · {filteredDialogs.length} of {matchingDialogCount}
+                                </Text>
+                              </Pressable>
                             ) : null}
                           </View>
                         </>
@@ -422,8 +455,8 @@ export function TelegramScreen({ navigation }: Props) {
                         label: value === null ? 'All' : label,
                       }))}
                     />
-                    {error ? <Text accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
-                    {!importing ? <Button label="Start import" onPress={handleImport} /> : null}
+                    {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
+                    {!importing ? <Button label="Start import" loading={importStarting} onPress={handleImport} /> : null}
                   </View>
                 </GlassPanel>
               )}
@@ -519,6 +552,17 @@ const styles = StyleSheet.create({
   dialogTitle: { ...typography.body, color: colors.textSecondary, flex: 1 },
   dialogTitleActive: { color: colors.textPrimary },
   dialogHandle: { ...typography.caption, fontSize: 11, color: colors.textMuted },
+  showMoreButton: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.sm,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.surfaceBorder,
+    backgroundColor: colors.surfaceBright,
+  },
+  showMoreLabel: { ...typography.caption, fontFamily: 'Sora_500Medium', color: colors.cyan },
   jobRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   jobPct: { ...typography.caption, fontSize: 11, color: colors.cyan, fontFamily: 'Sora_600SemiBold' },
 });
