@@ -7,7 +7,7 @@ import { RippleField } from './RippleField';
 import { GlassPanel } from './GlassPanel';
 import { GradientText } from './GradientText';
 import { Reveal } from './Reveal';
-import { Moonlight } from '../three/Moonlight';
+import { Starwell } from '../scene/Starwell';
 import { useResponsive } from '../../hooks/useResponsive';
 import { colors, radii, spacing, typography } from '../../theme/tokens';
 
@@ -48,7 +48,7 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: Props) {
         >
           <Reveal>
             <View style={styles.mobileOrb}>
-              {isFocused && <Moonlight state="idle" size={150} />}
+              {isFocused && <Starwell state="idle" size={150} />}
             </View>
             <Text style={styles.eyebrow}>{eyebrow}</Text>
             <GradientText style={styles.mobileTitle}>{title}</GradientText>
@@ -89,7 +89,7 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: Props) {
         <View style={styles.split}>
           <Reveal style={styles.heroCol}>
             <View style={styles.heroOrbRow}>
-              {isFocused && <Moonlight state="idle" size={roomy ? 180 : 140} />}
+              {isFocused && <Starwell state="idle" size={roomy ? 180 : 140} />}
             </View>
             <Text style={[styles.eyebrow, styles.heroEyebrow]}>{eyebrow}</Text>
             <GradientText style={styles.heroTitle}>{title}</GradientText>
@@ -107,7 +107,7 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: Props) {
           </Reveal>
 
           <Reveal delay={120} style={styles.formCol}>
-            <GlassPanel intensity={80} overlayColor="rgba(16,11,24,0.62)">
+            <GlassPanel intensity={80} overlayColor="rgba(9,17,14,0.62)">
               <View style={[styles.form, styles.formDesktop]}>{children}</View>
             </GlassPanel>
           </Reveal>
@@ -184,9 +184,9 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(255,138,92,0.12)',
+    backgroundColor: 'rgba(99,214,181,0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(255,138,92,0.22)',
+    borderColor: 'rgba(99,214,181,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,5 +1,5 @@
 /*
- * Duskglen service worker.
+ * Starhollow service worker.
  *
  * Strategy:
  *  - App shell (navigations): network-first, falling back to the cached shell
@@ -11,7 +11,7 @@
  *  - Media explicitly saved for offline playback lives in a separate cache
  *    (see offlineMedia.ts) that this worker never touches or evicts.
  */
-const CACHE = 'duskglen-shell-v2';
+const CACHE = 'starhollow-shell-v2';
 const SHELL = ['/', '/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {

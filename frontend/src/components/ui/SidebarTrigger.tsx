@@ -47,5 +47,5 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 8,
   },
-  initial: { ...typography.title, color: '#100B18' },
+  initial: { ...typography.title, color: '#0B1411' },
 });

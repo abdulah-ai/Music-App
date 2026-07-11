@@ -74,9 +74,9 @@ export function PlaylistsPane({ playlists, onOpen }: { playlists: Playlist[]; on
               style={styles.createButton}
             >
               {creating ? (
-                <ActivityIndicator size="small" color="#100B18" />
+                <ActivityIndicator size="small" color="#0B1411" />
               ) : (
-                <Ionicons name="add" size={20} color="#100B18" />
+                <Ionicons name="add" size={20} color="#0B1411" />
               )}
             </LinearGradient>
           </PressableScale>
@@ -203,7 +203,7 @@ export function PlaylistPickerModal({
                 end={{ x: 1, y: 1 }}
                 style={styles.createButton}
               >
-                <Ionicons name="add" size={20} color="#100B18" />
+                <Ionicons name="add" size={20} color="#0B1411" />
               </LinearGradient>
             </PressableScale>
           </View>
@@ -446,7 +446,7 @@ export function EditMediaModal({
               style={styles.editSave}
             >
               {saving ? (
-                <ActivityIndicator size="small" color="#100B18" />
+                <ActivityIndicator size="small" color="#0B1411" />
               ) : (
                 <Text style={styles.editSaveLabel}>Save</Text>
               )}
@@ -466,11 +466,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: 'rgba(27,20,38,0.5)',
+    backgroundColor: 'rgba(17,30,25,0.5)',
     borderRadius: radii.md,
     padding: spacing.sm,
   },
-  listRowPressed: { backgroundColor: 'rgba(255,138,92,0.10)' },
+  listRowPressed: { backgroundColor: 'rgba(99,214,181,0.10)' },
   listCover: {
     width: 48,
     height: 48,
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg + 8,
     paddingTop: spacing.lg,
     borderWidth: 1,
-    borderColor: 'rgba(174,165,192,0.16)',
+    borderColor: 'rgba(158,181,170,0.16)',
     ...shadows.card,
   },
   sheetHandle: {
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(174,165,192,0.3)',
+    backgroundColor: 'rgba(158,181,170,0.3)',
     marginBottom: spacing.md,
   },
   sheetSub: { ...typography.caption, color: colors.textMuted },
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radii.md,
   },
-  sheetRowPressed: { backgroundColor: 'rgba(255,138,92,0.10)' },
+  sheetRowPressed: { backgroundColor: 'rgba(99,214,181,0.10)' },
   sheetRowLabel: { ...typography.body, color: colors.textPrimary },
   editTitle: {
     ...typography.title,
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
   editInput: {
     ...typography.body,
     color: colors.textPrimary,
-    backgroundColor: 'rgba(9,6,15,0.6)',
+    backgroundColor: 'rgba(5,10,11,0.6)',
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md - 4,
@@ -542,16 +542,16 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     marginBottom: spacing.md,
-    backgroundColor: 'rgba(9,6,15,0.45)',
+    backgroundColor: 'rgba(5,10,11,0.45)',
   },
-  toolChipActive: { backgroundColor: 'rgba(255,138,92,0.18)' },
+  toolChipActive: { backgroundColor: 'rgba(99,214,181,0.18)' },
   editSave: {
     borderRadius: radii.md,
     paddingVertical: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  editSaveLabel: { ...typography.subtitle, fontFamily: 'Sora_600SemiBold', color: '#100B18' },
+  editSaveLabel: { ...typography.subtitle, fontFamily: 'Sora_600SemiBold', color: '#0B1411' },
   createRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     flex: 1,
     color: colors.textPrimary,
-    backgroundColor: 'rgba(27,20,38,0.6)',
+    backgroundColor: 'rgba(17,30,25,0.6)',
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md - 6,
@@ -589,7 +589,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: spacing.sm + 2,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(232,80,110,0.10)',
+    backgroundColor: 'rgba(240,131,140,0.10)',
   },
   detailDeleteLabel: { ...typography.caption, fontSize: 12, color: colors.danger },
   detailList: { marginTop: spacing.md },

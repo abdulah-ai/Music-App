@@ -1,14 +1,14 @@
 {
   "id": "/",
-  "name": "Duskglen — Your Private Signal Archive",
-  "short_name": "Duskglen",
+  "name": "Starhollow — Your Private Signal Archive",
+  "short_name": "Starhollow",
   "description": "Your private media archive: pull audio and video in from any link or Telegram chat, name any song, and stream your library anywhere.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#100B18",
-  "theme_color": "#100B18",
+  "background_color": "#0B1411",
+  "theme_color": "#0B1411",
   "categories": ["music", "entertainment"],
   "icons": [
     {

@@ -31,7 +31,7 @@ export function updateMetadata(media: Media): void {
   ms.metadata = new MediaMetadata({
     title: displayTitle(media),
     artist: displayArtist(media) ?? 'Unknown artist',
-    album: media.album ?? 'Duskglen',
+    album: media.album ?? 'Starhollow',
     artwork: artworkUri ? [{ src: artworkUri, sizes: '512x512', type: 'image/jpeg' }] : [],
   });
 }

@@ -17,7 +17,7 @@ export class AppErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     // Keep diagnostics available in browser/native logs without exposing them in the UI.
-    console.error('Duskglen render failure', error, info.componentStack);
+    console.error('Starhollow render failure', error, info.componentStack);
   }
 
   private reload = () => {
@@ -39,13 +39,13 @@ export class AppErrorBoundary extends Component<Props, State> {
       <View style={styles.root} accessibilityRole="alert">
         <View style={styles.glow} />
         <View style={styles.mark}><BrandMark size={58} /></View>
-        <Text style={styles.eyebrow}>DUSKGLEN</Text>
+        <Text style={styles.eyebrow}>STARHOLLOW</Text>
         <Text style={styles.title}>Something went wrong</Text>
         <Text style={styles.body}>The app hit an unexpected snag. Your library and downloads are safe.</Text>
         <Pressable
           onPress={this.reload}
           accessibilityRole="button"
-          accessibilityLabel="Reload Duskglen"
+          accessibilityLabel="Reload Starhollow"
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
         >
           <Text style={styles.buttonText}>Tap to reload</Text>

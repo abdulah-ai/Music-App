@@ -64,30 +64,32 @@ if (fs.existsSync(swPath)) {
   console.warn('[pwa] dist/sw.js not found — did the public/sw.js copy step run?');
 }
 
-if (html.includes('data-duskglen-pwa')) {
+if (html.includes('data-starhollow-pwa')) {
   console.log('[pwa] already injected — nothing to do.');
   process.exit(0);
 }
 
 const headSnippet = `
-    <!-- data-duskglen-pwa -->
+    <!-- data-starhollow-pwa -->
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Duskglen" />
-    <meta name="application-name" content="Duskglen" />
+    <meta name="apple-mobile-web-app-title" content="Starhollow" />
+    <meta name="application-name" content="Starhollow" />
     <meta name="description" content="Your private media archive: pull audio and video in from any link or Telegram chat, name any song, stream your library anywhere." />
-    <style data-duskglen-boot>
-      html, body, #root { min-height: 100%; margin: 0; background: #100B18; }
-      #duskglen-html-splash { position: fixed; inset: 0; z-index: 2147483647; display: grid; place-items: center; background: #100B18; color: #F1EDF7; font-family: system-ui, sans-serif; }
-      #duskglen-html-splash .dg-core { position: relative; width: 68px; height: 68px; border-radius: 50%; background: #F1EDF7; box-shadow: 0 0 55px rgba(255,138,92,.38); animation: dg-breathe 1.8s ease-in-out infinite; overflow: hidden; }
-      #duskglen-html-splash .dg-core::after { content: ''; position: absolute; width: 68px; height: 68px; border-radius: 50%; left: 25px; top: -5px; background: #100B18; }
-      #duskglen-html-splash .dg-name { margin-top: 22px; font-size: 12px; font-weight: 700; letter-spacing: 6px; text-align: center; }
-      #duskglen-html-splash .dg-note { margin-top: 10px; color: #AEA5C0; font-size: 11px; text-align: center; }
-      @keyframes dg-breathe { 50% { transform: scale(1.06); opacity: .82; } }
-      @media (prefers-reduced-motion: reduce) { #duskglen-html-splash .dg-core { animation: none; } }
+    <style data-starhollow-boot>
+      html, body, #root { min-height: 100%; margin: 0; background: #0B1411; }
+      #starhollow-html-splash { position: fixed; inset: 0; z-index: 2147483647; display: grid; place-items: center; background: #0B1411; color: #EFF5F1; font-family: system-ui, sans-serif; }
+      /* A four-point star: two crossed, rotated squares with a warm core glow. */
+      #starhollow-html-splash .sh-star { position: relative; width: 74px; height: 74px; animation: sh-breathe 2s ease-in-out infinite; filter: drop-shadow(0 0 26px rgba(233,205,126,.55)) drop-shadow(0 0 60px rgba(99,214,181,.3)); }
+      #starhollow-html-splash .sh-star::before, #starhollow-html-splash .sh-star::after { content: ''; position: absolute; inset: 0; background: #E9CD7E; clip-path: polygon(50% 0%, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0% 50%, 40% 40%); }
+      #starhollow-html-splash .sh-star::after { transform: scale(.42) rotate(45deg); background: #FFF7DE; }
+      #starhollow-html-splash .sh-name { margin-top: 24px; font-size: 12px; font-weight: 700; letter-spacing: 6px; text-align: center; }
+      #starhollow-html-splash .sh-note { margin-top: 10px; color: #7E948A; font-size: 11px; text-align: center; }
+      @keyframes sh-breathe { 50% { transform: scale(1.08); opacity: .85; } }
+      @media (prefers-reduced-motion: reduce) { #starhollow-html-splash .sh-star { animation: none; } }
     </style>
     <script>
       if ('serviceWorker' in navigator) {
@@ -106,7 +108,7 @@ html = html.replace(
 html = html.replace('</head>', `${headSnippet}</head>`);
 html = html.replace(
   '<div id="root"></div>',
-  '<div id="root"><div id="duskglen-html-splash" role="status" aria-label="Duskglen is loading"><div><div class="dg-core"></div><div class="dg-name">DUSKGLEN</div><div class="dg-note">Opening your hollow…</div></div></div></div>',
+  '<div id="root"><div id="starhollow-html-splash" role="status" aria-label="Starhollow is loading"><div><div class="sh-star" style="margin:0 auto"></div><div class="sh-name">STARHOLLOW</div><div class="sh-note">Opening your hollow…</div></div></div></div>',
 );
 
 fs.writeFileSync(indexPath, html);

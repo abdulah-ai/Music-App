@@ -1,46 +1,48 @@
 /**
- * Duskglen's visual foundation.
+ * Starhollow's visual foundation — forest night under deep space.
  *
- * The palette is intentionally quiet: a near-black plum canvas, solid tonal
- * surfaces, warm paper-like type and one ember signal colour. Decorative
- * gradients and glow are available for rare moments, not used as hierarchy.
+ * The canvas is midnight pine: a near-black green-navy that reads as a
+ * clearing after dark. Surfaces are solid tonal steps of the same wood.
+ * One aurora-teal signal colour carries every action; soft violet is the
+ * cosmic counterpoint and star gold appears only as a rare celebratory
+ * glint. Decorative gradients and glow are for moments, never hierarchy.
  */
 export const palette = {
-  background: '#0F0B10',
-  void: '#080608',
-  surface: '#171218',
-  surfaceBright: '#211A22',
-  surfaceElevated: '#29212A',
-  border: '#332A34',
-  borderStrong: '#493C48',
+  background: '#0B1411',
+  void: '#050A0B',
+  surface: '#121F1A',
+  surfaceBright: '#192B23',
+  surfaceElevated: '#20362C',
+  border: '#2A4336',
+  borderStrong: '#3B5A48',
 
-  primary: '#F28B63',
-  primaryPressed: '#D97852',
-  secondary: '#B5A7BA',
-  gold: '#D9B76E',
+  primary: '#63D6B5',
+  primaryPressed: '#4CBB9C',
+  secondary: '#A99BDB',
+  gold: '#E9CD7E',
 
-  textPrimary: '#F7F2F5',
-  textSecondary: '#C4B9C1',
-  textMuted: '#8C8089',
-  textInverse: '#1A0E0A',
+  textPrimary: '#EFF5F1',
+  textSecondary: '#B9CAC1',
+  textMuted: '#7E948A',
+  textInverse: '#07120D',
 
-  success: '#72C69B',
-  warning: '#D9B76E',
-  danger: '#EF7888',
+  success: '#71CE9C',
+  warning: '#E9CD7E',
+  danger: '#F0838C',
 } as const;
 
 export const gradients = {
   /** A restrained, single-family accent reserved for primary hero moments. */
-  accent: [palette.primary, '#E49A79'] as const,
-  /** Kept for compatibility; intentionally low-chroma rather than rainbow. */
-  aurora: [palette.textPrimary, '#DECED6', palette.primary] as const,
+  accent: [palette.primary, '#8FE3C8'] as const,
+  /** The night-sky sweep: aurora teal drifting through violet — rare moments only. */
+  aurora: ['#5BD3B0', '#7FB6D9', palette.secondary] as const,
   heroCard: [palette.surfaceBright, palette.surface] as const,
-  screenIdle: [palette.void, palette.background, '#130D14'] as const,
-  screenListening: ['#211218', '#160E14', palette.background] as const,
-  coverFallback: ['#251B23', '#141015'] as const,
-  coverScrim: ['rgba(8,6,8,0)', 'rgba(8,6,8,0.52)', 'rgba(8,6,8,0.94)'] as const,
-  rippleSignal: ['rgba(242,139,99,0.10)', 'rgba(242,139,99,0)'] as const,
-  rippleWave: ['rgba(181,167,186,0.07)', 'rgba(181,167,186,0)'] as const,
+  screenIdle: [palette.void, palette.background, '#0D1A14'] as const,
+  screenListening: ['#0E2019', '#0A1512', palette.background] as const,
+  coverFallback: ['#16281F', '#0D1512'] as const,
+  coverScrim: ['rgba(5,10,11,0)', 'rgba(5,10,11,0.52)', 'rgba(5,10,11,0.94)'] as const,
+  rippleSignal: ['rgba(99,214,181,0.10)', 'rgba(99,214,181,0)'] as const,
+  rippleWave: ['rgba(169,155,219,0.07)', 'rgba(169,155,219,0)'] as const,
 } as const;
 
 export const layout = {

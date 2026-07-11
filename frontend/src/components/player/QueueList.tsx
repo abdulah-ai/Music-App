@@ -98,8 +98,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radii.md - 4,
   },
-  rowCurrent: { backgroundColor: 'rgba(255,138,92,0.10)' },
-  rowPressed: { backgroundColor: 'rgba(174,165,192,0.10)' },
+  rowCurrent: { backgroundColor: 'rgba(99,214,181,0.10)' },
+  rowPressed: { backgroundColor: 'rgba(158,181,170,0.10)' },
   index: {
     ...typography.caption,
     fontSize: 11,

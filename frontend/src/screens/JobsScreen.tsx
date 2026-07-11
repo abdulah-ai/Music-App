@@ -75,7 +75,7 @@ function JobRow({ job, onCancel, onRetry }: { job: Job; onCancel: () => void; on
     : `${friendlyJobStage(job.stage_label, meta.label)} · ${timeAgo(job.updated_at)}`;
 
   return (
-    <GlassPanel style={styles.jobCard} edgeColor={running ? 'rgba(255,138,92,0.2)' : undefined}>
+    <GlassPanel style={styles.jobCard} edgeColor={running ? 'rgba(99,214,181,0.2)' : undefined}>
       <View style={styles.jobContent}>
         {running ? (
           <ProgressRing progress={progress / 100} size={48} strokeWidth={3.5}>
@@ -324,7 +324,7 @@ export function JobsScreen({ embedded = false }: { embedded?: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#09060F' },
+  root: { flex: 1, backgroundColor: '#050A0B' },
   scroll: { paddingBottom: spacing.xxl },
   scrollEmbedded: { paddingBottom: layout.tabBarClearance },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, marginBottom: spacing.lg },
@@ -348,15 +348,15 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     paddingHorizontal: spacing.md,
     marginBottom: spacing.md,
-    backgroundColor: 'rgba(27,20,38,0.64)',
+    backgroundColor: 'rgba(17,30,25,0.64)',
     borderWidth: 1,
-    borderColor: 'rgba(174,165,192,0.09)',
+    borderColor: 'rgba(158,181,170,0.09)',
   },
   summaryItem: { flex: 1, alignItems: 'center', gap: 2 },
   summaryValue: { ...typography.title, fontSize: 20, lineHeight: 25, color: colors.textPrimary },
   summaryValueAttention: { color: colors.danger },
   summaryLabel: { ...typography.caption, fontSize: 11, color: colors.textMuted },
-  summaryDivider: { width: 1, height: 30, backgroundColor: 'rgba(174,165,192,0.12)' },
+  summaryDivider: { width: 1, height: 30, backgroundColor: 'rgba(158,181,170,0.12)' },
   loadingState: { minHeight: 240, alignItems: 'center', justifyContent: 'center', gap: spacing.md },
   loadingText: { ...typography.caption, color: colors.textMuted },
   errorPanel: { alignItems: 'center', padding: spacing.xl, gap: spacing.sm },
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(232,80,110,0.1)',
+    backgroundColor: 'rgba(240,131,140,0.1)',
     marginBottom: spacing.xs,
   },
   errorTitle: { ...typography.title, fontSize: 19, color: colors.textPrimary, textAlign: 'center' },
@@ -395,8 +395,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(9,6,15,0.48)',
+    backgroundColor: 'rgba(5,10,11,0.48)',
   },
-  retryButton: { backgroundColor: 'rgba(255,138,92,0.1)' },
+  retryButton: { backgroundColor: 'rgba(99,214,181,0.1)' },
   pressed: { opacity: 0.68 },
 });

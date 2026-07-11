@@ -18,7 +18,7 @@ export const colors = {
   violet: palette.secondary,
   cyan: palette.primary,
   gold: palette.gold,
-  pink: '#C99AAE',
+  pink: '#DBA3BC',
   coral: palette.danger,
   success: palette.success,
   warning: palette.warning,
@@ -29,7 +29,7 @@ export const colors = {
   gradientIdleScreen: gradients.screenIdle,
   gradientListeningScreen: gradients.screenListening,
   gradientWarm: [palette.gold, palette.primary] as const,
-  gradientOrb: [palette.primary, '#E49A79', palette.gold] as const,
+  gradientOrb: [palette.primary, '#8FE3C8', palette.gold] as const,
 } as const;
 
 export const spacing = {

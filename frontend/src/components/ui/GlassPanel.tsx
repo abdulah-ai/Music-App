@@ -12,7 +12,7 @@ type Props = PropsWithChildren<{
 }>;
 
 /**
- * Duskglen's default raised surface. A solid fill and quiet border provide
+ * Starhollow's default raised surface. A solid fill and quiet border provide
  * hierarchy without stacking blur, gradients and glow on every card.
  */
 export function GlassPanel({

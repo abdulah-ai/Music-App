@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   surface: { backgroundColor: colors.surfaceBright, borderColor: colors.surfaceBorder },
   primary: { backgroundColor: colors.cyan, borderColor: colors.cyan },
   danger: { backgroundColor: 'rgba(239,120,136,0.08)', borderColor: 'rgba(239,120,136,0.18)' },
-  selected: { backgroundColor: 'rgba(242,139,99,0.10)', borderColor: 'rgba(242,139,99,0.24)' },
+  selected: { backgroundColor: 'rgba(99,214,181,0.10)', borderColor: 'rgba(99,214,181,0.24)' },
   pressed: { opacity: 0.72, transform: [{ scale: 0.96 }] },
   disabled: { opacity: 0.4 },
 });

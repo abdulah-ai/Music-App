@@ -114,7 +114,7 @@ export const GridCard = memo(function GridCard({
 
         {selectMode && (
           <View style={[styles.selectCheck, selected && styles.selectCheckActive]}>
-            {selected && <Ionicons name="checkmark" size={13} color="#100B18" />}
+            {selected && <Ionicons name="checkmark" size={13} color="#0B1411" />}
           </View>
         )}
 
@@ -136,7 +136,7 @@ export const GridCard = memo(function GridCard({
               end={{ x: 1, y: 1 }}
               style={styles.playFab}
             >
-              <Ionicons name="play" size={22} color="#100B18" style={{ marginLeft: 2 }} />
+              <Ionicons name="play" size={22} color="#0B1411" style={{ marginLeft: 2 }} />
             </LinearGradient>
           </View>
         )}
@@ -182,7 +182,7 @@ export const ListRow = memo(function ListRow({
     >
       {selectMode && (
         <View style={[styles.selectCheckInline, selected && styles.selectCheckActive]}>
-          {selected && <Ionicons name="checkmark" size={12} color="#100B18" />}
+          {selected && <Ionicons name="checkmark" size={12} color="#0B1411" />}
         </View>
       )}
       {coverUri ? (
@@ -273,9 +273,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'flex-end',
     borderWidth: 1,
-    borderColor: 'rgba(174,165,192,0.12)',
+    borderColor: 'rgba(158,181,170,0.12)',
   },
-  cardHovered: { borderColor: 'rgba(255,138,92,0.45)' },
+  cardHovered: { borderColor: 'rgba(99,214,181,0.45)' },
   cardSelected: { borderColor: colors.cyan, borderWidth: 2 },
   selectCheck: {
     position: 'absolute',
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     borderColor: colors.textPrimary,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(9,6,15,0.4)',
+    backgroundColor: 'rgba(5,10,11,0.4)',
   },
   selectCheckInline: {
     width: 20,
@@ -307,12 +307,12 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(9,6,15,0.55)',
+    backgroundColor: 'rgba(5,10,11,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 2,
   },
-  moreChipHovered: { backgroundColor: 'rgba(9,6,15,0.85)' },
+  moreChipHovered: { backgroundColor: 'rgba(5,10,11,0.85)' },
   playFabWrap: {
     position: 'absolute',
     right: spacing.sm + 2,
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(9,6,15,0.55)',
+    backgroundColor: 'rgba(5,10,11,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(9,6,15,0.65)',
+    backgroundColor: 'rgba(5,10,11,0.65)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.sm,
     left: spacing.sm,
-    backgroundColor: 'rgba(9,6,15,0.65)',
+    backgroundColor: 'rgba(5,10,11,0.65)',
     borderRadius: radii.pill,
     padding: 5,
   },
@@ -381,12 +381,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: 'rgba(27,20,38,0.5)',
+    backgroundColor: 'rgba(17,30,25,0.5)',
     borderRadius: radii.md,
     padding: spacing.sm,
   },
-  listRowHovered: { backgroundColor: 'rgba(27,20,38,0.85)' },
-  listRowPressed: { backgroundColor: 'rgba(255,138,92,0.10)' },
+  listRowHovered: { backgroundColor: 'rgba(17,30,25,0.85)' },
+  listRowPressed: { backgroundColor: 'rgba(99,214,181,0.10)' },
   listRowSelected: { borderWidth: 1, borderColor: colors.cyan },
   listCover: {
     width: 48,
@@ -398,6 +398,6 @@ const styles = StyleSheet.create({
   listText: { flex: 1 },
   skeletonGridWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   skeletonListWrap: { gap: spacing.md },
-  skeletonCard: { borderRadius: radii.lg, backgroundColor: 'rgba(174,165,192,0.08)' },
-  skeletonRow: { height: 68, borderRadius: radii.md, backgroundColor: 'rgba(174,165,192,0.08)' },
+  skeletonCard: { borderRadius: radii.lg, backgroundColor: 'rgba(158,181,170,0.08)' },
+  skeletonRow: { height: 68, borderRadius: radii.md, backgroundColor: 'rgba(158,181,170,0.08)' },
 });

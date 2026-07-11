@@ -61,7 +61,7 @@ function QueuePreview({ onJump }: { onJump: () => void }) {
 
   return (
     <View style={styles.queueCard}>
-      <GlassPanel style={StyleSheet.absoluteFill as object} overlayColor="rgba(27,20,38,0.92)" />
+      <GlassPanel style={StyleSheet.absoluteFill as object} overlayColor="rgba(17,30,25,0.92)" />
       <Text style={styles.queueTitle}>UP NEXT</Text>
       {upcoming.length === 0 ? (
         <Text style={styles.queueEmpty}>End of queue.</Text>
@@ -125,7 +125,7 @@ export function MiniPlayerBar() {
       {queueOpen && <QueuePreview onJump={() => setQueueOpen(false)} />}
       <Pressable onPress={() => navigation.navigate('Player')} style={isDesktop ? styles.pressDesktop : undefined}>
         <View style={[playing && styles.glowWrap, playing && accentColor && { shadowColor: accentColor }]}>
-          <GlassPanel style={styles.panel} overlayColor="rgba(27,20,38,0.9)">
+          <GlassPanel style={styles.panel} overlayColor="rgba(17,30,25,0.9)">
             <View style={styles.content}>
               <Artwork
                 media={currentMedia}
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(255,138,92,0.16)',
+    backgroundColor: 'rgba(99,214,181,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     height: 2,
-    backgroundColor: 'rgba(174,165,192,0.14)',
+    backgroundColor: 'rgba(158,181,170,0.14)',
   },
   progressFill: {
     height: '100%',
@@ -245,13 +245,13 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(174,165,192,0.14)',
+    borderColor: 'rgba(158,181,170,0.14)',
     padding: spacing.md,
   },
   queueTitle: { ...typography.eyebrow, fontSize: 10, letterSpacing: 2, color: colors.textMuted, marginBottom: spacing.sm },
   queueEmpty: { ...typography.caption, color: colors.textMuted },
   queueRow: { paddingVertical: spacing.sm - 2, borderRadius: radii.sm },
-  queueRowPressed: { backgroundColor: 'rgba(255,138,92,0.10)' },
+  queueRowPressed: { backgroundColor: 'rgba(99,214,181,0.10)' },
   queueRowTitle: { ...typography.subtitle, fontSize: 14, color: colors.textPrimary },
   queueRowArtist: { ...typography.caption, fontSize: 11, color: colors.textMuted },
 });

@@ -1,24 +1,24 @@
 {
   "expo": {
-    "name": "Duskglen",
-    "slug": "duskglen",
-    "scheme": "duskglen",
+    "name": "Starhollow",
+    "slug": "starhollow",
+    "scheme": "starhollow",
     "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#100B18",
+    "backgroundColor": "#0B1411",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.duskglen.app",
+      "bundleIdentifier": "com.starhollow.app",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Duskglen listens briefly through the microphone to identify the song playing around you."
+        "NSMicrophoneUsageDescription": "Starhollow listens briefly through the microphone to identify the song playing around you."
       }
     },
     "android": {
-      "package": "com.duskglen.app",
+      "package": "com.starhollow.app",
       "adaptiveIcon": {
-        "backgroundColor": "#100B18",
+        "backgroundColor": "#0B1411",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -30,16 +30,16 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "name": "Duskglen",
-      "shortName": "Duskglen",
-      "themeColor": "#100B18",
-      "backgroundColor": "#100B18"
+      "name": "Starhollow",
+      "shortName": "Starhollow",
+      "themeColor": "#0B1411",
+      "backgroundColor": "#0B1411"
     },
     "plugins": [
       [
         "expo-audio",
         {
-          "microphonePermission": "Duskglen listens briefly through the microphone to identify the song playing around you."
+          "microphonePermission": "Starhollow listens briefly through the microphone to identify the song playing around you."
         }
       ],
       "expo-asset",

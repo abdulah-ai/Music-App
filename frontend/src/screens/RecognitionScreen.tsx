@@ -12,7 +12,7 @@ import {
   useAudioRecorderState,
 } from 'expo-audio';
 
-import { Moonlight } from '../components/three/Moonlight';
+import { Starwell } from '../components/scene/Starwell';
 import { MiniPlayerBar } from '../components/player/MiniPlayerBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { RippleField } from '../components/ui/RippleField';
@@ -53,7 +53,7 @@ export function RecognitionScreen() {
   const insets = useSafeAreaInsets();
   const { isDesktop } = useResponsive();
   // This tab stays mounted when the user switches to Home/Library — without
-  // this, its RippleField + Moonlight instance keeps animating invisibly.
+  // this, its RippleField + Starwell instance keeps animating invisibly.
   const isFocused = useIsFocused();
   const recorder = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
   const recorderState = useAudioRecorderState(recorder, 100);
@@ -307,7 +307,7 @@ export function RecognitionScreen() {
                   cx={RING_SIZE / 2}
                   cy={RING_SIZE / 2}
                   r={(RING_SIZE - RING_STROKE) / 2}
-                  stroke="rgba(255,138,92,0.35)"
+                  stroke="rgba(99,214,181,0.35)"
                   strokeWidth={1.5}
                   strokeDasharray="3 16"
                   strokeLinecap="round"
@@ -353,13 +353,13 @@ export function RecognitionScreen() {
           >
             <View style={styles.listenShadow}>
               <LinearGradient
-                colors={micActive ? colors.gradientPrimary : ['rgba(255,138,92,0.4)', 'rgba(179,157,255,0.4)']}
+                colors={micActive ? colors.gradientPrimary : ['rgba(99,214,181,0.4)', 'rgba(169,155,219,0.4)']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.listenRing}
               >
                 <View style={styles.listenInner}>
-                  {isFocused && <Moonlight state={orbState} amplitude={amplitude} size={BUTTON_SIZE - 46} />}
+                  {isFocused && <Starwell state={orbState} amplitude={amplitude} size={BUTTON_SIZE - 46} />}
                 </View>
               </LinearGradient>
             </View>
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
   listenInner: {
     flex: 1,
     borderRadius: (BUTTON_SIZE - 6) / 2,
-    backgroundColor: 'rgba(9,6,15,0.92)',
+    backgroundColor: 'rgba(5,10,11,0.92)',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     flex: 1,
     color: colors.textPrimary,
-    backgroundColor: 'rgba(27,20,38,0.6)',
+    backgroundColor: 'rgba(17,30,25,0.6)',
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md - 6,
@@ -663,7 +663,7 @@ const styles = StyleSheet.create({
   },
   historyBlock: {
     alignSelf: 'stretch',
-    backgroundColor: 'rgba(27,20,38,0.35)',
+    backgroundColor: 'rgba(17,30,25,0.35)',
     borderRadius: radii.md,
     padding: spacing.md,
     gap: spacing.sm,

@@ -1,6 +1,6 @@
 // Generates every raster brand asset (favicon, PWA icons, Android adaptive
 // icon layers, Capacitor icon/splash sources) from one vector definition of
-// the Duskglen mark, so every surface stays pixel-consistent with the
+// the Starhollow mark, so every surface stays pixel-consistent with the
 // in-app <BrandMark /> component (src/components/ui/BrandMark.tsx).
 //
 // Run: node scripts/generate-brand-assets.js
@@ -8,26 +8,39 @@ const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 
-const INK = '#100B18';
-const MOON = '#F1EDF7';
-const GLOW = '#FF8A5C';
+const INK = '#0B1411'; // midnight pine
+const STAR = '#E9CD7E'; // star gold
+const CORE = '#FFF7DE';
+const AURORA = '#63D6B5'; // aurora teal
+const RIDGE_FAR = '#0A2018';
+const RIDGE_NEAR = '#04120C';
 
 // Mark geometry mirrors BrandMark.tsx's 0 0 100 100 viewBox exactly.
-function markGroup({ moon = MOON, trees = INK, star = MOON, glow = true } = {}) {
+function markGroup({ star = STAR, core = CORE, ridgeFar = RIDGE_FAR, ridgeNear = RIDGE_NEAR, glow = true, flat = false } = {}) {
   return `
-    ${glow ? `<circle cx="50" cy="38" r="40" fill="url(#dg-glow)" />` : ''}
-    <circle cx="50" cy="38" r="26" fill="${moon}" />
-    <circle cx="20" cy="18" r="1.8" fill="${star}" opacity="0.85" />
-    <circle cx="80" cy="24" r="1.4" fill="${star}" opacity="0.7" />
-    <path d="M10,70 L25,42 L40,70 Z M32,70 L50,32 L68,70 Z M60,70 L75,42 L90,70 Z" fill="${trees}" />
-    <rect x="0" y="70" width="100" height="30" fill="${trees}" />
+    ${glow ? `<circle cx="50" cy="78" r="44" fill="url(#sh-pool)" />` : ''}
+    <path d="M-2,74 L16,48 L30,66 L40,52 L50,68 L60,52 L70,66 L84,48 L102,74 L102,102 L-2,102 Z" fill="${ridgeFar}" ${flat ? 'opacity="0.55"' : ''} />
+    <path d="M-2,88 L14,68 L28,82 L42,70 L58,70 L72,82 L86,68 L102,88 L102,102 L-2,102 Z" fill="${ridgeNear}" />
+    ${glow ? `<circle cx="50" cy="36" r="32" fill="url(#sh-glow)" />` : ''}
+    <path d="M50,10 L54,30 L72,36 L54,42 L50,62 L46,42 L28,36 L46,30 Z" fill="${star}" />
+    ${flat ? '' : `<path d="M50,26 L51.6,34.4 L60,36 L51.6,37.6 L50,46 L48.4,37.6 L40,36 L48.4,34.4 Z" fill="${core}" opacity="0.9" />`}
+    <circle cx="22" cy="20" r="1.9" fill="${star}" opacity="0.85" />
+    <circle cx="79" cy="16" r="1.4" fill="${star}" opacity="0.65" />
+    <circle cx="87" cy="34" r="1.2" fill="${star}" opacity="0.55" />
   `;
 }
 
-const GLOW_DEFS = `<defs><radialGradient id="dg-glow" cx="50%" cy="42%" r="50%">
-  <stop offset="0%" stop-color="${GLOW}" stop-opacity="0.35" />
-  <stop offset="100%" stop-color="${GLOW}" stop-opacity="0" />
-</radialGradient></defs>`;
+const GLOW_DEFS = `<defs>
+  <radialGradient id="sh-pool" cx="50%" cy="78%" r="46%">
+    <stop offset="0%" stop-color="${AURORA}" stop-opacity="0.5" />
+    <stop offset="60%" stop-color="${AURORA}" stop-opacity="0.16" />
+    <stop offset="100%" stop-color="${AURORA}" stop-opacity="0" />
+  </radialGradient>
+  <radialGradient id="sh-glow" cx="50%" cy="36%" r="40%">
+    <stop offset="0%" stop-color="${STAR}" stop-opacity="0.4" />
+    <stop offset="100%" stop-color="${STAR}" stop-opacity="0" />
+  </radialGradient>
+</defs>`;
 
 /** Flat square icon: ink background, mark scaled to ~64% and centered. Used for favicon / app icon / PWA "any" icons. */
 function squareIconSvg({ cornerRadius = 0 } = {}) {
@@ -65,7 +78,7 @@ function backgroundSvg() {
 /** Android 13+ themed monochrome layer: single-colour silhouette, transparent bg (OS supplies the tint). */
 function monochromeSvg() {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-    <g transform="translate(276 276) scale(4.72)">${markGroup({ moon: '#FFFFFF', trees: '#FFFFFF', star: '#FFFFFF', glow: false })}</g>
+    <g transform="translate(276 276) scale(4.72)">${markGroup({ star: '#FFFFFF', ridgeFar: '#FFFFFF', ridgeNear: '#FFFFFF', glow: false, flat: true })}</g>
   </svg>`;
 }
 

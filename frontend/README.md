@@ -1,7 +1,7 @@
-# Duskglen frontend
+# Starhollow frontend
 
 Expo 57 / React Native Web client shipped as a production web bundle inside a
-Capacitor Android shell. Duskglen captures media links, identifies nearby
+Capacitor Android shell. Starhollow captures media links, identifies nearby
 music, organizes a private library, and provides queue, lyrics, offline, and
 background playback controls.
 

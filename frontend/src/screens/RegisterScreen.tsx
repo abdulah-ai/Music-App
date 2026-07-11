@@ -55,7 +55,7 @@ export function RegisterScreen({ navigation }: Props) {
 
   return (
     <AuthLayout
-      eyebrow="JOIN DUSKGLEN"
+      eyebrow="JOIN STARHOLLOW"
       title="Make it yours"
       subtitle="Save, identify, and organize music in one private collection."
     >

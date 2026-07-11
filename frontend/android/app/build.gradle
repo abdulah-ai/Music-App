@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.duskglen.app"
+    namespace = "com.starhollow.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.duskglen.app"
+        applicationId "com.starhollow.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // CI passes the workflow run number so every published APK can install
@@ -29,6 +29,8 @@ android {
             release {
                 storeFile file(System.getenv("ANDROID_KEYSTORE_FILE"))
                 storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                // NB: the alias inside the existing PKCS12 keystore — do not
+                // rename when rebranding, or CI signing stops opening the key.
                 keyAlias "duskglen"
                 keyPassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
                 storeType "pkcs12"

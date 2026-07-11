@@ -134,8 +134,8 @@ export function AppSidebar({
           <BrandMark size={22} />
         </View>
         <View>
-          <Text style={styles.brand}>DUSKGLEN</Text>
-          <Text style={styles.brandSub}>Your music after dark</Text>
+          <Text style={styles.brand}>STARHOLLOW</Text>
+          <Text style={styles.brandSub}>Your quiet place under the stars</Text>
         </View>
       </View>
 
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,138,92,0.12)',
+    backgroundColor: 'rgba(99,214,181,0.12)',
   },
   brand: { ...typography.eyebrow, fontSize: 13, letterSpacing: 3, color: colors.textPrimary },
   brandSub: { ...typography.caption, fontSize: 11, color: colors.textMuted },
@@ -262,8 +262,8 @@ const styles = StyleSheet.create({
     paddingRight: spacing.sm,
     borderRadius: radii.md - 4,
   },
-  navRowHovered: { backgroundColor: 'rgba(174,165,192,0.08)' },
-  navRowActive: { backgroundColor: 'rgba(255,138,92,0.11)' },
+  navRowHovered: { backgroundColor: 'rgba(158,181,170,0.08)' },
+  navRowActive: { backgroundColor: 'rgba(99,214,181,0.11)' },
   navAccent: {
     position: 'absolute',
     left: 0,
@@ -286,9 +286,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     borderRadius: radii.md,
-    backgroundColor: 'rgba(255,138,92,0.08)',
+    backgroundColor: 'rgba(99,214,181,0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255,138,92,0.14)',
+    borderColor: 'rgba(99,214,181,0.14)',
   },
   nowPlayingIcon: {
     width: 34,
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,138,92,0.12)',
+    backgroundColor: 'rgba(99,214,181,0.12)',
   },
   nowPlayingText: { flex: 1 },
   nowPlayingEyebrow: { ...typography.eyebrow, fontSize: 8, lineHeight: 11, letterSpacing: 1.6, color: colors.cyan },
@@ -322,12 +322,12 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: 'rgba(174,165,192,0.12)',
-    backgroundColor: 'rgba(27,20,38,0.45)',
+    borderColor: 'rgba(158,181,170,0.12)',
+    backgroundColor: 'rgba(17,30,25,0.45)',
   },
-  accountRowActive: { backgroundColor: 'rgba(27,20,38,0.85)', borderColor: 'rgba(255,138,92,0.35)' },
+  accountRowActive: { backgroundColor: 'rgba(17,30,25,0.85)', borderColor: 'rgba(99,214,181,0.35)' },
   avatar: { width: 36, height: 36, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { ...typography.title, fontSize: 16, color: '#100B18' },
+  avatarInitial: { ...typography.title, fontSize: 16, color: '#0B1411' },
   accountText: { flex: 1 },
   accountName: { ...typography.subtitle, fontSize: 14, lineHeight: 18, color: colors.textPrimary },
   accountEmail: { ...typography.caption, fontSize: 11, color: colors.textMuted },

@@ -60,6 +60,6 @@ const styles = StyleSheet.create({
     right: '8%',
     bottom: 0,
     height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(242,139,99,0.10)',
+    backgroundColor: 'rgba(99,214,181,0.10)',
   },
 });

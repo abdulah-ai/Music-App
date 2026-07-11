@@ -1,4 +1,4 @@
-package com.duskglen.app;
+﻿package com.starhollow.app;
 
 import com.getcapacitor.BridgeActivity;
 

@@ -232,7 +232,7 @@ export function GlobalVideoStage() {
             )}
             <View style={styles.posterScrim} />
             <View style={styles.posterSpinner}>
-              <Ionicons name="play-circle" size={54} color="rgba(241,237,247,0.85)" />
+              <Ionicons name="play-circle" size={54} color="rgba(239,245,241,0.85)" />
               <Text style={styles.posterLabel}>Loading…</Text>
             </View>
           </View>
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#09060F',
+    backgroundColor: '#050A0B',
     zIndex: 50,
   },
   topBar: {
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(27,20,38,0.72)',
+    backgroundColor: 'rgba(17,30,25,0.72)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -333,14 +333,14 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(27,20,38,0.6)',
+    backgroundColor: 'rgba(17,30,25,0.6)',
   },
   chipLabel: { ...typography.eyebrow, fontSize: 10, letterSpacing: 2, color: colors.textSecondary },
   stage: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   video: { width: '100%', height: '100%' },
   posterWrap: { ...(StyleSheet.absoluteFill as object), alignItems: 'center', justifyContent: 'center' },
   poster: { ...(StyleSheet.absoluteFill as object) },
-  posterScrim: { ...(StyleSheet.absoluteFill as object), backgroundColor: 'rgba(9,6,15,0.55)' },
+  posterScrim: { ...(StyleSheet.absoluteFill as object), backgroundColor: 'rgba(5,10,11,0.55)' },
   posterSpinner: { alignItems: 'center', gap: spacing.sm },
   posterLabel: { ...typography.eyebrow, fontSize: 10, letterSpacing: 2, color: colors.textSecondary },
   metaBar: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, width: '100%', maxWidth: 960, alignSelf: 'center' },
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(27,20,38,0.7)',
+    backgroundColor: 'rgba(17,30,25,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(174,165,192,0.14)',
+    borderColor: 'rgba(158,181,170,0.14)',
   },
   stripTitle: { ...typography.caption, fontSize: 11, color: colors.textSecondary },
 
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#000',
     borderWidth: 1,
-    borderColor: 'rgba(174,165,192,0.18)',
+    borderColor: 'rgba(158,181,170,0.18)',
     zIndex: 60,
     ...shadows.card,
   },
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(9,6,15,0.6)',
+    backgroundColor: 'rgba(5,10,11,0.6)',
     alignItems: 'center',
     justifyContent: 'center',
   },

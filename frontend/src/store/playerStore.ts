@@ -193,7 +193,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     PlayerService.setLockScreenActive({
       title: displayTitle(media),
       artist: displayArtist(media) ?? 'Unknown artist',
-      albumTitle: media.album ?? 'Duskglen',
+      albumTitle: media.album ?? 'Starhollow',
       artworkUrl: thumbnailUri(media) ?? undefined,
     });
     mediaSession.bindHandlers({

@@ -7,6 +7,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Artwork } from '../components/ui/Artwork';
+import { SanctuaryMode } from '../components/scene/SanctuaryMode';
 import { CoverBackdrop } from '../components/player/CoverBackdrop';
 import { LyricsView } from '../components/player/LyricsView';
 import { QueueList } from '../components/player/QueueList';
@@ -85,6 +86,7 @@ export function PlayerScreen() {
   const { width, height, isDesktop } = useResponsive();
   const [sheet, setSheet] = useState<Sheet>(null);
   const [sheetTab, setSheetTab] = useState<'queue' | 'lyrics'>('queue');
+  const [sanctuary, setSanctuary] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const artworkEntrance = useRef(new Animated.Value(0)).current;
 
@@ -254,6 +256,15 @@ export function PlayerScreen() {
           <Ionicons name="text" size={18} color={colors.textSecondary} />
           <Text style={styles.secondaryLabel}>Lyrics</Text>
         </Pressable>
+        <Pressable
+          onPress={() => setSanctuary(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Enter Sanctuary Mode"
+          style={[styles.secondaryAction, styles.sanctuaryAction]}
+        >
+          <Ionicons name="moon" size={17} color={accent} />
+          <Text style={[styles.secondaryLabel, { color: accent }]}>Sanctuary</Text>
+        </Pressable>
         <Pressable onPress={() => setSheet('options')} accessibilityRole="button" accessibilityLabel="Playback options" style={styles.secondaryAction}>
           <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
           <Text style={styles.secondaryLabel}>More</Text>
@@ -322,6 +333,8 @@ export function PlayerScreen() {
         </ScrollView>
       )}
 
+      <SanctuaryMode visible={sanctuary} onClose={() => setSanctuary(false)} accent={accent} />
+
       <Modal visible={sheet !== null} transparent animationType="slide" onRequestClose={() => setSheet(null)}>
         <View style={styles.sheetRoot}>
           <Pressable style={styles.sheetBackdrop} onPress={() => setSheet(null)} accessibilityLabel="Close playback panel" />
@@ -364,10 +377,10 @@ export function PlayerScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  backdropVeil: { ...(StyleSheet.absoluteFill as object), backgroundColor: 'rgba(11,8,14,0.76)' },
+  backdropVeil: { ...(StyleSheet.absoluteFill as object), backgroundColor: 'rgba(6,12,10,0.76)' },
   topBar: { position: 'absolute', zIndex: 10, top: 0, left: spacing.lg, right: spacing.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  topButton: { width: 44, height: 44, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(17,13,22,0.68)', borderWidth: 1, borderColor: colors.surfaceBorder },
-  playingState: { minHeight: 36, paddingHorizontal: spacing.md, borderRadius: radii.pill, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: 'rgba(17,13,22,0.52)' },
+  topButton: { width: 44, height: 44, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(10,19,15,0.68)', borderWidth: 1, borderColor: colors.surfaceBorder },
+  playingState: { minHeight: 36, paddingHorizontal: spacing.md, borderRadius: radii.pill, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: 'rgba(10,19,15,0.52)' },
   stateDot: { width: 6, height: 6, borderRadius: 3 },
   playingStateLabel: { ...typography.eyebrow, fontSize: 10, letterSpacing: 1.8, color: colors.textSecondary },
   mobileContent: { alignItems: 'center', paddingHorizontal: spacing.lg, gap: spacing.lg },
@@ -387,7 +400,7 @@ const styles = StyleSheet.create({
   time: { ...typography.caption, fontSize: 11, color: colors.textMuted, fontVariant: ['tabular-nums'] },
   transportRow: { minHeight: 82, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   modeButton: { width: 44, height: 44, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
-  modeButtonActive: { backgroundColor: 'rgba(255,117,93,0.12)' },
+  modeButtonActive: { backgroundColor: 'rgba(99,214,181,0.12)' },
   modeBadge: { position: 'absolute', fontSize: 8, color: colors.textMuted, fontFamily: 'Sora_700Bold' },
   modeBadgeActive: { color: colors.cyan },
   skipButton: { width: 50, height: 50, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
@@ -396,7 +409,8 @@ const styles = StyleSheet.create({
   playNudge: { marginLeft: 4 },
   pressed: { opacity: 0.65 },
   secondaryRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.md },
-  secondaryAction: { minWidth: 86, minHeight: 46, borderRadius: radii.pill, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: 'rgba(21,17,27,0.72)', borderWidth: 1, borderColor: colors.surfaceBorder },
+  secondaryAction: { minWidth: 78, minHeight: 46, borderRadius: radii.pill, paddingHorizontal: spacing.md - 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: 'rgba(12,22,17,0.72)', borderWidth: 1, borderColor: colors.surfaceBorder },
+  sanctuaryAction: { borderColor: 'rgba(99,214,181,0.28)' },
   secondaryLabel: { ...typography.caption, color: colors.textSecondary },
   nextRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderTopWidth: 1, borderTopColor: colors.surfaceBorder, marginTop: spacing.xs, paddingTop: spacing.md },
   nextText: { flex: 1 },
@@ -406,7 +420,7 @@ const styles = StyleSheet.create({
   volumeIcon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   volumeSlider: { flex: 1, height: 36 },
   sheetRoot: { flex: 1, justifyContent: 'flex-end' },
-  sheetBackdrop: { ...(StyleSheet.absoluteFill as object), backgroundColor: 'rgba(4,3,6,0.62)' },
+  sheetBackdrop: { ...(StyleSheet.absoluteFill as object), backgroundColor: 'rgba(2,5,4,0.62)' },
   sheet: { height: '76%', borderTopLeftRadius: radii.lg + 6, borderTopRightRadius: radii.lg + 6, backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.surfaceBorder, overflow: 'hidden' },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginTop: spacing.sm, marginBottom: spacing.sm, backgroundColor: colors.surfaceBright },
   sheetTabs: { flexDirection: 'row', marginHorizontal: spacing.lg, padding: 4, borderRadius: radii.pill, backgroundColor: colors.bg },

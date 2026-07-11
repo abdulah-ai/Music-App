@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 const user = {
   id: 'smoke-user',
-  email: 'smoke@duskglen.test',
+  email: 'smoke@starhollow.test',
   display_name: 'Smoke Test',
   storage_preference: 'default',
   is_admin: false,

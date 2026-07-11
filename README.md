@@ -1,4 +1,4 @@
-# Duskglen
+# Starhollow
 
 *(repo/folder name: SuperMediaApp — see [GO_PUBLIC.md](GO_PUBLIC.md) for the brand rationale)*
 

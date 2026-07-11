@@ -51,10 +51,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: 'rgba(27,20,38,0.96)',
+    backgroundColor: 'rgba(17,30,25,0.96)',
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,138,92,0.3)',
+    borderColor: 'rgba(99,214,181,0.3)',
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     maxWidth: 460,
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   actionText: {
     fontFamily: 'Sora_600SemiBold',
     fontSize: 12,
-    color: '#100B18',
+    color: '#0B1411',
   },
   dismiss: {
     padding: 2,

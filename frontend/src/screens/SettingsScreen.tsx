@@ -212,7 +212,7 @@ export function SettingsScreen() {
       const href = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = href;
-      anchor.download = 'duskglen-library.json';
+      anchor.download = 'starhollow-library.json';
       anchor.click();
       URL.revokeObjectURL(href);
       toast('Library exported', 'success');
@@ -259,7 +259,7 @@ export function SettingsScreen() {
             <SectionHeader
               eyebrow="Preferences"
               title="Settings"
-              subtitle="Shape playback, storage, and the way Duskglen works for you."
+              subtitle="Shape playback, storage, and the way Starhollow works for you."
               style={styles.screenHeading}
             />
           </View>
@@ -268,7 +268,7 @@ export function SettingsScreen() {
           <GlassPanel style={styles.panel}>
             <View style={styles.panelBody}>
               <StatusRow label="Network" ok={networkOnline} />
-              <StatusRow label="Duskglen API" ok={backendOnline} pending={backendOnline === null} />
+              <StatusRow label="Starhollow API" ok={backendOnline} pending={backendOnline === null} />
               <StatusRow
                 label="Telegram"
                 ok={telegramStatus ? telegramStatus.authorized : null}
@@ -418,7 +418,7 @@ export function SettingsScreen() {
             <View style={[styles.panelBody, styles.aboutRow]}>
               <BrandMark size={28} />
               <View>
-                <Text style={styles.fieldValue}>Duskglen</Text>
+                <Text style={styles.fieldValue}>Starhollow</Text>
                 <Text style={styles.hint}>Your private signal archive.</Text>
               </View>
             </View>

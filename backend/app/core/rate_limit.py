@@ -10,7 +10,7 @@ from fastapi import HTTPException, Request, status
 class InMemoryRateLimiter:
     """Small single-process sliding-window limiter for sensitive endpoints.
 
-    Duskglen currently runs one API process. If it is scaled horizontally this
+    Starhollow currently runs one API process. If it is scaled horizontally this
     can be replaced with Redis without changing endpoint behavior.
     """
 

@@ -15,18 +15,18 @@ import { Toaster } from './src/components/ui/Toaster';
 
 // Browser-only chrome: themed scrollbars, selection color and font smoothing.
 // Injected once at module load so even the boot screen benefits.
-if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getElementById('duskglen-web-css')) {
+if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getElementById('starhollow-web-css')) {
   const style = document.createElement('style');
-  style.id = 'duskglen-web-css';
+  style.id = 'starhollow-web-css';
   style.textContent = `
-    html, body { background: #0F0B10; }
+    html, body { background: #0B1411; }
     * { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
-    ::selection { background: rgba(242,139,99,0.32); }
-    * { scrollbar-width: thin; scrollbar-color: rgba(196,185,193,0.24) transparent; }
+    ::selection { background: rgba(99,214,181,0.32); }
+    * { scrollbar-width: thin; scrollbar-color: rgba(158,181,170,0.24) transparent; }
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(196,185,193,0.24); border-radius: 99px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(196,185,193,0.38); }
+    ::-webkit-scrollbar-thumb { background: rgba(158,181,170,0.24); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(158,181,170,0.38); }
     input, textarea { outline: none; }
     /* Ease hover/press colour changes everywhere — transform/opacity stay
        untouched so RN Animated-driven motion isn't slowed down. */
@@ -34,7 +34,7 @@ if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getEle
       transition: background-color 160ms ease, border-color 160ms ease, box-shadow 220ms ease;
     }
     input, textarea { transition: border-color 160ms ease, box-shadow 220ms ease; }
-    :focus-visible { outline: 2px solid #F28B63; outline-offset: 3px; }
+    :focus-visible { outline: 2px solid #63D6B5; outline-offset: 3px; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.01ms !important;
@@ -64,7 +64,7 @@ function BootScreen() {
       <View style={bootStyles.core}>
         <BrandMark size={56} />
       </View>
-      <Text style={bootStyles.wordmark}>DUSKGLEN</Text>
+      <Text style={bootStyles.wordmark}>STARHOLLOW</Text>
       <Text style={bootStyles.tagline}>Preparing your library…</Text>
     </View>
   );
@@ -73,7 +73,7 @@ function BootScreen() {
 const bootStyles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0F0B10',
+    backgroundColor: '#0B1411',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 18,
@@ -84,9 +84,9 @@ const bootStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 20,
-    backgroundColor: '#171218',
+    backgroundColor: '#121F1A',
     borderWidth: 1,
-    borderColor: '#332A34',
+    borderColor: '#2A4336',
   },
   wordmark: {
     fontFamily: 'Sora_600SemiBold',

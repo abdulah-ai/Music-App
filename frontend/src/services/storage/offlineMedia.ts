@@ -16,10 +16,10 @@ import { displayArtist, displayTitle } from '../../utils/mediaDisplay';
  * work today.
  */
 
-const DB_NAME = 'duskglen-offline';
+const DB_NAME = 'starhollow-offline';
 const DB_VERSION = 1;
 const META_STORE = 'media-meta';
-const CACHE_NAME = 'duskglen-offline-media-v1';
+const CACHE_NAME = 'starhollow-offline-media-v1';
 
 export type OfflineEntry = {
   id: string;

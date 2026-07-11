@@ -1,4 +1,4 @@
-# Builds the Duskglen Android APK in the cloud (this repo's dev machine has no
+# Builds the Starhollow Android APK in the cloud (this repo's dev machine has no
 # Android SDK) and publishes it to a rolling GitHub Release, so the download
 # link never changes:
 #   https://github.com/3boodabbas2026-debug/Music-App/releases/tag/apk-latest
@@ -111,12 +111,15 @@ jobs:
             exit 1
           fi
           tar xzf signing/bundle.tgz -C signing
-          mv signing/duskglen-release.p12 frontend/android/duskglen-release.p12
+          # The bundle inside the secret predates the Starhollow rebrand — the
+          # keystore file (and its "duskglen" key alias) keep their old names
+          # so the already-pasted secret keeps working.
+          mv signing/duskglen-release.p12 frontend/android/starhollow-release.p12
           mv signing/keystore-password.txt frontend/android/keystore-password.txt
           # Prove Java itself can open the keystore with this password before
           # spending minutes in Gradle — fail loudly and publicly if not.
           if ! keytool -list -storetype pkcs12 \
-              -keystore frontend/android/duskglen-release.p12 \
+              -keystore frontend/android/starhollow-release.p12 \
               -storepass "$(cat frontend/android/keystore-password.txt)" > /dev/null; then
             echo "::error title=Signing::keytool could not open the keystore with the bundled password — regenerate the bundle and re-paste the secret"
             exit 1
@@ -130,8 +133,8 @@ jobs:
         run: |
           chmod +x gradlew
           set -o pipefail
-          if [ -f duskglen-release.p12 ]; then
-            export ANDROID_KEYSTORE_FILE="$PWD/duskglen-release.p12"
+          if [ -f starhollow-release.p12 ]; then
+            export ANDROID_KEYSTORE_FILE="$PWD/starhollow-release.p12"
             export ANDROID_KEYSTORE_PASSWORD="$(cat keystore-password.txt)"
             TARGET=assembleRelease; OUT=release/app-release.apk
           else
@@ -146,14 +149,14 @@ jobs:
               | while IFS= read -r line; do echo "::error title=Gradle detail::${line}"; done
             exit 1
           fi
-          cp "app/build/outputs/apk/$OUT" "$GITHUB_WORKSPACE/duskglen.apk"
+          cp "app/build/outputs/apk/$OUT" "$GITHUB_WORKSPACE/starhollow.apk"
 
       - name: Write version.json (lets installed apps detect this release)
         run: |
           cat > version.json <<EOF
           {
             "versionCode": ${{ github.run_number }},
-            "apkUrl": "https://github.com/${GITHUB_REPOSITORY}/releases/download/apk-latest/duskglen.apk"
+            "apkUrl": "https://github.com/${GITHUB_REPOSITORY}/releases/download/apk-latest/starhollow.apk"
           }
           EOF
 
@@ -162,7 +165,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete apk-latest --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" || true
-          gh release create apk-latest duskglen.apk version.json \
+          gh release create apk-latest starhollow.apk version.json \
             --repo "$GITHUB_REPOSITORY" \
-            --title "Duskglen APK (latest)" \
-            --notes "Automatic Android build of commit ${GITHUB_SHA::7} — download duskglen.apk below, open it on your phone, and allow the install. Already have the app? It will offer this update in-app within about 30 minutes."
+            --title "Starhollow APK (latest)" \
+            --notes "Automatic Android build of commit ${GITHUB_SHA::7} — download starhollow.apk below, open it on your phone, and allow the install. Already have the app? It will offer this update in-app within about 30 minutes."

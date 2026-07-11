@@ -1,8 +1,8 @@
-# Duskglen product rebuild
+# Starhollow product rebuild
 
 ## Product position
 
-Duskglen is a private music utility that turns links, nearby audio, and
+Starhollow is a private music utility that turns links, nearby audio, and
 Telegram files into a personal, playable collection. It should not imitate a
 streaming catalog it does not own. The premium experience comes from making
 capture, identification, organization, and playback feel immediate.
