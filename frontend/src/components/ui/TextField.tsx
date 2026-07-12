@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { colors, radii, spacing, typography } from '../../theme/tokens';
+import { colors, glass, glassBlur, radii, spacing, typography } from '../../theme/tokens';
 
 type Props = TextInputProps & {
   label?: string;
@@ -46,6 +46,7 @@ export function TextField({
           }}
           style={[
             styles.input,
+            glassBlur,
             focused && styles.inputFocused,
             error && styles.inputError,
             isSecure && styles.inputSecure,
@@ -93,16 +94,16 @@ const styles = StyleSheet.create({
     ...typography.body,
     minHeight: 52,
     color: colors.textPrimary,
-    backgroundColor: colors.bgElevated,
+    backgroundColor: glass.fillDeep,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 13,
     borderWidth: 1,
-    borderColor: colors.surfaceBorder,
+    borderColor: glass.stroke,
   },
   inputFocused: {
     borderColor: colors.cyan,
-    backgroundColor: colors.surfaceBright,
+    backgroundColor: glass.fillBright,
   },
   inputSecure: { paddingRight: 52 },
   inputError: {

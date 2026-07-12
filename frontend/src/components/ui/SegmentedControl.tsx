@@ -1,7 +1,7 @@
 import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { colors, radii, spacing } from '../../theme/tokens';
+import { colors, glass, glassBlur, radii, spacing } from '../../theme/tokens';
 
 export type SegmentOption<T extends string> = {
   value: T;
@@ -34,7 +34,7 @@ export function SegmentedControl<T extends string>({
   const select = onValueChange ?? onChange;
 
   return (
-    <View accessibilityLabel={accessibilityLabel} style={[styles.root, style]}>
+    <View accessibilityLabel={accessibilityLabel} style={[styles.root, glassBlur, style]}>
       {options.map((option) => {
         const selected = option.value === value;
         return (
@@ -71,9 +71,9 @@ const styles = StyleSheet.create({
     padding: 3,
     gap: 2,
     borderRadius: radii.md,
-    backgroundColor: colors.surface,
+    backgroundColor: glass.fillDeep,
     borderWidth: 1,
-    borderColor: colors.surfaceBorder,
+    borderColor: glass.stroke,
   },
   segment: {
     minWidth: 44,
@@ -85,8 +85,10 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     borderRadius: radii.sm,
     paddingHorizontal: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
-  selected: { backgroundColor: colors.surfaceElevated },
+  selected: { backgroundColor: glass.fillBright, borderColor: glass.strokeStrong },
   pressed: { opacity: 0.72 },
   disabled: { opacity: 0.38 },
   label: { fontFamily: 'Sora_500Medium', fontSize: 12, lineHeight: 16, color: colors.textMuted },

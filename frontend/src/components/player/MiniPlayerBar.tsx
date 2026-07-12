@@ -11,7 +11,7 @@ import { useResponsive } from '../../hooks/useResponsive';
 import { useTrackAccent } from '../../hooks/useTrackAccent';
 import { usePlayerStore } from '../../store/playerStore';
 import { displayArtist, displayTitle, thumbnailUri } from '../../utils/mediaDisplay';
-import { colors, layout, radii, spacing, typography } from '../../theme/tokens';
+import { colors, glass, layout, radii, spacing, typography } from '../../theme/tokens';
 import type { RootStackParamList } from '../../navigation/types';
 
 const BAR_COUNT = 4;
@@ -66,7 +66,7 @@ function QueuePreview({ onJump }: { onJump: () => void }) {
 
   return (
     <View style={styles.queueCard}>
-      <GlassPanel style={StyleSheet.absoluteFill as object} overlayColor="rgba(17,30,25,0.92)" />
+      <GlassPanel style={StyleSheet.absoluteFill as object} overlayColor={glass.fillHeavy} />
       <Text style={styles.queueTitle}>UP NEXT</Text>
       {upcoming.length === 0 ? (
         <Text style={styles.queueEmpty}>End of queue.</Text>
@@ -131,7 +131,7 @@ export function MiniPlayerBar({ bottomOffset = 0 }: Props) {
       {queueOpen && <QueuePreview onJump={() => setQueueOpen(false)} />}
       <Pressable onPress={() => navigation.navigate('Player')} style={isDesktop ? styles.pressDesktop : undefined}>
         <View style={[playing && styles.glowWrap, playing && accentColor && { shadowColor: accentColor }]}>
-          <GlassPanel style={styles.panel} overlayColor="rgba(17,30,25,0.9)">
+          <GlassPanel style={styles.panel} overlayColor={glass.fillHeavy}>
             <View style={styles.content}>
               <Artwork
                 media={currentMedia}

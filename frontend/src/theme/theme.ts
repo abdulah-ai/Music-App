@@ -37,6 +37,32 @@ export const ambient = {
   ridgeFront: '#061119',
 } as const;
 
+/**
+ * The frosted-glass surface language. Every raised surface and control is a
+ * translucent navy pane over the ambient starfield; on web (and therefore in
+ * the Capacitor APK) a backdrop blur turns whatever sits behind the pane into
+ * the soft "mirror" sheen. Fills stay dark enough that textPrimary keeps its
+ * contrast on every pane.
+ */
+export const glass = {
+  /** Default card/panel pane. */
+  fill: 'rgba(13, 26, 36, 0.45)',
+  /** Slightly brighter pane for controls sitting on top of panels. */
+  fillBright: 'rgba(24, 44, 58, 0.5)',
+  /** Recessed pane for inputs and wells. */
+  fillDeep: 'rgba(5, 12, 19, 0.5)',
+  /** Dense pane for floating chrome (mini player, popovers) over busy content. */
+  fillHeavy: 'rgba(10, 21, 30, 0.68)',
+  stroke: 'rgba(148, 186, 210, 0.16)',
+  strokeStrong: 'rgba(170, 206, 229, 0.30)',
+  /** The lit top edge that sells the pane as glass. */
+  edge: 'rgba(255, 255, 255, 0.16)',
+  tintPrimary: 'rgba(99, 214, 181, 0.18)',
+  tintPrimaryStroke: 'rgba(99, 214, 181, 0.44)',
+  tintDanger: 'rgba(240, 131, 140, 0.12)',
+  tintDangerStroke: 'rgba(240, 131, 140, 0.30)',
+} as const;
+
 export const gradients = {
   /** A restrained, single-family accent reserved for primary hero moments. */
   accent: [palette.primary, '#8FE3C8'] as const,
@@ -132,5 +158,5 @@ export const motion = {
   },
 } as const;
 
-export const theme = { palette, ambient, gradients, layout, typeScale, shadows, motion } as const;
+export const theme = { palette, ambient, glass, gradients, layout, typeScale, shadows, motion } as const;
 export default theme;

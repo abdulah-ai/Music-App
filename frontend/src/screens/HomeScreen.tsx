@@ -41,7 +41,7 @@ import { usePlayerStore } from '../store/playerStore';
 import { usePlayHistoryStore } from '../store/playHistoryStore';
 import { toast } from '../store/toastStore';
 import { useVideoPlayerStore } from '../store/videoPlayerStore';
-import { colors, layout, radii, spacing, typography } from '../theme/tokens';
+import { colors, glass, glassBlur, layout, radii, spacing, typography } from '../theme/tokens';
 import { apiErrorMessage, friendlyJobStage } from '../utils/apiError';
 import { displayArtist, displayTitle } from '../utils/mediaDisplay';
 
@@ -129,7 +129,7 @@ function MediaCard({ media, size, onPress }: { media: Media; size: number; onPre
 
 function StatTile({ icon, value, label, accent }: { icon: keyof typeof Ionicons.glyphMap; value: string; label: string; accent: string }) {
   return (
-    <View style={styles.statTile} accessibilityLabel={`${label}: ${value}`}>
+    <View style={[styles.statTile, glassBlur]} accessibilityLabel={`${label}: ${value}`}>
       <Ionicons name={icon} size={16} color={accent} />
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
@@ -325,7 +325,7 @@ export function HomeScreen() {
             </View>
           </View>
 
-          <View style={styles.inputRow}>
+          <View style={[styles.inputRow, glassBlur]}>
             <TextInput
               value={url}
               onChangeText={(value) => {
@@ -347,7 +347,7 @@ export function HomeScreen() {
               onPress={() => void handlePaste()}
               accessibilityRole="button"
               accessibilityLabel="Paste link"
-              style={({ pressed }) => [styles.pasteButton, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.pasteButton, glassBlur, pressed && styles.pressed]}
             >
               <Ionicons name="clipboard-outline" size={16} color={colors.textSecondary} />
               <Text style={styles.pasteLabel}>Paste</Text>
@@ -376,7 +376,7 @@ export function HomeScreen() {
                     accessibilityRole="radio"
                     accessibilityLabel={`${choice.label} quality`}
                     accessibilityState={{ checked: selected }}
-                    style={({ pressed }) => [styles.formatChip, selected && styles.formatChipSelected, pressed && styles.pressed]}
+                    style={({ pressed }) => [styles.formatChip, glassBlur, selected && styles.formatChipSelected, pressed && styles.pressed]}
                   >
                     <Text style={[styles.formatChipLabel, selected && styles.formatChipLabelSelected]}>{choice.label}</Text>
                   </Pressable>
@@ -444,9 +444,14 @@ export function HomeScreen() {
                 onPress={togglePlayback}
                 accessibilityRole="button"
                 accessibilityLabel={`Resume ${displayTitle(currentMedia)}`}
-                style={({ pressed }) => [styles.resumeButton, { backgroundColor: accent }, pressed && styles.cardPressed]}
+                style={({ pressed }) => [
+                  styles.resumeButton,
+                  glassBlur,
+                  { backgroundColor: `${accent}2E`, borderColor: `${accent}66` },
+                  pressed && styles.cardPressed,
+                ]}
               >
-                <Ionicons name="play" size={21} color={colors.textInverse} style={{ marginLeft: 2 }} />
+                <Ionicons name="play" size={21} color={accent} style={{ marginLeft: 2 }} />
               </Pressable>
             </View>
           </GlassPanel>
@@ -559,7 +564,7 @@ export function HomeScreen() {
               onPress={action.go}
               accessibilityRole="button"
               accessibilityLabel={action.label}
-              style={({ pressed }) => [styles.quickTile, pressed && styles.cardPressed]}
+              style={({ pressed }) => [styles.quickTile, glassBlur, pressed && styles.cardPressed]}
             >
               <Ionicons name={action.icon} size={19} color={accent} />
               <Text style={styles.quickLabel}>{action.label}</Text>
@@ -617,7 +622,7 @@ export function HomeScreen() {
                   onPress={() => openTab('Recognize')}
                   accessibilityRole="button"
                   accessibilityLabel="Identify music playing nearby"
-                  style={({ pressed }) => [styles.firstUseCard, pressed && styles.cardPressed]}
+                  style={({ pressed }) => [styles.firstUseCard, glassBlur, pressed && styles.cardPressed]}
                 >
                   <View style={styles.firstUseIcon}><Ionicons name="mic" size={21} color={accent} /></View>
                   <Text style={styles.firstUseTitle}>Identify music</Text>
@@ -628,7 +633,7 @@ export function HomeScreen() {
                   onPress={() => navigation.navigate('Telegram')}
                   accessibilityRole="button"
                   accessibilityLabel="Import from Telegram"
-                  style={({ pressed }) => [styles.firstUseCard, pressed && styles.cardPressed]}
+                  style={({ pressed }) => [styles.firstUseCard, glassBlur, pressed && styles.cardPressed]}
                 >
                   <View style={styles.firstUseIcon}><Ionicons name="paper-plane" size={21} color={colors.violet} /></View>
                   <Text style={styles.firstUseTitle}>Telegram</Text>
@@ -684,9 +689,9 @@ const styles = StyleSheet.create({
     paddingRight: 5,
     gap: spacing.sm,
     borderRadius: radii.md,
-    backgroundColor: 'rgba(5,10,11,0.62)',
+    backgroundColor: glass.fillDeep,
     borderWidth: 1,
-    borderColor: 'rgba(158,181,170,0.12)',
+    borderColor: glass.stroke,
   },
   input: { ...typography.body, flex: 1, minWidth: 0, color: colors.textPrimary, paddingVertical: 0 },
   pasteButton: {
@@ -697,7 +702,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 5,
     borderRadius: radii.md - 3,
-    backgroundColor: 'rgba(158,181,170,0.08)',
+    backgroundColor: glass.fillBright,
+    borderWidth: 1,
+    borderColor: glass.stroke,
   },
   pasteLabel: { ...typography.caption, fontFamily: 'Sora_500Medium', color: colors.textSecondary },
   formatLabel: { ...typography.eyebrow, fontSize: 9, lineHeight: 12, letterSpacing: 1.8, color: colors.textMuted, marginBottom: spacing.sm },
@@ -707,9 +714,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(5,10,11,0.5)',
+    backgroundColor: glass.fillDeep,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: glass.stroke,
   },
   formatChipSelected: { backgroundColor: 'rgba(169,155,219,0.11)', borderColor: 'rgba(169,155,219,0.22)' },
   formatChipLabel: { ...typography.caption, color: colors.textMuted },
@@ -755,6 +762,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
   },
   recentRow: { gap: spacing.md, paddingRight: spacing.lg, paddingBottom: spacing.sm },
   recentCard: { gap: 4 },
@@ -777,9 +785,9 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: 3,
     borderRadius: radii.lg,
-    backgroundColor: 'rgba(17,30,25,0.74)',
+    backgroundColor: glass.fill,
     borderWidth: 1,
-    borderColor: 'rgba(158,181,170,0.1)',
+    borderColor: glass.stroke,
   },
   statValue: { ...typography.title, fontSize: 21, lineHeight: 27, color: colors.textPrimary },
   statLabel: { ...typography.caption, fontSize: 11, color: colors.textMuted },
@@ -794,9 +802,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'center',
     borderRadius: radii.lg,
-    backgroundColor: 'rgba(17,30,25,0.74)',
+    backgroundColor: glass.fill,
     borderWidth: 1,
-    borderColor: 'rgba(158,181,170,0.1)',
+    borderColor: glass.stroke,
   },
   quickLabel: { ...typography.subtitle, fontSize: 13, color: colors.textPrimary },
   firstUseRow: { flexDirection: 'row', gap: spacing.sm },
@@ -806,9 +814,9 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.sm,
     borderRadius: radii.lg,
-    backgroundColor: 'rgba(17,30,25,0.74)',
+    backgroundColor: glass.fill,
     borderWidth: 1,
-    borderColor: 'rgba(158,181,170,0.1)',
+    borderColor: glass.stroke,
   },
   firstUseIcon: {
     width: 42,

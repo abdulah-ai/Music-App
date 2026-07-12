@@ -10,7 +10,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useLibraryStore } from '../../store/libraryStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { useUiStore } from '../../store/uiStore';
-import { colors, radii, spacing, typography } from '../../theme/tokens';
+import { colors, glass, radii, spacing, typography } from '../../theme/tokens';
 import { displayTitle } from '../../utils/mediaDisplay';
 import { BrandMark } from './BrandMark';
 
@@ -322,10 +322,10 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: 'rgba(158,181,170,0.12)',
-    backgroundColor: 'rgba(17,30,25,0.45)',
+    borderColor: glass.stroke,
+    backgroundColor: glass.fill,
   },
-  accountRowActive: { backgroundColor: 'rgba(17,30,25,0.85)', borderColor: 'rgba(99,214,181,0.35)' },
+  accountRowActive: { backgroundColor: glass.fillHeavy, borderColor: glass.tintPrimaryStroke },
   avatar: { width: 36, height: 36, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
   avatarInitial: { ...typography.title, fontSize: 16, color: '#0B1411' },
   accountText: { flex: 1 },

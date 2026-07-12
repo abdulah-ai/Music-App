@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { colors, radii, spacing, typography } from '../../theme/tokens';
+import { colors, glass, glassBlur, radii, spacing, typography } from '../../theme/tokens';
 
 type Props = {
   label: string;
@@ -14,6 +14,9 @@ type Props = {
   accessibilityHint?: string;
   testID?: string;
 };
+
+/** A bright mint for text sitting on the teal-tinted primary glass pane. */
+const PRIMARY_LABEL = '#E9FFF6';
 
 export function Button({
   label,
@@ -41,6 +44,7 @@ export function Button({
       accessibilityState={{ disabled: !!isDisabled, busy: !!loading }}
       style={({ pressed }) => [
         styles.base,
+        glassBlur,
         isPrimary && styles.primary,
         variant === 'secondary' && styles.secondary,
         variant === 'ghost' && styles.ghost,
@@ -55,15 +59,12 @@ export function Button({
     >
       <View style={styles.content}>
         {loading ? (
-          <ActivityIndicator
-            size="small"
-            color={isPrimary ? colors.textInverse : isDanger ? colors.danger : colors.cyan}
-          />
+          <ActivityIndicator size="small" color={isDanger ? colors.danger : colors.cyan} />
         ) : icon ? (
           <Ionicons
             name={icon}
             size={18}
-            color={isDisabled ? colors.textMuted : isPrimary ? colors.textInverse : isDanger ? colors.danger : colors.textPrimary}
+            color={isDisabled ? colors.textMuted : isPrimary ? colors.cyan : isDanger ? colors.danger : colors.textPrimary}
           />
         ) : null}
         <Text
@@ -92,37 +93,46 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'transparent',
   },
+  // Every variant is a glass pane: translucent tint + luminous stroke, with
+  // the shared backdrop blur applied inline so the sky reflects through.
   primary: {
-    backgroundColor: colors.cyan,
-    borderColor: colors.cyan,
+    backgroundColor: glass.tintPrimary,
+    borderColor: glass.tintPrimaryStroke,
+    shadowColor: colors.cyan,
+    shadowOpacity: 0.2,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   secondary: {
-    backgroundColor: colors.surfaceBright,
-    borderColor: colors.surfaceBorderStrong,
+    backgroundColor: glass.fillBright,
+    borderColor: glass.strokeStrong,
   },
   ghost: {
-    backgroundColor: 'transparent',
-    borderColor: colors.surfaceBorder,
+    backgroundColor: glass.fillDeep,
+    borderColor: glass.stroke,
   },
   danger: {
-    backgroundColor: 'rgba(239,120,136,0.08)',
-    borderColor: 'rgba(239,120,136,0.24)',
+    backgroundColor: glass.tintDanger,
+    borderColor: glass.tintDangerStroke,
   },
   pressed: { opacity: 0.86, transform: [{ scale: 0.985 }] },
   disabledPrimary: {
-    backgroundColor: colors.surfaceElevated,
-    borderColor: colors.surfaceBorder,
+    backgroundColor: glass.fillDeep,
+    borderColor: glass.stroke,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   disabledSecondary: {
-    backgroundColor: colors.surface,
-    borderColor: colors.surfaceBorder,
+    backgroundColor: glass.fillDeep,
+    borderColor: glass.stroke,
   },
   disabledGhost: {
-    borderColor: colors.surfaceBorder,
+    borderColor: glass.stroke,
   },
   disabledDanger: {
-    backgroundColor: 'rgba(239,120,136,0.04)',
-    borderColor: 'rgba(239,120,136,0.12)',
+    backgroundColor: 'rgba(240,131,140,0.05)',
+    borderColor: 'rgba(240,131,140,0.14)',
   },
   content: {
     minHeight: 22,
@@ -132,7 +142,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   label: { ...typography.subtitle, fontSize: 15, color: colors.textPrimary, textAlign: 'center' },
-  primaryLabel: { color: colors.textInverse },
+  primaryLabel: { color: PRIMARY_LABEL },
   dangerLabel: { color: colors.danger },
   disabledLabel: { color: colors.textMuted },
 });

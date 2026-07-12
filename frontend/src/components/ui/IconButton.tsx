@@ -1,7 +1,7 @@
 import { Pressable, PressableProps, StyleProp, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { colors, radii } from '../../theme/tokens';
+import { colors, glass, glassBlur } from '../../theme/tokens';
 
 type Props = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -32,7 +32,7 @@ export function IconButton({
   style,
   testID,
 }: Props) {
-  const tone = variant === 'danger' ? colors.danger : variant === 'primary' ? colors.textInverse : selected ? colors.cyan : colors.textSecondary;
+  const tone = variant === 'danger' ? colors.danger : variant === 'primary' ? colors.cyan : selected ? colors.cyan : colors.textSecondary;
 
   return (
     <Pressable
@@ -46,6 +46,7 @@ export function IconButton({
       accessibilityState={{ disabled, selected }}
       style={({ pressed }) => [
         styles.base,
+        glassBlur,
         { width: Math.max(44, size), height: Math.max(44, size), borderRadius: Math.max(44, size) / 2 },
         variant === 'surface' && styles.surface,
         variant === 'primary' && styles.primary,
@@ -62,11 +63,19 @@ export function IconButton({
 }
 
 const styles = StyleSheet.create({
-  base: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent' },
-  surface: { backgroundColor: colors.surfaceBright, borderColor: colors.surfaceBorder },
-  primary: { backgroundColor: colors.cyan, borderColor: colors.cyan },
-  danger: { backgroundColor: 'rgba(239,120,136,0.08)', borderColor: 'rgba(239,120,136,0.18)' },
-  selected: { backgroundColor: 'rgba(99,214,181,0.10)', borderColor: 'rgba(99,214,181,0.24)' },
+  // Even the quiet ghost variant is a faint pane of glass, so every control
+  // catches the starfield behind it.
+  base: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: glass.stroke,
+    backgroundColor: glass.fillDeep,
+  },
+  surface: { backgroundColor: glass.fillBright, borderColor: glass.strokeStrong },
+  primary: { backgroundColor: glass.tintPrimary, borderColor: glass.tintPrimaryStroke },
+  danger: { backgroundColor: glass.tintDanger, borderColor: glass.tintDangerStroke },
+  selected: { backgroundColor: glass.tintPrimary, borderColor: glass.tintPrimaryStroke },
   pressed: { opacity: 0.72, transform: [{ scale: 0.96 }] },
   disabled: { opacity: 0.4 },
 });

@@ -1,29 +1,30 @@
 import { PropsWithChildren } from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
-import { colors, radii, shadows } from '../../theme/tokens';
+import { glass, glassBlur, radii, shadows } from '../../theme/tokens';
 
 type Props = PropsWithChildren<{
   style?: StyleProp<ViewStyle>;
-  /** Retained for API compatibility. Solid tonal panels avoid blur cost. */
+  /** Retained for API compatibility. Blur strength is uniform across panes. */
   intensity?: number;
   overlayColor?: string;
   edgeColor?: string;
 }>;
 
 /**
- * Starhollow's default raised surface. A solid fill and quiet border provide
- * hierarchy without stacking blur, gradients and glow on every card.
+ * Starhollow's default raised surface: a frosted navy pane. The translucent
+ * fill lets the ambient starfield show through, backdrop blur (web/APK)
+ * smears it into a soft mirror sheen, and a lit top edge sells the glass.
  */
 export function GlassPanel({
   children,
   style,
   intensity: _intensity,
-  overlayColor = colors.surface,
-  edgeColor = 'rgba(247,242,245,0.06)',
+  overlayColor = glass.fill,
+  edgeColor = glass.edge,
 }: Props) {
   return (
-    <View style={[styles.panel, { backgroundColor: overlayColor }, style]}>
+    <View style={[styles.panel, { backgroundColor: overlayColor }, glassBlur, style]}>
       <View pointerEvents="none" style={[styles.edge, { backgroundColor: edgeColor }]} />
       {children}
     </View>
@@ -35,7 +36,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.surfaceBorder,
+    borderColor: glass.stroke,
     overflow: 'hidden',
     ...shadows.card,
   },

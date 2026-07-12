@@ -1,4 +1,23 @@
-import { gradients, layout, palette, typeScale } from './theme';
+import { Platform, type ViewStyle } from 'react-native';
+
+import { glass, gradients, layout, palette, typeScale } from './theme';
+
+/**
+ * Backdrop blur for glass panes. Real CSS backdrop-filter on web — which is
+ * what the shipped APK runs, inside its Capacitor WebView — and a no-op on
+ * native, where the translucent glass fills still read correctly on their own.
+ * Spread inline (`style={[styles.x, glassBlur]}`), never inside
+ * StyleSheet.create, so native style validation never sees the web-only keys.
+ */
+export const glassBlur: ViewStyle =
+  Platform.OS === 'web'
+    ? ({
+        backdropFilter: 'blur(16px) saturate(150%)',
+        WebkitBackdropFilter: 'blur(16px) saturate(150%)',
+      } as unknown as ViewStyle)
+    : {};
+
+export { glass };
 
 /** Compatibility surface used throughout the app. New work should still use
  * these semantic names so palette changes remain centralized. */
