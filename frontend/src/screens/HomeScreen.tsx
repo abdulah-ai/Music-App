@@ -309,7 +309,7 @@ export function HomeScreen() {
     libraryHydrated && !libraryLoading && recentItems.length === 0 && activeJobs.length === 0 && !currentMedia;
   const offline = !networkOnline || backendOnline === false;
   const offlineBytes = offlineEntries.reduce((sum, entry) => sum + entry.sizeBytes, 0);
-  const offlineShelfEmpty = offlineSupported() && offlineEntries.length === 0;
+  const offlineShelfEmpty = offlineSupported() && offlineEntries.length === 0 && !offline;
 
   const widgetRenderers: Record<WidgetId, () => ReactElement | null> = {
     import: () => (
