@@ -413,10 +413,7 @@ export function RecognitionScreen() {
                   return <View key={i} style={[styles.waveBar, { height }]} />;
                 })}
               </View>
-              <Text style={styles.countdownText}>
-                <Text style={styles.countdownNumber}>{countdown}</Text>
-                <Text style={styles.subtitle}>  s — tap the orb to stop early</Text>
-              </Text>
+              <Text style={styles.countdownText}>{countdown}s — tap the orb to stop early</Text>
             </>
           )}
 
@@ -615,8 +612,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     backgroundColor: colors.cyan,
   },
-  countdownText: { textAlign: 'center' },
-  countdownNumber: { ...typography.title, color: colors.cyan },
+  countdownText: { ...typography.body, color: colors.textMuted, textAlign: 'center' },
   resultBlock: { width: '100%', gap: spacing.md, alignItems: 'center' },
   resultPanel: { width: '100%' },
   resultContent: {
