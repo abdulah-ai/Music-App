@@ -16,6 +16,11 @@ import type { RootStackParamList } from '../../navigation/types';
 
 const BAR_COUNT = 4;
 
+type Props = {
+  /** Additional occupied space below the player, such as a contextual action bar. */
+  bottomOffset?: number;
+};
+
 /** A small glowing bar visualizer driven by the player's real amplitude signal — not a canned loop. */
 function AmplitudeBars({ playing, amplitude }: { playing: boolean; amplitude: number }) {
   const smoothed = useRef(new Animated.Value(0.15)).current;
@@ -90,7 +95,7 @@ function QueuePreview({ onJump }: { onJump: () => void }) {
   );
 }
 
-export function MiniPlayerBar() {
+export function MiniPlayerBar({ bottomOffset = 0 }: Props) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const { isDesktop } = useResponsive();
@@ -118,7 +123,8 @@ export function MiniPlayerBar() {
 
   // On phones the bar floats above the bottom dock; on desktop there is no
   // dock, so it hugs the bottom edge as a centered strip.
-  const bottom = isDesktop ? insets.bottom + spacing.md : insets.bottom + layout.dockClearance + spacing.sm;
+  const bottom =
+    (isDesktop ? insets.bottom + spacing.md : insets.bottom + layout.dockClearance + spacing.sm) + bottomOffset;
 
   return (
     <View pointerEvents="box-none" style={[styles.holder, isDesktop && styles.holderDesktop, { bottom }]}>

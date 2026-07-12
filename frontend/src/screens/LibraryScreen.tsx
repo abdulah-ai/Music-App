@@ -134,6 +134,7 @@ export function LibraryScreen() {
   const [selectedIds, setSelectedIds] = useState<Record<string, true>>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [bulkBarHeight, setBulkBarHeight] = useState(0);
   const [naming, setNaming] = useState(false);
 
   useEffect(() => {
@@ -434,6 +435,10 @@ export function LibraryScreen() {
   const columns = view === 'grid' ? (isDesktop ? Math.max(3, Math.floor(containerWidth / 224)) : 2) : 1;
   const cellSize = (containerWidth - spacing.md * (columns - 1)) / columns;
   const hasActiveFilters = !!query || !!genreFilter || !!yearFilter || remixFilter !== 'all' || tab === 'favorites';
+  // The bar includes safe-area padding and can grow with font scaling. Measure
+  // its rendered height so the absolutely positioned player clears it exactly.
+  // The conservative first-layout value prevents a one-frame collision.
+  const bulkBarOffset = selectMode ? Math.max(bulkBarHeight, insets.bottom + spacing.xxxl) : 0;
 
   function resetFilters() {
     setQuery('');
@@ -658,7 +663,10 @@ export function LibraryScreen() {
       </ScreenContainer>
 
       {selectMode && (
-        <View style={[styles.bulkBar, { paddingBottom: insets.bottom + spacing.sm }]}>
+        <View
+          onLayout={(event) => setBulkBarHeight(Math.ceil(event.nativeEvent.layout.height))}
+          style={[styles.bulkBar, { paddingBottom: insets.bottom + spacing.sm }]}
+        >
           <Text style={styles.bulkLabel}>
             {Object.keys(selectedIds).length === 0
               ? 'Tap items to select'
@@ -707,7 +715,7 @@ export function LibraryScreen() {
           </View>
         </View>
       )}
-      <MiniPlayerBar />
+      <MiniPlayerBar bottomOffset={bulkBarOffset} />
 
       {/* Track actions sheet */}
       <Modal visible={!!sheetMedia} transparent animationType="fade" onRequestClose={() => setSheetMedia(null)}>
