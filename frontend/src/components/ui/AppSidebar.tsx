@@ -296,12 +296,15 @@ export function AppSidebar({
       </View>
 
       <Pressable
-        onPress={isRail ? toggleAccountMenu : undefined}
+        onPress={() => {
+          if (!isRail) onNavigate?.();
+          toggleAccountMenu();
+        }}
         onHoverIn={() => setHoveredKey('Account')}
         onHoverOut={() => setHoveredKey((value) => (value === 'Account' ? null : value))}
-        accessibilityRole={isRail ? 'button' : undefined}
-        accessibilityLabel={isRail ? 'Open account menu' : undefined}
-        accessibilityState={isRail ? { expanded: accountMenuOpen } : undefined}
+        accessibilityRole="button"
+        accessibilityLabel="Open account menu"
+        accessibilityState={{ expanded: accountMenuOpen }}
         style={({ pressed }) => [
           styles.accountRow,
           isRail && (hoveredKey === 'Account' || pressed) && styles.accountRowHovered,
@@ -498,7 +501,7 @@ const styles = StyleSheet.create({
   accountRowActive: { backgroundColor: glass.fillHeavy, borderColor: glass.tintPrimaryStroke },
   accountRowHovered: { backgroundColor: glass.fillBright, borderColor: glass.strokeStrong },
   avatar: { width: 36, height: 36, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { ...typography.title, fontSize: 16, color: '#0B1411' },
+  avatarInitial: { ...typography.title, fontSize: 16, color: colors.textInverse },
   accountText: { flex: 1 },
   accountName: { ...typography.subtitle, fontSize: 14, lineHeight: 18, color: colors.textPrimary },
   accountEmail: { ...typography.caption, fontSize: 11, color: colors.textMuted },

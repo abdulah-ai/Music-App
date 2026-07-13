@@ -134,6 +134,10 @@ everywhere content can sit near the tab bar or mini player.
    password each time? That's a real feature, not a small UI tweak — token
    storage, cached-user data, and Issue 4 below all need to support multiple
    concurrent identities before "Add account" can work correctly).
+
+   **Status: fixed in codex/forest-and-remaining-audit** — the device remembers
+   public account profiles only, requires reauthentication to switch, clears
+   every account-owned store, and rejects late responses from the old session.
 4. **Telegram connection isn't remembered** — user has to reconnect
    repeatedly instead of staying linked.
    Suggested fix: needs verification before fixing. The backend already

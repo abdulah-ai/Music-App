@@ -3,7 +3,7 @@ import { AccessibilityInfo, Animated, Easing, Platform, Pressable, StyleSheet, T
 import { Ionicons } from '@expo/vector-icons';
 
 import { useEscapeToClose } from '../../hooks/useEscapeToClose';
-import { RAIL_WIDTH } from '../../hooks/useResponsive';
+import { RAIL_WIDTH, useResponsive } from '../../hooks/useResponsive';
 import { navigationRef } from '../../navigation/navigationRef';
 import { useAuthStore } from '../../store/authStore';
 import { useUiStore } from '../../store/uiStore';
@@ -21,6 +21,10 @@ export function AccountPopover() {
   const close = useUiStore((state) => state.closeAccountMenu);
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const rememberedAccounts = useAuthStore((state) => state.rememberedAccounts);
+  const startAccountSwitch = useAuthStore((state) => state.startAccountSwitch);
+  const forgetAccount = useAuthStore((state) => state.forgetAccount);
+  const { isDesktop } = useResponsive();
   const [rendered, setRendered] = useState(open);
   const [reducedMotion, setReducedMotion] = useState(initialReducedMotion);
   const progress = useRef(new Animated.Value(open ? 1 : 0)).current;
@@ -64,6 +68,8 @@ export function AccountPopover() {
 
   if (!rendered) return null;
 
+  const otherAccounts = rememberedAccounts.filter((account) => account.user.id !== user?.id);
+
   function navigate(route: 'Settings' | 'Replay') {
     close();
     if (navigationRef.isReady()) navigationRef.navigate(route);
@@ -83,6 +89,7 @@ export function AccountPopover() {
         pointerEvents={open ? 'auto' : 'none'}
         style={[
           styles.cardPosition,
+          !isDesktop && styles.cardPositionMobile,
           {
             opacity: progress,
             transform: [
@@ -102,6 +109,53 @@ export function AccountPopover() {
               {user?.email ?? ''}
             </Text>
           </View>
+          {otherAccounts.length > 0 ? (
+            <View style={styles.accountSection}>
+              <Text style={styles.sectionLabel}>SWITCH ACCOUNT</Text>
+              {otherAccounts.map((account) => (
+                <View key={account.user.id} style={styles.savedAccountRow}>
+                  <Pressable
+                    onPress={() => {
+                      close();
+                      void startAccountSwitch(account.user.email);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Switch to ${account.user.display_name}`}
+                    style={({ pressed }) => [styles.savedAccountMain, pressed && styles.rowPressed]}
+                  >
+                    <View style={styles.savedAvatar}>
+                      <Text style={styles.savedAvatarText}>{account.user.display_name.trim().charAt(0).toUpperCase() || '?'}</Text>
+                    </View>
+                    <View style={styles.savedCopy}>
+                      <Text numberOfLines={1} style={styles.savedName}>{account.user.display_name}</Text>
+                      <Text numberOfLines={1} style={styles.email}>{account.user.email}</Text>
+                    </View>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => void forgetAccount(account.user.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Forget ${account.user.display_name} on this device`}
+                    hitSlop={8}
+                    style={({ pressed }) => [styles.forgetButton, pressed && styles.rowPressed]}
+                  >
+                    <Ionicons name="close" size={17} color={colors.textMuted} />
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          ) : null}
+          <Pressable
+            onPress={() => {
+              close();
+              void startAccountSwitch();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Add another account"
+            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+          >
+            <Ionicons name="person-add-outline" size={18} color={colors.cyan} />
+            <Text style={styles.rowLabel}>Add account</Text>
+          </Pressable>
           <Pressable
             onPress={() => navigate('Settings')}
             accessibilityRole="button"
@@ -145,7 +199,9 @@ const styles = StyleSheet.create({
     left: spacing.lg,
     bottom: 88,
     width: RAIL_WIDTH - spacing.lg * 2,
+    zIndex: 50,
   },
+  cardPositionMobile: { left: spacing.lg, right: spacing.lg, bottom: spacing.xl, width: 'auto' },
   card: {
     borderRadius: radii.lg,
     borderColor: glass.strokeStrong,
@@ -160,6 +216,15 @@ const styles = StyleSheet.create({
   },
   name: { ...typography.subtitle, fontSize: 14, color: colors.textPrimary },
   email: { ...typography.caption, fontSize: 11, color: colors.textMuted },
+  accountSection: { paddingBottom: spacing.xs, borderBottomWidth: 1, borderBottomColor: glass.stroke },
+  sectionLabel: { ...typography.eyebrow, fontSize: 9, color: colors.textMuted, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
+  savedAccountRow: { flexDirection: 'row', alignItems: 'center' },
+  savedAccountMain: { minHeight: 48, flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md },
+  savedAvatar: { width: 30, height: 30, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: glass.tintPrimary, borderWidth: 1, borderColor: glass.tintPrimaryStroke },
+  savedAvatarText: { ...typography.caption, color: colors.cyan },
+  savedCopy: { flex: 1, minWidth: 0 },
+  savedName: { ...typography.body, fontSize: 13, color: colors.textPrimary },
+  forgetButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: radii.pill, marginRight: spacing.xs },
   row: {
     minHeight: 44,
     flexDirection: 'row',

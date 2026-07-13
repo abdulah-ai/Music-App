@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Text, StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, Text, StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { AuthLayout } from '../components/ui/AuthLayout';
@@ -14,10 +14,16 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export function LoginScreen({ navigation }: Props) {
   const login = useAuthStore((s) => s.login);
+  const pendingAccountEmail = useAuthStore((s) => s.pendingAccountEmail);
+  const rememberedAccounts = useAuthStore((s) => s.rememberedAccounts);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (pendingAccountEmail) setEmail(pendingAccountEmail);
+  }, [pendingAccountEmail]);
 
   async function handleLogin() {
     setError(null);
@@ -33,6 +39,37 @@ export function LoginScreen({ navigation }: Props) {
 
   return (
     <AuthLayout eyebrow="STARHOLLOW" title="Welcome back" subtitle="Your music, right where you left it.">
+      {pendingAccountEmail ? (
+        <Text style={styles.switching}>Switching account · sign in to keep every library private</Text>
+      ) : null}
+      {!pendingAccountEmail && rememberedAccounts.length > 0 ? (
+        <View style={styles.rememberedBlock}>
+          <Text style={styles.rememberedLabel}>ACCOUNTS ON THIS DEVICE</Text>
+          <View style={styles.rememberedRow}>
+            {rememberedAccounts.map((account) => (
+              <Pressable
+                key={account.user.id}
+                onPress={() => {
+                  setEmail(account.user.email);
+                  setPassword('');
+                  setError(null);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`Sign in as ${account.user.display_name}`}
+                style={({ pressed }) => [styles.rememberedAccount, pressed && styles.rememberedPressed]}
+              >
+                <Text style={styles.rememberedInitial}>
+                  {account.user.display_name.trim().charAt(0).toUpperCase() || '?'}
+                </Text>
+                <View style={styles.rememberedCopy}>
+                  <Text numberOfLines={1} style={styles.rememberedName}>{account.user.display_name}</Text>
+                  <Text numberOfLines={1} style={styles.rememberedEmail}>{account.user.email}</Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
       <TextField
         label="Email"
         value={email}
@@ -59,4 +96,24 @@ export function LoginScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   error: { ...typography.caption, color: colors.danger, textAlign: 'center' },
+  switching: { ...typography.caption, color: colors.textSecondary, textAlign: 'center' },
+  rememberedBlock: { gap: 6 },
+  rememberedLabel: { ...typography.eyebrow, fontSize: 9, color: colors.textMuted },
+  rememberedRow: { gap: 6 },
+  rememberedAccount: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.surfaceBorder,
+    backgroundColor: colors.surface,
+  },
+  rememberedPressed: { opacity: 0.74 },
+  rememberedInitial: { ...typography.subtitle, width: 26, textAlign: 'center', color: colors.cyan },
+  rememberedCopy: { flex: 1, minWidth: 0 },
+  rememberedName: { ...typography.body, fontSize: 13, color: colors.textPrimary },
+  rememberedEmail: { ...typography.caption, fontSize: 11, color: colors.textMuted },
 });

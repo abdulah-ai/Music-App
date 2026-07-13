@@ -78,6 +78,25 @@ async function expectNoHorizontalOverflow(page: import('@playwright/test').Page)
     .toBeLessThanOrEqual(1);
 }
 
+test('remembered account profiles prefill sign-in without persisting credentials', async ({ page }) => {
+  const remembered = [{
+    user: { ...user, id: 'remembered-user', email: 'remembered@starhollow.test', display_name: 'Remembered Listener' },
+    lastUsedAt: new Date().toISOString(),
+  }];
+  await page.addInitScript((accounts) => {
+    localStorage.setItem('sma.rememberedAccounts.v1', JSON.stringify(accounts));
+  }, remembered);
+
+  await page.goto('/');
+  await expect(page.getByText('ACCOUNTS ON THIS DEVICE', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Sign in as Remembered Listener' }).click();
+  await expect(page.getByLabel('Email', { exact: true })).toHaveValue('remembered@starhollow.test');
+  const stored = await page.evaluate(() => localStorage.getItem('sma.rememberedAccounts.v1') ?? '');
+  expect(stored).not.toContain('password');
+  expect(stored).not.toContain('access_token');
+  expect(stored).not.toContain('refresh_token');
+});
+
 test('the 390px mobile shell navigates across every primary destination without errors or overflow', async ({ page }) => {
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));

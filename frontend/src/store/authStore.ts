@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 
 import * as authApi from '../services/api/auth';
-import { setAuthenticationExpiredHandler } from '../services/api/client';
+import { invalidateApiSession, setAuthenticationExpiredHandler } from '../services/api/client';
+import { accountStorage, type RememberedAccount } from '../services/storage/accountStorage';
 import { tokenStorage } from '../services/storage/tokenStorage';
 import { resetSessionStores } from './sessionStoreReset';
 import { toast } from './toastStore';
@@ -13,10 +14,14 @@ type AuthState = {
   isAuthenticated: boolean;
   /** True when the session was restored from local cache because the network/API was unreachable — not a rejected token. */
   isOfflineSession: boolean;
+  rememberedAccounts: RememberedAccount[];
+  pendingAccountEmail: string | null;
   bootstrap: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, displayName: string, inviteCode?: string) => Promise<void>;
   logout: () => Promise<void>;
+  startAccountSwitch: (email?: string) => Promise<void>;
+  forgetAccount: (userId: string) => Promise<void>;
   setStoragePreference: (preference: StoragePreference) => Promise<void>;
 };
 
@@ -31,11 +36,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   isBootstrapping: true,
   isAuthenticated: false,
   isOfflineSession: false,
+  rememberedAccounts: [],
+  pendingAccountEmail: null,
 
   async bootstrap() {
+    const rememberedAccounts = await accountStorage.list();
     const token = await tokenStorage.getAccessToken();
     if (!token) {
-      set({ isBootstrapping: false });
+      set({ rememberedAccounts, isBootstrapping: false });
       return;
     }
     try {
@@ -44,41 +52,75 @@ export const useAuthStore = create<AuthState>((set) => ({
       // into the cached session in a couple of seconds, not stall on a boot screen.
       const user = await authApi.me({ timeoutMs: 6000 });
       await tokenStorage.setCachedUser(user);
-      set({ user, isAuthenticated: true, isOfflineSession: false, isBootstrapping: false });
+      const accounts = await accountStorage.remember(user);
+      set({ user, rememberedAccounts: accounts, isAuthenticated: true, isOfflineSession: false, isBootstrapping: false });
     } catch (error) {
       if (isAuthRejection(error)) {
         // The server actively rejected this token — it really is invalid/expired.
         await Promise.all([tokenStorage.clear(), resetSessionStores()]);
-        set({ isBootstrapping: false });
+        set({ rememberedAccounts, isBootstrapping: false });
         return;
       }
       // Network/backend unreachable: trust the token that's already on disk and
       // open into the app using the last-known profile, instead of bouncing to
       // the login screen every time the app opens offline.
       const cachedUser = await tokenStorage.getCachedUser();
-      set({ user: cachedUser, isAuthenticated: true, isOfflineSession: true, isBootstrapping: false });
+      set({ user: cachedUser, rememberedAccounts, isAuthenticated: true, isOfflineSession: true, isBootstrapping: false });
     }
   },
 
   async login(email, password) {
     const result = await authApi.login(email, password);
+    invalidateApiSession();
     await resetSessionStores();
     await tokenStorage.setTokens(result.access_token, result.refresh_token);
     await tokenStorage.setCachedUser(result.user);
-    set({ user: result.user, isAuthenticated: true, isOfflineSession: false });
+    const rememberedAccounts = await accountStorage.remember(result.user);
+    set({
+      user: result.user,
+      rememberedAccounts,
+      pendingAccountEmail: null,
+      isAuthenticated: true,
+      isOfflineSession: false,
+    });
   },
 
   async register(email, password, displayName, inviteCode) {
     const result = await authApi.register(email, password, displayName, inviteCode);
+    invalidateApiSession();
     await resetSessionStores();
     await tokenStorage.setTokens(result.access_token, result.refresh_token);
     await tokenStorage.setCachedUser(result.user);
-    set({ user: result.user, isAuthenticated: true, isOfflineSession: false });
+    const rememberedAccounts = await accountStorage.remember(result.user);
+    set({
+      user: result.user,
+      rememberedAccounts,
+      pendingAccountEmail: null,
+      isAuthenticated: true,
+      isOfflineSession: false,
+    });
   },
 
   async logout() {
+    invalidateApiSession();
     await Promise.all([tokenStorage.clear(), resetSessionStores()]);
-    set({ user: null, isAuthenticated: false, isOfflineSession: false });
+    set({ user: null, pendingAccountEmail: null, isAuthenticated: false, isOfflineSession: false });
+  },
+
+  async startAccountSwitch(email = '') {
+    invalidateApiSession();
+    await Promise.all([tokenStorage.clear(), resetSessionStores()]);
+    set({
+      user: null,
+      pendingAccountEmail: email,
+      isAuthenticated: false,
+      isOfflineSession: false,
+    });
+  },
+
+  async forgetAccount(userId) {
+    const rememberedAccounts = await accountStorage.forget(userId);
+    set({ rememberedAccounts });
   },
 
   async setStoragePreference(preference) {
@@ -89,7 +131,8 @@ export const useAuthStore = create<AuthState>((set) => ({
 }));
 
 setAuthenticationExpiredHandler(() => {
+  invalidateApiSession();
   void resetSessionStores();
-  useAuthStore.setState({ user: null, isAuthenticated: false, isOfflineSession: false, isBootstrapping: false });
+  useAuthStore.setState({ user: null, pendingAccountEmail: null, isAuthenticated: false, isOfflineSession: false, isBootstrapping: false });
   toast('Your session expired. Log in to keep listening.', 'info');
 });
