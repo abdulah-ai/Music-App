@@ -247,6 +247,10 @@ minimized/floating state seen over the Library screen.
    with 2+ videos in the library** before treating this as a bug rather than
    a test-data limitation.
 
+   **Status: resolved by verification in codex/ui-audit-completion** — with
+   two local video fixtures, Next changed the rendered title and badge from
+   video 1 of 2 to video 2 of 2.
+
 3. **Wants controls to auto-hide behind a blur after 3–5 seconds of
    inactivity, so the video is unobstructed** (any tap brings them back).
    Confirmed this doesn't exist yet — there is no `setTimeout`/
