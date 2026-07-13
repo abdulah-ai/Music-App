@@ -570,6 +570,8 @@ gives plenty of headroom to extend the client-side listening window without
 any backend changes — this is a one-line change once fixes start, not a
 systems problem.
 
+**Status: fixed in codex/ui-audit-completion**
+
 ---
 
 ## Issue 17 — "Recognize sung/hummed lyrics, not just the exact recording" — major feature, needs feasibility research (not a simple fix)

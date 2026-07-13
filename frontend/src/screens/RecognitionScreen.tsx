@@ -33,7 +33,7 @@ import { toast } from '../store/toastStore';
 import { apiErrorMessage, friendlyJobError, friendlyJobStage } from '../utils/apiError';
 import { colors, gradients, radii, spacing, typography } from '../theme/tokens';
 
-const LISTEN_SECONDS = 8;
+const LISTEN_SECONDS = 15;
 
 const BUTTON_SIZE = 208;
 const RING_SIZE = BUTTON_SIZE + 26;
