@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -23,6 +23,15 @@ import { colors, radii, spacing, typography } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/types';
 
 type Sheet = 'queue' | 'lyrics' | 'options' | null;
+
+const PLAYER_SPARKS = [
+  { left: '8%', top: '22%', size: 3, color: colors.gold },
+  { left: '22%', top: '4%', size: 2, color: colors.textPrimary },
+  { left: '72%', top: '9%', size: 2.5, color: colors.violet },
+  { left: '90%', top: '35%', size: 2, color: colors.textPrimary },
+  { left: '14%', top: '78%', size: 2.5, color: colors.violet },
+  { left: '82%', top: '84%', size: 3, color: colors.gold },
+] as const;
 
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
@@ -90,6 +99,7 @@ export function PlayerScreen() {
   const [sanctuary, setSanctuary] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const artworkEntrance = useRef(new Animated.Value(0)).current;
+  const listeningPulse = useRef(new Animated.Value(0)).current;
 
   const currentMedia = usePlayerStore((state) => state.currentMedia);
   const playing = usePlayerStore((state) => state.playing);
@@ -153,6 +163,33 @@ export function PlayerScreen() {
     }).start();
   }, [artworkEntrance, currentMedia?.id, navigation, reduceMotion]);
 
+  useEffect(() => {
+    listeningPulse.stopAnimation();
+    if (!playing || reduceMotion) {
+      listeningPulse.setValue(0);
+      return;
+    }
+
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(listeningPulse, {
+          toValue: 1,
+          duration: 2800,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(listeningPulse, {
+          toValue: 0,
+          duration: 2800,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [listeningPulse, playing, reduceMotion]);
+
   const nextTrack = useMemo(() => {
     if (queue.length < 2) return null;
     return queue[queueIndex + 1] ?? (repeat === 'all' ? queue[0] : null);
@@ -188,12 +225,71 @@ export function PlayerScreen() {
         },
       ]}
     >
+      <View
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={styles.artworkAura}
+      >
+        <Animated.View
+          style={[
+            styles.auraRing,
+            styles.auraRingOuter,
+            {
+              borderColor: `${accent}38`,
+              opacity: listeningPulse.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.68] }),
+              transform: [{ scale: listeningPulse.interpolate({ inputRange: [0, 1], outputRange: [0.97, 1.035] }) }],
+            },
+          ]}
+        />
+        <Animated.View
+          style={[
+            styles.auraRing,
+            styles.auraRingInner,
+            {
+              borderColor: `${colors.violet}30`,
+              opacity: listeningPulse.interpolate({ inputRange: [0, 1], outputRange: [0.58, 0.24] }),
+              transform: [{ scale: listeningPulse.interpolate({ inputRange: [0, 1], outputRange: [1.025, 0.985] }) }],
+            },
+          ]}
+        />
+        {PLAYER_SPARKS.map((spark, index) => (
+          <Animated.View
+            key={`${spark.left}-${spark.top}`}
+            style={[
+              styles.auraSpark,
+              {
+                left: spark.left,
+                top: spark.top,
+                width: spark.size,
+                height: spark.size,
+                borderRadius: spark.size,
+                backgroundColor: spark.color,
+                shadowColor: spark.color,
+                opacity: listeningPulse.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: index % 2 === 0 ? [0.38, 0.9] : [0.78, 0.34],
+                }),
+              },
+            ]}
+          />
+        ))}
+      </View>
       <Artwork media={currentMedia} size="100%" priority borderRadius={radii.lg} />
     </Animated.View>
   );
 
   const detailsAndControls = (
-    <View style={[styles.controlColumn, isDesktop && styles.controlColumnDesktop]}>
+    <Animated.View
+      style={[
+        styles.controlColumn,
+        isDesktop && styles.controlColumnDesktop,
+        {
+          opacity: artworkEntrance,
+          transform: [{ translateY: artworkEntrance.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }],
+        },
+      ]}
+    >
       <View style={styles.identityRow}>
         <View style={styles.identityText}>
           <Text numberOfLines={2} style={styles.title}>{displayTitle(currentMedia)}</Text>
@@ -298,7 +394,7 @@ export function PlayerScreen() {
           />
         </View>
       ) : null}
-    </View>
+    </Animated.View>
   );
 
   return (
@@ -393,6 +489,11 @@ const styles = StyleSheet.create({
   desktopLayout: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xxl, paddingHorizontal: spacing.xxl },
   desktopArtworkColumn: { flex: 1, alignItems: 'flex-end' },
   artworkShadow: { borderRadius: radii.lg, shadowOpacity: 0.3, shadowRadius: 38, shadowOffset: { width: 0, height: 20 }, elevation: 16 },
+  artworkAura: { position: 'absolute', top: -34, right: -34, bottom: -34, left: -34, alignItems: 'center', justifyContent: 'center' },
+  auraRing: { position: 'absolute', borderWidth: 1 },
+  auraRingOuter: { width: '100%', height: '100%', borderRadius: radii.xl + 26 },
+  auraRingInner: { width: '90%', height: '90%', borderRadius: radii.xl + 18 },
+  auraSpark: { position: 'absolute', shadowOpacity: 0.85, shadowRadius: 7, shadowOffset: { width: 0, height: 0 }, elevation: 5 },
   controlColumn: { width: '100%', maxWidth: 520, gap: spacing.md },
   controlColumnDesktop: { flex: 1, paddingRight: spacing.xl },
   identityRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

@@ -17,7 +17,7 @@ import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { usePlayerStore } from '../../store/playerStore';
-import { colors, radii, spacing, typography } from '../../theme/tokens';
+import { colors, motion, radii, spacing, typography } from '../../theme/tokens';
 import { displayArtist, displayTitle } from '../../utils/mediaDisplay';
 import { Artwork } from '../ui/Artwork';
 import { QueueList } from '../player/QueueList';
@@ -28,7 +28,7 @@ type Props = {
   accent?: string;
 };
 
-const STAR_COUNT = 26;
+const STAR_COUNT = 40;
 const BAR_COUNT = 20;
 const CONTROLS_TIMEOUT_MS = 4500;
 
@@ -45,34 +45,13 @@ function seeded(i: number, salt: number): number {
   return x - Math.floor(x);
 }
 
-function Star({ index, width, height, animate }: { index: number; width: number; height: number; animate: boolean }) {
-  const twinkle = useRef(new Animated.Value(seeded(index, 7))).current;
+function Star({ index, width, height, twinkle }: { index: number; width: number; height: number; twinkle: Animated.Value }) {
   const size = 1 + seeded(index, 3) * 2.4;
   const left = seeded(index, 1) * width;
   const top = seeded(index, 2) * height * 0.62;
   const gold = seeded(index, 5) > 0.8;
-
-  useEffect(() => {
-    if (!animate) return;
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(twinkle, {
-          toValue: 1,
-          duration: 1600 + seeded(index, 4) * 2600,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(twinkle, {
-          toValue: 0.25,
-          duration: 1600 + seeded(index, 6) * 2600,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [animate, index, twinkle]);
+  const phase = index % 3;
+  const opacityRange = phase === 0 ? [0.2, 0.82, 0.28] : phase === 1 ? [0.72, 0.24, 0.62] : [0.32, 0.56, 0.86];
 
   return (
     <Animated.View
@@ -85,7 +64,7 @@ function Star({ index, width, height, animate }: { index: number; width: number;
         height: size,
         borderRadius: size,
         backgroundColor: gold ? colors.gold : colors.textPrimary,
-        opacity: twinkle.interpolate({ inputRange: [0, 1], outputRange: [0.18, 0.85] }),
+        opacity: twinkle.interpolate({ inputRange: [0, 0.5, 1], outputRange: opacityRange }),
       }}
     />
   );
@@ -148,6 +127,7 @@ export function SanctuaryMode({ visible, onClose, accent = colors.cyan }: Props)
   const [reduceMotion, setReduceMotion] = useState(false);
   const controlsOpacity = useRef(new Animated.Value(1)).current;
   const auroraDrift = useRef(new Animated.Value(0)).current;
+  const starTwinkle = useRef(new Animated.Value(0.5)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentMedia = usePlayerStore((state) => state.currentMedia);
@@ -163,14 +143,20 @@ export function SanctuaryMode({ visible, onClose, accent = colors.cyan }: Props)
   useEffect(() => {
     let mounted = true;
     void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => mounted && setReduceMotion(enabled));
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
     return () => {
       mounted = false;
+      subscription.remove();
     };
   }, []);
 
   // The aurora slowly sways side to side, always.
   useEffect(() => {
-    if (!visible || reduceMotion) return;
+    auroraDrift.stopAnimation();
+    if (!visible || reduceMotion) {
+      auroraDrift.setValue(0.5);
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(auroraDrift, { toValue: 1, duration: 16000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
@@ -181,15 +167,33 @@ export function SanctuaryMode({ visible, onClose, accent = colors.cyan }: Props)
     return () => loop.stop();
   }, [auroraDrift, reduceMotion, visible]);
 
+  // One shared phase gives the denser sky three offset twinkle patterns
+  // without running a separate animation loop for every star.
+  useEffect(() => {
+    starTwinkle.stopAnimation();
+    if (!visible || reduceMotion) {
+      starTwinkle.setValue(0.5);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(starTwinkle, { toValue: 1, duration: 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(starTwinkle, { toValue: 0, duration: 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [reduceMotion, starTwinkle, visible]);
+
   // Controls auto-hide while playing; any tap wakes them.
   useEffect(() => {
     Animated.timing(controlsOpacity, {
       toValue: controlsVisible ? 1 : 0,
-      duration: 320,
+      duration: reduceMotion ? 0 : motion.duration.slow,
       easing: Easing.out(Easing.quad),
       useNativeDriver: true,
     }).start();
-  }, [controlsOpacity, controlsVisible]);
+  }, [controlsOpacity, controlsVisible, reduceMotion]);
 
   useEffect(() => {
     if (!visible || !controlsVisible || !playing || queueOpen) return;
@@ -246,9 +250,32 @@ export function SanctuaryMode({ visible, onClose, accent = colors.cyan }: Props)
           />
         </Animated.View>
 
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.aurora,
+            styles.auroraSecondary,
+            {
+              width: width * 1.45,
+              height: height * 0.42,
+              transform: [
+                { translateX: auroraDrift.interpolate({ inputRange: [0, 1], outputRange: [width * 0.08, -width * 0.2] }) },
+                { rotate: '12deg' },
+              ],
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={['rgba(169,155,219,0)', 'rgba(169,155,219,0.11)', 'rgba(99,214,181,0.09)', 'rgba(169,155,219,0)']}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+
         {/* Starfield */}
         {stars.map((index) => (
-          <Star key={index} index={index} width={width} height={height} animate={visible && !reduceMotion} />
+          <Star key={index} index={index} width={width} height={height} twinkle={starTwinkle} />
         ))}
 
         {/* Pine ridge horizon */}
@@ -260,11 +287,12 @@ export function SanctuaryMode({ visible, onClose, accent = colors.cyan }: Props)
         </View>
 
         {/* Content */}
-        <Animated.View
-          pointerEvents={controlsVisible ? 'box-none' : 'none'}
-          style={[styles.content, { opacity: controlsOpacity, paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xl }]}
-        >
-          <View style={styles.topRow}>
+        <View style={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xl }]}>
+          <Animated.View
+            pointerEvents={controlsVisible ? 'box-none' : 'none'}
+            style={[styles.chrome, { opacity: controlsOpacity }]}
+          >
+            <View style={styles.topRow}>
             <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Leave Sanctuary Mode" style={styles.topButton}>
               <Ionicons name="chevron-down" size={22} color={colors.textPrimary} />
             </Pressable>
@@ -280,9 +308,10 @@ export function SanctuaryMode({ visible, onClose, accent = colors.cyan }: Props)
             >
               <Ionicons name="list" size={20} color={colors.textPrimary} />
             </Pressable>
-          </View>
+            </View>
+          </Animated.View>
 
-          <View style={styles.centerBlock} pointerEvents="box-none">
+          <View style={styles.centerBlock} pointerEvents="none">
             <View style={[styles.artworkGlow, { shadowColor: accent }]}>
               <Artwork media={currentMedia} size={Math.min(width * 0.56, height * 0.3, 300)} priority borderRadius={radii.lg + 6} />
             </View>
@@ -290,7 +319,7 @@ export function SanctuaryMode({ visible, onClose, accent = colors.cyan }: Props)
             <Text numberOfLines={1} style={styles.artist}>{displayArtist(currentMedia) ?? 'Unknown artist'}</Text>
           </View>
 
-          <View style={styles.bottomBlock} pointerEvents="box-none">
+          <View style={styles.bottomBlock}>
             {/* Ambient visualizer */}
             <View style={styles.visualizerRow} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
               {Array.from({ length: BAR_COUNT }, (_, index) => (
@@ -298,46 +327,51 @@ export function SanctuaryMode({ visible, onClose, accent = colors.cyan }: Props)
               ))}
             </View>
 
-            {/* Thin seek line */}
-            <Pressable
-              accessibilityRole="adjustable"
-              accessibilityLabel={`Seek position, ${formatTime(currentTime)} of ${formatTime(duration)}`}
-              onPress={(event) => {
-                const x = event.nativeEvent.locationX;
-                const barWidth = width - spacing.lg * 2;
-                if (barWidth > 0 && duration) seek((x / barWidth) * duration);
-              }}
-              style={styles.seekTrack}
+            <Animated.View
+              pointerEvents={controlsVisible ? 'box-none' : 'none'}
+              style={[styles.bottomChrome, { opacity: controlsOpacity }]}
             >
-              <View style={[styles.seekFill, { width: `${progress * 100}%`, backgroundColor: accent }]} />
-            </Pressable>
-            <View style={styles.timeRow}>
-              <Text style={styles.time}>{formatTime(currentTime)}</Text>
-              <Text style={styles.time}>{formatTime(duration)}</Text>
-            </View>
-
-            <View style={styles.transportRow}>
-              <Pressable onPress={() => void playPrev()} accessibilityRole="button" accessibilityLabel="Previous track" style={({ pressed }) => [styles.skip, pressed && styles.pressed]}>
-                <Ionicons name="play-skip-back" size={26} color={colors.textPrimary} />
-              </Pressable>
+              {/* Thin seek line */}
               <Pressable
-                onPress={toggle}
-                accessibilityRole="button"
-                accessibilityLabel={playing ? 'Pause' : 'Play'}
-                style={({ pressed }) => [styles.play, { borderColor: accent }, pressed && styles.pressed]}
+                accessibilityRole="adjustable"
+                accessibilityLabel={`Seek position, ${formatTime(currentTime)} of ${formatTime(duration)}`}
+                onPress={(event) => {
+                  const x = event.nativeEvent.locationX;
+                  const barWidth = width - spacing.lg * 2;
+                  if (barWidth > 0 && duration) seek((x / barWidth) * duration);
+                }}
+                style={styles.seekTrack}
               >
-                {isBuffering ? (
-                  <ActivityIndicator color={accent} />
-                ) : (
-                  <Ionicons name={playing ? 'pause' : 'play'} size={30} color={colors.textPrimary} style={playing ? undefined : { marginLeft: 3 }} />
-                )}
+                <View style={[styles.seekFill, { width: `${progress * 100}%`, backgroundColor: accent }]} />
               </Pressable>
-              <Pressable onPress={() => void playNext()} accessibilityRole="button" accessibilityLabel="Next track" style={({ pressed }) => [styles.skip, pressed && styles.pressed]}>
-                <Ionicons name="play-skip-forward" size={26} color={colors.textPrimary} />
-              </Pressable>
-            </View>
+              <View style={styles.timeRow}>
+                <Text style={styles.time}>{formatTime(currentTime)}</Text>
+                <Text style={styles.time}>{formatTime(duration)}</Text>
+              </View>
+
+              <View style={styles.transportRow}>
+                <Pressable onPress={() => void playPrev()} accessibilityRole="button" accessibilityLabel="Previous track" style={({ pressed }) => [styles.skip, pressed && styles.pressed]}>
+                  <Ionicons name="play-skip-back" size={26} color={colors.textPrimary} />
+                </Pressable>
+                <Pressable
+                  onPress={toggle}
+                  accessibilityRole="button"
+                  accessibilityLabel={playing ? 'Pause' : 'Play'}
+                  style={({ pressed }) => [styles.play, { borderColor: accent }, pressed && styles.pressed]}
+                >
+                  {isBuffering ? (
+                    <ActivityIndicator color={accent} />
+                  ) : (
+                    <Ionicons name={playing ? 'pause' : 'play'} size={30} color={colors.textPrimary} style={playing ? undefined : { marginLeft: 3 }} />
+                  )}
+                </Pressable>
+                <Pressable onPress={() => void playNext()} accessibilityRole="button" accessibilityLabel="Next track" style={({ pressed }) => [styles.skip, pressed && styles.pressed]}>
+                  <Ionicons name="play-skip-forward" size={26} color={colors.textPrimary} />
+                </Pressable>
+              </View>
+            </Animated.View>
           </View>
-        </Animated.View>
+        </View>
 
         {/* Queue overlay */}
         {queueOpen ? (
@@ -360,8 +394,10 @@ export function SanctuaryMode({ visible, onClose, accent = colors.cyan }: Props)
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#03080A' },
   aurora: { position: 'absolute', top: '6%', left: '-20%', opacity: 0.9 },
+  auroraSecondary: { top: '22%', left: '-10%', opacity: 0.72 },
   ridge: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '30%' },
   content: { flex: 1, justifyContent: 'space-between', paddingHorizontal: spacing.lg },
+  chrome: { minHeight: 44 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   topButton: {
     width: 44,
@@ -397,6 +433,7 @@ const styles = StyleSheet.create({
   title: { ...typography.title, fontSize: 22, lineHeight: 28, color: colors.textPrimary, textAlign: 'center' },
   artist: { ...typography.body, color: colors.textMuted, textAlign: 'center' },
   bottomBlock: { gap: spacing.sm },
+  bottomChrome: { gap: spacing.sm },
   visualizerRow: {
     height: 42,
     flexDirection: 'row',

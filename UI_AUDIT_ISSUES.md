@@ -350,6 +350,8 @@ start.**
    "listening to music" feeling and more motion throughout. No concrete
    sub-items yet; needs a design direction agreed before implementation.
 
+   **Status: fixed in codex/ui-audit-open-items**
+
 2. **Transport play/pause button — confirmed root cause, third occurrence of
    the accent-contrast bug.** `PlayerScreen.tsx:236` sets the big center
    button's `backgroundColor: accent` directly, using the same
@@ -432,6 +434,8 @@ sparse to read as "alive" at a glance. Worth a genuine visual upgrade to
 this scene on its own merits, since "empty" was the user's own word for it
 — ties into Issue 9's broader ask for the Player experience to feel more
 alive.
+
+**Status: fixed in codex/ui-audit-open-items**
 
 ---
 
@@ -570,6 +574,8 @@ sub-items yet; needs a design direction agreed before implementation.
 alive" theme as Issue 9 (Player screen) and Issue 14 (Sanctuary ambient
 scene) — now a third screen. Worth treating these three as one connected
 design pass on the app's key "moments" rather than three unrelated asks.
+
+**Status: fixed in codex/ui-audit-open-items**
 
 ---
 
