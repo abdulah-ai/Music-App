@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useLatestAnnouncement } from '../../hooks/useAnnouncements';
-import { colors, radii, shadows, spacing, typography } from '../../theme/tokens';
+import { colors, glass, radii, shadows, spacing, typography } from '../../theme/tokens';
 
 /** Global "the admin posted something" banner — same pattern as UpdateBanner. */
 export function AnnouncementBanner() {
@@ -42,10 +42,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: 'rgba(17,30,25,0.96)',
+    backgroundColor: glass.fillHeavy,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: 'rgba(99,214,181,0.3)',
+    borderColor: glass.tintPrimaryStroke,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     maxWidth: 460,

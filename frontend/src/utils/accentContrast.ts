@@ -1,5 +1,3 @@
-import { palette } from '../theme/theme';
-
 type Rgb = { r: number; g: number; b: number };
 
 /** WCAG's minimum non-text contrast for meaningful UI controls. */
@@ -10,7 +8,7 @@ export const TRACK_ACCENT_MIN_CONTRAST = 3;
  * Glass panes remain darker than this after compositing over the night sky,
  * so clearing this surface also keeps the accent visible on glass.
  */
-export const TRACK_ACCENT_CONTRAST_SURFACE = palette.surfaceElevated;
+export const TRACK_ACCENT_CONTRAST_SURFACE = '#20362C';
 
 function hexToRgb(color: string): Rgb | null {
   const match = /^#([0-9a-f]{6})$/i.exec(color.trim());
@@ -96,15 +94,17 @@ export function colorContrastRatio(foreground: string, background: string): numb
  * brightest dark surface. Hue and saturation stay intact, so the result still
  * belongs to the cover instead of falling back to a generic brand color.
  */
-export function ensureTrackAccentContrast(color: string): string {
+export function ensureTrackAccentContrast(color: string, surface: string = TRACK_ACCENT_CONTRAST_SURFACE): string {
   const rgb = hexToRgb(color);
+  const surfaceRgb = hexToRgb(surface);
   if (!rgb) return color;
-  if (colorContrastRatio(color, TRACK_ACCENT_CONTRAST_SURFACE) >= TRACK_ACCENT_MIN_CONTRAST) return color;
+  if (!surfaceRgb || colorContrastRatio(color, surface) >= TRACK_ACCENT_MIN_CONTRAST) return color;
 
   const { h, s, l } = rgbToHsl(rgb);
-  let low = l;
-  let high = 1;
-  let best = '#ffffff';
+  const lighten = relativeLuminance(surfaceRgb) < 0.5;
+  let low = lighten ? l : 0;
+  let high = lighten ? 1 : l;
+  let best = lighten ? '#ffffff' : '#000000';
 
   // Binary search keeps the adjustment as small as possible. Compare the
   // rounded hex result on each pass so the returned color always clears the
@@ -112,11 +112,13 @@ export function ensureTrackAccentContrast(color: string): string {
   for (let index = 0; index < 24; index += 1) {
     const mid = (low + high) / 2;
     const candidate = rgbToHex(hslToRgb(h, s, mid));
-    if (colorContrastRatio(candidate, TRACK_ACCENT_CONTRAST_SURFACE) >= TRACK_ACCENT_MIN_CONTRAST) {
+    if (colorContrastRatio(candidate, surface) >= TRACK_ACCENT_MIN_CONTRAST) {
       best = candidate;
-      high = mid;
+      if (lighten) high = mid;
+      else low = mid;
     } else {
-      low = mid;
+      if (lighten) low = mid;
+      else high = mid;
     }
   }
 

@@ -11,7 +11,7 @@ import { JobsScreen } from '../screens/JobsScreen';
 import { LibraryScreen } from '../screens/LibraryScreen';
 import { RecognitionScreen } from '../screens/RecognitionScreen';
 import { useUiStore } from '../store/uiStore';
-import { colors, layout, motion, radii, shadows, spacing, typography } from '../theme/tokens';
+import { colors, glass, layout, motion, radii, shadows, spacing, typography } from '../theme/tokens';
 import type { MainTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -253,8 +253,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(158,181,170,0.16)',
-    backgroundColor: 'rgba(9,17,14,0.96)',
+    borderColor: glass.stroke,
+    backgroundColor: glass.fillHeavy,
     ...shadows.card,
   },
   dockToggle: {
@@ -264,8 +264,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: 'rgba(158,181,170,0.16)',
-    backgroundColor: 'rgba(9,17,14,0.96)',
+    borderColor: glass.stroke,
+    backgroundColor: glass.fillHeavy,
     ...shadows.card,
   },
   expandWrap: {
@@ -280,8 +280,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: 'rgba(99,214,181,0.28)',
-    backgroundColor: 'rgba(9,17,14,0.96)',
+    borderColor: glass.tintPrimaryStroke,
+    backgroundColor: glass.fillHeavy,
     ...shadows.card,
   },
   dockHighlight: {
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     left: spacing.md,
     right: spacing.md,
     height: 1,
-    backgroundColor: 'rgba(239,245,241,0.12)',
+    backgroundColor: glass.edge,
   },
   dockItem: {
     flex: 1,
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
   activePill: {
     ...(StyleSheet.absoluteFill as object),
     borderRadius: radii.md,
-    backgroundColor: 'rgba(99,214,181,0.12)',
+    backgroundColor: glass.tintPrimary,
   },
   dockItemContent: { alignItems: 'center', justifyContent: 'center', gap: 3 },
   dockLabel: {
@@ -323,11 +323,11 @@ const styles = StyleSheet.create({
     width: RAIL_WIDTH,
     paddingHorizontal: spacing.md,
     borderRightWidth: 1,
-    borderRightColor: 'rgba(158,181,170,0.12)',
+    borderRightColor: glass.stroke,
     overflow: 'hidden',
   },
   railOverlay: {
     ...(StyleSheet.absoluteFill as object),
-    backgroundColor: 'rgba(5,10,11,0.9)',
+    backgroundColor: glass.fillHeavy,
   },
 });

@@ -12,6 +12,12 @@ import { Sora_700Bold } from '@expo-google-fonts/sora/700Bold';
 
 import { BrandMark } from './src/components/ui/BrandMark';
 import { Toaster } from './src/components/ui/Toaster';
+import { getInitialWebTheme, ThemeProvider, useTheme } from './src/theme/ThemeProvider';
+import { applyWebTheme } from './src/theme/theme';
+
+// Apply the persisted web preference before React paints. This avoids a dark
+// flash when the installed PWA/Capacitor shell was last left in daylight mode.
+applyWebTheme(getInitialWebTheme());
 
 // Browser-only chrome: themed scrollbars, selection color and font smoothing.
 // Injected once at module load so even the boot screen benefits.
@@ -19,14 +25,14 @@ if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getEle
   const style = document.createElement('style');
   style.id = 'starhollow-web-css';
   style.textContent = `
-    html, body { background: #0B1411; }
+    html, body { background: var(--sh-palette-background, #0B1411); }
     * { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
-    ::selection { background: rgba(99,214,181,0.32); }
-    * { scrollbar-width: thin; scrollbar-color: rgba(158,181,170,0.24) transparent; }
+    ::selection { background: var(--sh-glass-tintPrimaryStroke, rgba(99,214,181,0.32)); }
+    * { scrollbar-width: thin; scrollbar-color: var(--sh-palette-borderStrong, rgba(158,181,170,0.24)) transparent; }
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(158,181,170,0.24); border-radius: 99px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(158,181,170,0.38); }
+    ::-webkit-scrollbar-thumb { background: var(--sh-palette-border, rgba(158,181,170,0.24)); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--sh-palette-borderStrong, rgba(158,181,170,0.38)); }
     input, textarea { outline: none; }
     /* Ease hover/press colour changes everywhere — transform/opacity stay
        untouched so RN Animated-driven motion isn't slowed down. */
@@ -34,7 +40,7 @@ if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getEle
       transition: background-color 160ms ease, border-color 160ms ease, box-shadow 220ms ease;
     }
     input, textarea { transition: border-color 160ms ease, box-shadow 220ms ease; }
-    :focus-visible { outline: 2px solid #63D6B5; outline-offset: 3px; }
+    :focus-visible { outline: 2px solid var(--sh-palette-primary, #63D6B5); outline-offset: 3px; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.01ms !important;
@@ -73,7 +79,7 @@ function BootScreen() {
 const bootStyles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0B1411',
+    backgroundColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 18,
@@ -84,7 +90,7 @@ const bootStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 20,
-    backgroundColor: '#121F1A',
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: '#2A4336',
   },
@@ -144,7 +150,7 @@ function useKeyboardShortcuts() {
   }, []);
 }
 
-export default function App() {
+function AppContent() {
   const [fontsLoaded] = useFonts({ Sora_400Regular, Sora_500Medium, Sora_600SemiBold, Sora_700Bold });
   const bootstrap = useAuthStore((s) => s.bootstrap);
   const isBootstrapping = useAuthStore((s) => s.isBootstrapping);
@@ -154,6 +160,7 @@ export default function App() {
   // cannot load the bundled assets, open with the system fallback after a
   // short grace period rather than leaving the user at boot indefinitely.
   const [fontTimedOut, setFontTimedOut] = useState(false);
+  const { scheme } = useTheme();
 
   useKeyboardShortcuts();
 
@@ -191,10 +198,18 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar style="light" />
+        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
         <RootNavigator />
         <Toaster />
       </SafeAreaProvider>
     </GestureHandlerRootView>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }

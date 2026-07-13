@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppUpdate } from '../../hooks/useAppUpdate';
-import { colors, radii, shadows, spacing, typography } from '../../theme/tokens';
+import { colors, glass, radii, shadows, spacing, typography } from '../../theme/tokens';
 
 /**
  * Global "a new version is ready" banner — rendered once at the app root
@@ -51,10 +51,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: 'rgba(17,30,25,0.96)',
+    backgroundColor: glass.fillHeavy,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: 'rgba(99,214,181,0.3)',
+    borderColor: glass.tintPrimaryStroke,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     maxWidth: 460,

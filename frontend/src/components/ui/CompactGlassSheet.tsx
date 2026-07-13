@@ -196,7 +196,10 @@ const styles = StyleSheet.create({
   rootMobile: { justifyContent: 'flex-end', alignItems: 'center' },
   rootDesktop: { justifyContent: 'center', alignItems: 'center', paddingVertical: spacing.md },
   backdrop: { ...StyleSheet.absoluteFill as object, backgroundColor: 'rgba(2,5,10,0.68)' },
-  animatedPanel: { flexShrink: 1 },
+  // The full-screen dismiss Pressable is absolutely positioned. Keep the
+  // panel in a higher stacking context so its controls remain clickable on
+  // React Native Web (and therefore in the Capacitor app).
+  animatedPanel: { position: 'relative', flexShrink: 1, zIndex: 1 },
   panel: { width: '100%', maxHeight: '100%', borderRadius: radii.xl },
   content: { flexShrink: 1, padding: spacing.md },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },

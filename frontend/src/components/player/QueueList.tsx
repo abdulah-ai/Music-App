@@ -5,7 +5,7 @@ import { Artwork } from '../ui/Artwork';
 import { usePlayerStore } from '../../store/playerStore';
 import type { Media } from '../../services/api/types';
 import { displayArtist, displayTitle } from '../../utils/mediaDisplay';
-import { colors, radii, spacing, typography } from '../../theme/tokens';
+import { colors, glass, radii, spacing, typography } from '../../theme/tokens';
 
 function formatDuration(seconds: number | null): string {
   if (!seconds) return '--:--';
@@ -100,8 +100,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radii.md - 4,
   },
-  rowCurrent: { backgroundColor: 'rgba(99,214,181,0.10)' },
-  rowPressed: { backgroundColor: 'rgba(158,181,170,0.10)' },
+  rowCurrent: { backgroundColor: glass.tintPrimary },
+  rowPressed: { backgroundColor: glass.fillBright },
   index: {
     ...typography.caption,
     fontSize: 11,

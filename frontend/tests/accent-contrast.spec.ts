@@ -44,3 +44,11 @@ test('leaves an already-visible accent unchanged', () => {
 test('returns an unsupported color unchanged', () => {
   expect(ensureTrackAccentContrast('rgba(20, 30, 40, 0.8)')).toBe('rgba(20, 30, 40, 0.8)');
 });
+
+test('darkens an artwork accent when it sits on the daylight surface', () => {
+  const daylightSurface = '#DFEAE2';
+  const adjusted = ensureTrackAccentContrast('#8FE3C8', daylightSurface);
+
+  expect(adjusted).not.toBe('#8FE3C8');
+  expect(colorContrastRatio(adjusted, daylightSurface)).toBeGreaterThanOrEqual(TRACK_ACCENT_MIN_CONTRAST);
+});

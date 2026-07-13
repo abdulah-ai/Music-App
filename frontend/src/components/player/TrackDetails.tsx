@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import type { Media } from '../../services/api/types';
-import { colors, radii, spacing, typography } from '../../theme/tokens';
+import { colors, glass, radii, spacing, typography } from '../../theme/tokens';
 import { buildMediaDetailSections, type MediaDetailItem } from '../../utils/mediaDetails';
 import { displayArtist, displayTitle } from '../../utils/mediaDisplay';
 import { Artwork } from '../ui/Artwork';
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.sm,
     borderRadius: radii.md,
-    backgroundColor: 'rgba(17, 30, 25, 0.54)',
+    backgroundColor: glass.fill,
     borderWidth: 1,
     borderColor: colors.surfaceBorder,
   },
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(99, 214, 181, 0.08)',
+    backgroundColor: glass.tintPrimary,
   },
   detailText: { flex: 1, minWidth: 0 },
   detailLabel: { ...typography.caption, fontSize: 10, color: colors.textMuted },

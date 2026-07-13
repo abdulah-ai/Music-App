@@ -24,7 +24,7 @@ import { usePlaylistStore } from '../../store/playlistStore';
 import { toast } from '../../store/toastStore';
 import { apiErrorMessage } from '../../utils/apiError';
 import { displayArtist as artistOf, displayTitle, firstPlaylistArtworkItem } from '../../utils/mediaDisplay';
-import { colors, layout, radii, shadows, spacing, typography } from '../../theme/tokens';
+import { colors, glass, layout, radii, shadows, spacing, typography } from '../../theme/tokens';
 
 function displayArtist(media: Media): string {
   return artistOf(media) ?? 'Unknown artist';
@@ -481,11 +481,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: 'rgba(17,30,25,0.5)',
+    backgroundColor: glass.fill,
     borderRadius: radii.md,
     padding: spacing.sm,
   },
-  listRowPressed: { backgroundColor: 'rgba(99,214,181,0.10)' },
+  listRowPressed: { backgroundColor: glass.tintPrimary },
   listText: { flex: 1 },
   modalRoot: { flex: 1, justifyContent: 'flex-end' },
   modalRootDesktop: { justifyContent: 'center', alignItems: 'center' },
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(158,181,170,0.3)',
+    backgroundColor: glass.strokeStrong,
     marginBottom: spacing.md,
   },
   sheetSub: { ...typography.caption, color: colors.textMuted },
@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radii.md,
   },
-  sheetRowPressed: { backgroundColor: 'rgba(99,214,181,0.10)' },
+  sheetRowPressed: { backgroundColor: glass.tintPrimary },
   sheetRowLabel: { ...typography.body, color: colors.textPrimary },
   editTitle: {
     ...typography.title,
@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
   editInput: {
     ...typography.body,
     color: colors.textPrimary,
-    backgroundColor: 'rgba(5,10,11,0.6)',
+    backgroundColor: glass.fillDeep,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md - 4,
@@ -550,9 +550,9 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     marginBottom: spacing.md,
-    backgroundColor: 'rgba(5,10,11,0.45)',
+    backgroundColor: glass.fillDeep,
   },
-  toolChipActive: { backgroundColor: 'rgba(99,214,181,0.18)' },
+  toolChipActive: { backgroundColor: glass.tintPrimary },
   editSave: {
     borderRadius: radii.md,
     paddingVertical: spacing.md,
@@ -570,7 +570,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     flex: 1,
     color: colors.textPrimary,
-    backgroundColor: 'rgba(17,30,25,0.6)',
+    backgroundColor: glass.fill,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md - 6,
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: spacing.sm + 2,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(240,131,140,0.10)',
+    backgroundColor: glass.tintDanger,
   },
   detailDeleteLabel: { ...typography.caption, fontSize: 12, color: colors.danger },
   detailList: { marginTop: spacing.md },

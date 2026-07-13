@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useToastStore, type Toast } from '../../store/toastStore';
-import { colors, radii, shadows, spacing, typography } from '../../theme/tokens';
+import { colors, glass, radii, shadows, spacing, typography } from '../../theme/tokens';
 
 const TONE_META = {
   info: { icon: 'information-circle' as const, color: colors.cyan },
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: 'rgba(9,17,14,0.92)',
+    backgroundColor: glass.fillHeavy,
     borderRadius: radii.md,
     paddingVertical: spacing.sm + 2,
     paddingHorizontal: spacing.md,

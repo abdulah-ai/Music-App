@@ -20,7 +20,7 @@ import { useFavoritesStore } from '../store/favoritesStore';
 import { usePinStore } from '../store/pinStore';
 import { usePlayerStore } from '../store/playerStore';
 import { displayArtist, displayTitle, thumbnailUri } from '../utils/mediaDisplay';
-import { colors, radii, spacing, typography } from '../theme/tokens';
+import { colors, glass, radii, spacing, typography } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/types';
 
 type Sheet = 'queue' | 'lyrics' | 'options' | null;
@@ -545,10 +545,10 @@ export function PlayerScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  backdropVeil: { ...(StyleSheet.absoluteFill as object), backgroundColor: 'rgba(6,12,10,0.76)' },
+  backdropVeil: { ...(StyleSheet.absoluteFill as object), backgroundColor: glass.fillHeavy },
   topBar: { position: 'absolute', zIndex: 10, top: 0, left: spacing.lg, right: spacing.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  topButton: { width: 44, height: 44, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(10,19,15,0.68)', borderWidth: 1, borderColor: colors.surfaceBorder },
-  playingState: { minHeight: 36, paddingHorizontal: spacing.md, borderRadius: radii.pill, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: 'rgba(10,19,15,0.52)' },
+  topButton: { width: 44, height: 44, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: glass.fillHeavy, borderWidth: 1, borderColor: colors.surfaceBorder },
+  playingState: { minHeight: 36, paddingHorizontal: spacing.md, borderRadius: radii.pill, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: glass.fill },
   stateDot: { width: 6, height: 6, borderRadius: 3 },
   playingStateLabel: { ...typography.eyebrow, fontSize: 10, letterSpacing: 1.8, color: colors.textSecondary },
   mobileContent: { alignItems: 'center', paddingHorizontal: spacing.lg, gap: spacing.lg },
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
   time: { ...typography.caption, fontSize: 11, color: colors.textMuted, fontVariant: ['tabular-nums'] },
   transportRow: { minHeight: 82, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   modeButton: { width: 44, height: 44, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
-  modeButtonActive: { backgroundColor: 'rgba(99,214,181,0.12)' },
+  modeButtonActive: { backgroundColor: glass.tintPrimary },
   modeBadge: { position: 'absolute', fontSize: 8, color: colors.textMuted, fontFamily: 'Sora_700Bold' },
   modeBadgeActive: { color: colors.cyan },
   skipButton: { width: 50, height: 50, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
@@ -582,8 +582,8 @@ const styles = StyleSheet.create({
   playNudge: { marginLeft: 4 },
   pressed: { opacity: 0.65 },
   secondaryRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.md },
-  secondaryAction: { minWidth: 78, minHeight: 46, borderRadius: radii.pill, paddingHorizontal: spacing.md - 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: 'rgba(12,22,17,0.72)', borderWidth: 1, borderColor: colors.surfaceBorder },
-  sanctuaryAction: { borderColor: 'rgba(99,214,181,0.28)' },
+  secondaryAction: { minWidth: 78, minHeight: 46, borderRadius: radii.pill, paddingHorizontal: spacing.md - 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: glass.fill, borderWidth: 1, borderColor: colors.surfaceBorder },
+  sanctuaryAction: { borderColor: glass.tintPrimaryStroke },
   secondaryLabel: { ...typography.caption, color: colors.textSecondary },
   nextRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderTopWidth: 1, borderTopColor: colors.surfaceBorder, marginTop: spacing.xs, paddingTop: spacing.md },
   nextText: { flex: 1 },

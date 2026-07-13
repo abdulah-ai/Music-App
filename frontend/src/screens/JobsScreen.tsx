@@ -19,7 +19,7 @@ import { watchJob } from '../services/api/jobSocket';
 import type { Job } from '../services/api/types';
 import { useLibraryStore } from '../store/libraryStore';
 import { toast } from '../store/toastStore';
-import { colors, radii, spacing, typography } from '../theme/tokens';
+import { colors, glass, radii, spacing, typography } from '../theme/tokens';
 import { apiErrorMessage, friendlyJobError, friendlyJobStage } from '../utils/apiError';
 import { displayTitle } from '../utils/mediaDisplay';
 
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   summaryValue: { ...typography.title, fontSize: 20, lineHeight: 25, color: colors.textPrimary },
   summaryValueAttention: { color: colors.danger },
   summaryLabel: { ...typography.caption, fontSize: 11, color: colors.textMuted },
-  summaryDivider: { width: 1, height: 30, backgroundColor: 'rgba(158,181,170,0.12)' },
+  summaryDivider: { width: 1, height: 30, backgroundColor: glass.stroke },
   loadingState: { minHeight: 240, alignItems: 'center', justifyContent: 'center', gap: spacing.md },
   loadingText: { ...typography.caption, color: colors.textMuted },
   errorPanel: { alignItems: 'center', padding: spacing.xl, gap: spacing.sm },
@@ -393,8 +393,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(5,10,11,0.48)',
+    backgroundColor: glass.fillDeep,
   },
-  retryButton: { backgroundColor: 'rgba(99,214,181,0.1)' },
+  retryButton: { backgroundColor: glass.tintPrimary },
   pressed: { opacity: 0.68 },
 });

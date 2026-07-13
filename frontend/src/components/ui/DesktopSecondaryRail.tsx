@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RAIL_WIDTH, useResponsive } from '../../hooks/useResponsive';
 import { navigationRef } from '../../navigation/navigationRef';
-import { spacing } from '../../theme/tokens';
+import { glass, spacing } from '../../theme/tokens';
 import { AppSidebar } from './AppSidebar';
 
 /**
@@ -68,6 +68,6 @@ const styles = StyleSheet.create({
   },
   railOverlay: {
     ...(StyleSheet.absoluteFill as object),
-    backgroundColor: 'rgba(5,10,11,0.9)',
+    backgroundColor: glass.fillHeavy,
   },
 });

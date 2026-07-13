@@ -1,4 +1,5 @@
-import { DarkTheme, NavigationContainer } from '@react-navigation/native';
+import { useMemo } from 'react';
+import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StyleSheet, View } from 'react-native';
 
@@ -20,24 +21,13 @@ import { ForestBackdrop } from '../components/ui/ForestBackdrop';
 import { RAIL_WIDTH, useResponsive } from '../hooks/useResponsive';
 import { useAuthStore } from '../store/authStore';
 import { colors } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeProvider';
 import { MainTabs } from './MainTabs';
 import { navigationRef } from './navigationRef';
 import type { AuthStackParamList, RootStackParamList } from './types';
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const RootStack = createNativeStackNavigator<RootStackParamList>();
-
-const navTheme = {
-  ...DarkTheme,
-  colors: {
-    ...DarkTheme.colors,
-    background: 'transparent',
-    card: 'transparent',
-    border: colors.surfaceBorder,
-    primary: colors.cyan,
-    text: colors.textPrimary,
-  },
-};
 
 function AuthNavigator() {
   return (
@@ -51,6 +41,21 @@ function AuthNavigator() {
 export function RootNavigator() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { isDesktop } = useResponsive();
+  const { scheme, theme } = useTheme();
+  const navTheme = useMemo(() => {
+    const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        background: 'transparent',
+        card: 'transparent',
+        border: theme.palette.border,
+        primary: theme.palette.primary,
+        text: theme.palette.textPrimary,
+      },
+    };
+  }, [scheme, theme]);
 
   // On desktop the secondary routes render beside the persistent rail, so
   // their content is inset by the rail width. Phones keep the full width.

@@ -15,7 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { usePlayerStore } from '../../store/playerStore';
-import { colors, motion, radii, spacing, typography } from '../../theme/tokens';
+import { motion, radii, spacing, typography } from '../../theme/tokens';
+import { literalThemes } from '../../theme/theme';
 import { displayArtist, displayTitle } from '../../utils/mediaDisplay';
 import { Artwork } from '../ui/Artwork';
 import { ForestBackdrop } from '../ui/ForestBackdrop';
@@ -62,7 +63,7 @@ function Star({ index, width, height, twinkle }: { index: number; width: number;
         width: size,
         height: size,
         borderRadius: size,
-        backgroundColor: gold ? colors.gold : colors.textPrimary,
+        backgroundColor: gold ? night.gold : night.textPrimary,
         opacity: twinkle.interpolate({ inputRange: [0, 0.5, 1], outputRange: opacityRange }),
       }}
     />
@@ -116,7 +117,9 @@ function VisualizerBar({ index, playing, accent }: { index: number; playing: boo
  * twinkling star layer, and a soft ambient visualizer under minimal controls.
  * Controls fade away after a few seconds; tapping anywhere brings them back.
  */
-export function SanctuaryMode({ visible, onClose, accent = colors.cyan }: Props) {
+const night = literalThemes.dark.palette;
+
+export function SanctuaryMode({ visible, onClose, accent = night.primary }: Props) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [controlsVisible, setControlsVisible] = useState(true);
@@ -213,7 +216,7 @@ export function SanctuaryMode({ visible, onClose, accent = colors.cyan }: Props)
           >
             <View style={styles.topRow}>
             <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Leave Sanctuary Mode" style={styles.topButton}>
-              <Ionicons name="chevron-down" size={22} color={colors.textPrimary} />
+              <Ionicons name="chevron-down" size={22} color={night.textPrimary} />
             </Pressable>
             <View style={styles.modePill}>
               <Ionicons name="moon" size={11} color={accent} />
@@ -225,7 +228,7 @@ export function SanctuaryMode({ visible, onClose, accent = colors.cyan }: Props)
               accessibilityLabel="Open queue"
               style={styles.topButton}
             >
-              <Ionicons name="list" size={20} color={colors.textPrimary} />
+              <Ionicons name="list" size={20} color={night.textPrimary} />
             </Pressable>
             </View>
           </Animated.View>
@@ -270,7 +273,7 @@ export function SanctuaryMode({ visible, onClose, accent = colors.cyan }: Props)
 
               <View style={styles.transportRow}>
                 <Pressable onPress={() => void playPrev()} accessibilityRole="button" accessibilityLabel="Previous track" style={({ pressed }) => [styles.skip, pressed && styles.pressed]}>
-                  <Ionicons name="play-skip-back" size={26} color={colors.textPrimary} />
+                  <Ionicons name="play-skip-back" size={26} color={night.textPrimary} />
                 </Pressable>
                 <Pressable
                   onPress={toggle}
@@ -281,11 +284,11 @@ export function SanctuaryMode({ visible, onClose, accent = colors.cyan }: Props)
                   {isBuffering ? (
                     <ActivityIndicator color={accent} />
                   ) : (
-                    <Ionicons name={playing ? 'pause' : 'play'} size={30} color={colors.textPrimary} style={playing ? undefined : { marginLeft: 3 }} />
+                    <Ionicons name={playing ? 'pause' : 'play'} size={30} color={night.textPrimary} style={playing ? undefined : { marginLeft: 3 }} />
                   )}
                 </Pressable>
                 <Pressable onPress={() => void playNext()} accessibilityRole="button" accessibilityLabel="Next track" style={({ pressed }) => [styles.skip, pressed && styles.pressed]}>
-                  <Ionicons name="play-skip-forward" size={26} color={colors.textPrimary} />
+                  <Ionicons name="play-skip-forward" size={26} color={night.textPrimary} />
                 </Pressable>
               </View>
             </Animated.View>
@@ -336,7 +339,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(158,181,170,0.12)',
   },
-  modeLabel: { ...typography.eyebrow, fontSize: 9, letterSpacing: 2.2, color: colors.textSecondary },
+  modeLabel: { ...typography.eyebrow, fontSize: 9, letterSpacing: 2.2, color: night.textSecondary },
   centerBlock: { alignItems: 'center', gap: spacing.xs },
   artworkGlow: {
     borderRadius: radii.lg + 6,
@@ -346,8 +349,8 @@ const styles = StyleSheet.create({
     elevation: 18,
     marginBottom: spacing.md,
   },
-  title: { ...typography.title, fontSize: 22, lineHeight: 28, color: colors.textPrimary, textAlign: 'center' },
-  artist: { ...typography.body, color: colors.textMuted, textAlign: 'center' },
+  title: { ...typography.title, fontSize: 22, lineHeight: 28, color: night.textPrimary, textAlign: 'center' },
+  artist: { ...typography.body, color: night.textMuted, textAlign: 'center' },
   bottomBlock: { gap: spacing.sm },
   bottomChrome: { gap: spacing.sm },
   visualizerRow: {
@@ -367,7 +370,7 @@ const styles = StyleSheet.create({
   },
   seekFill: { height: 3, borderRadius: radii.pill },
   timeRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -6 },
-  time: { ...typography.caption, fontSize: 10, color: colors.textMuted, fontVariant: ['tabular-nums'] },
+  time: { ...typography.caption, fontSize: 10, color: night.textMuted, fontVariant: ['tabular-nums'] },
   transportRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xl },
   skip: { width: 52, height: 52, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
   play: {
@@ -389,12 +392,12 @@ const styles = StyleSheet.create({
     maxHeight: '62%',
     borderTopLeftRadius: radii.lg + 4,
     borderTopRightRadius: radii.lg + 4,
-    backgroundColor: colors.bgElevated,
+    backgroundColor: night.surface,
     borderWidth: 1,
-    borderColor: colors.surfaceBorder,
+    borderColor: night.border,
     paddingHorizontal: spacing.md,
   },
-  queueHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginVertical: spacing.sm, backgroundColor: colors.surfaceBright },
-  queueTitle: { ...typography.subtitle, color: colors.textPrimary, marginBottom: spacing.sm },
+  queueHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginVertical: spacing.sm, backgroundColor: night.surfaceBright },
+  queueTitle: { ...typography.subtitle, color: night.textPrimary, marginBottom: spacing.sm },
   queueBody: { flexGrow: 0, minHeight: 180, maxHeight: 420 },
 });

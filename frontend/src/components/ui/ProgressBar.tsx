@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { colors, radii } from '../../theme/tokens';
+import { colors, glass, radii } from '../../theme/tokens';
 
 export function ProgressBar({ progress }: { progress: number }) {
   const clamped = Math.max(0, Math.min(1, progress));
@@ -21,7 +21,7 @@ const styles = StyleSheet.create({
   track: {
     height: 6,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(158,181,170,0.16)',
+    backgroundColor: glass.stroke,
     overflow: 'hidden',
   },
   fill: {

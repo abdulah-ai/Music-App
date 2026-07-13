@@ -510,7 +510,12 @@ export function HomeScreen() {
               onAction={() => navigation.navigate('Settings')}
             />
           ) : (
-            <View style={styles.offlineRow}>
+            <View
+              style={styles.offlineRow}
+              accessible
+              accessibilityLiveRegion="polite"
+              accessibilityLabel={offline ? 'Offline. Playing from this device.' : 'Online. Connected to your hollow.'}
+            >
               <View style={[styles.offlineDot, { backgroundColor: offline ? colors.warning : colors.success }]} />
               <View style={styles.offlineCopy}>
                 <Text style={styles.offlineTitle}>
@@ -750,7 +755,7 @@ const styles = StyleSheet.create({
   jobPercent: { ...typography.caption, fontFamily: 'Sora_600SemiBold', fontSize: 11 },
   jobStage: { ...typography.caption, fontSize: 12, color: colors.textMuted },
   cancelButton: { width: 44, height: 44, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
-  divider: { height: 1, backgroundColor: 'rgba(158,181,170,0.09)' },
+  divider: { height: 1, backgroundColor: glass.stroke },
   continuePanel: { padding: spacing.md },
   continueContent: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   continueCopy: { flex: 1, minHeight: 48, justifyContent: 'center' },

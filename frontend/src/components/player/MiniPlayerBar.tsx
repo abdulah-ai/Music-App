@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(99,214,181,0.16)',
+    backgroundColor: glass.tintPrimary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     height: 2,
-    backgroundColor: 'rgba(158,181,170,0.14)',
+    backgroundColor: glass.stroke,
   },
   progressFill: {
     height: '100%',
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   queueTitle: { ...typography.eyebrow, fontSize: 10, letterSpacing: 2, color: colors.textMuted, marginBottom: spacing.sm },
   queueEmpty: { ...typography.caption, color: colors.textMuted },
   queueRow: { paddingVertical: spacing.sm - 2, borderRadius: radii.sm },
-  queueRowPressed: { backgroundColor: 'rgba(99,214,181,0.10)' },
+  queueRowPressed: { backgroundColor: glass.tintPrimary },
   queueRowTitle: { ...typography.subtitle, fontSize: 14, color: colors.textPrimary },
   queueRowArtist: { ...typography.caption, fontSize: 11, color: colors.textMuted },
 });

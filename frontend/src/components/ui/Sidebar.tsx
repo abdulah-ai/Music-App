@@ -3,7 +3,7 @@ import { Animated, Easing, Pressable, ScrollView, StyleSheet, View, useWindowDim
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useUiStore } from '../../store/uiStore';
-import { spacing } from '../../theme/tokens';
+import { glass, spacing } from '../../theme/tokens';
 import { AppSidebar } from './AppSidebar';
 
 const PANEL_MAX = 320;
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(9,17,14,0.97)',
+    backgroundColor: glass.fillHeavy,
   },
   panelContent: {
     flex: 1,

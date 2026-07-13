@@ -78,6 +78,10 @@ everywhere content can sit near the tab bar or mini player.
    **Status: fixed in codex/ui-audit-completion** (accent previews; a true
    light theme remains an unscoped product decision.)
 
+   **Status: true theme fixed in codex/forest-and-remaining-audit** — System,
+   Daylight, and Night now select complete semantic palettes across web,
+   Capacitor, and Expo native surfaces.
+
 4. **Layout/Accent segmented controls feel generic** — selected state is a
    subtle background tint, easy to miss.
    Suggested fix: reuse the glass/glow selected-state treatment already built
@@ -229,6 +233,11 @@ per identity.
    yellow status dot to label; a screenshot or its intended meaning is needed
    before adding or changing one. The artwork-quality portion is fixed by
    Issue 5.2's shared fallback.
+
+   **Status: resolved by verification in codex/forest-and-remaining-audit** —
+   no unexplained yellow Library-card dot exists. The current yellow indicator
+   is Home's offline state and is directly paired with visible and accessible
+   “Offline — playing from this device” text.
 
 ---
 

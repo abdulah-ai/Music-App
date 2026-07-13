@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { PanResponder, StyleSheet, View } from 'react-native';
 
-import { colors, radii } from '../../theme/tokens';
+import { colors, glass, radii } from '../../theme/tokens';
 
 const BAR_COUNT = 40;
 const MAX_BAR = 40;
@@ -110,7 +110,7 @@ export function WaveformScrubber({ seedKey, progress, onSeekRatio, activeColor =
               styles.bar,
               {
                 height,
-                backgroundColor: played ? activeColor : 'rgba(158,181,170,0.25)',
+                backgroundColor: played ? activeColor : glass.strokeStrong,
               },
               played && dragRatio !== null ? styles.barDragging : null,
             ]}
