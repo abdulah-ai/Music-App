@@ -91,6 +91,63 @@ class AutoNameMediaTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(Path(self.temp_dir.name) / "media-0.mp4", args[2])
         self.assertFalse(worker.await_args.kwargs["cleanup"])
 
+    async def test_readable_telegram_title_is_enriched_when_genre_is_missing(self) -> None:
+        async with self.sessions() as session:
+            media = Media(
+                user_id=self.user_id,
+                media_type=MediaType.AUDIO,
+                source=MediaSource.TELEGRAM,
+                title="A perfectly readable title",
+                file_path=str(Path(self.temp_dir.name) / "readable.mp3"),
+                storage_backend="local",
+            )
+            session.add(media)
+            await session.commit()
+            media_id = media.id
+
+        worker = AsyncMock()
+        with patch.object(job_engine, "run_recognition_job", worker):
+            await job_engine.auto_name_media(self.user_id, [media_id])
+
+        worker.assert_awaited_once()
+        self.assertEqual(media_id, worker.await_args.args[3])
+
+    async def test_s3_media_is_materialized_only_for_recognition(self) -> None:
+        async with self.sessions() as session:
+            media = Media(
+                user_id=self.user_id,
+                media_type=MediaType.AUDIO,
+                source=MediaSource.TELEGRAM,
+                title="Cloud song",
+                original_filename="cloud-song.m4a",
+                file_path="private/cloud-object",
+                storage_backend="s3",
+            )
+            session.add(media)
+            await session.commit()
+            media_id = media.id
+
+        observed_path: Path | None = None
+
+        def copy_to_path(_key: str, _backend: str, destination: Path) -> None:
+            destination.write_bytes(b"provider sample")
+
+        async def recognize(_job_id, _user_id, path: Path, _media_id, *, cleanup: bool) -> None:
+            nonlocal observed_path
+            observed_path = path
+            self.assertTrue(path.exists())
+            self.assertEqual(".m4a", path.suffix)
+            self.assertTrue(cleanup)
+
+        with (
+            patch.object(job_engine.storage_backend, "copy_to_path", side_effect=copy_to_path),
+            patch.object(job_engine, "run_recognition_job", side_effect=recognize),
+        ):
+            await job_engine.auto_name_media(self.user_id, [media_id])
+
+        self.assertIsNotNone(observed_path)
+        self.assertFalse(observed_path.exists())
+
     async def test_concurrent_batches_share_one_recognition_slot(self) -> None:
         first_ids = await self._seed_media(2)
         second_ids = await self._seed_media(2, MediaType.VIDEO)

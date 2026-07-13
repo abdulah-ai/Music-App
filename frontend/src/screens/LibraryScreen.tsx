@@ -34,6 +34,7 @@ import {
   PlaylistsPane,
   SheetAction,
 } from '../components/library/LibrarySheets';
+import { SmartCategoriesPane } from '../components/library/SmartCategoriesPane';
 import { useBottomChromeClearance, useDockClearance } from '../hooks/useBottomChromeClearance';
 import { RAIL_WIDTH, useResponsive } from '../hooks/useResponsive';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -59,10 +60,11 @@ import { useVideoPlayerStore } from '../store/videoPlayerStore';
 import { useUiStore } from '../store/uiStore';
 import { toast } from '../store/toastStore';
 import { apiErrorMessage } from '../utils/apiError';
-import { colors, gradients, radii, spacing, typography } from '../theme/tokens';
+import { categoryForGenre, MEDIA_CATEGORIES, type MediaCategoryId } from '../utils/mediaCategory';
+import { colors, glass, gradients, radii, spacing, typography } from '../theme/tokens';
 import type { MainTabParamList, RootStackParamList } from '../navigation/types';
 
-type Tab = 'all' | 'audio' | 'video' | 'favorites' | 'playlists';
+type Tab = 'all' | 'audio' | 'video' | 'favorites' | 'categories' | 'playlists';
 type SortMode = 'newest' | 'title' | 'artist' | 'genre' | 'year' | 'longest';
 type ViewMode = 'grid' | 'list';
 type RemixFilter = 'all' | 'original' | 'remix';
@@ -72,6 +74,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'audio', label: 'Songs' },
   { key: 'video', label: 'Videos' },
   { key: 'favorites', label: 'Favorites' },
+  { key: 'categories', label: 'Categories' },
   { key: 'playlists', label: 'Playlists' },
 ];
 
@@ -126,6 +129,7 @@ export function LibraryScreen() {
   }, [route.params?.tab]);
   const [sort, setSort] = useState<SortMode>('newest');
   const [genreFilter, setGenreFilter] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<MediaCategoryId | null>(null);
   const [yearFilter, setYearFilter] = useState<number | null>(null);
   const [remixFilter, setRemixFilter] = useState<RemixFilter>('all');
   const [view, setView] = useState<ViewMode>('grid');
@@ -174,6 +178,7 @@ export function LibraryScreen() {
     let list = items;
     if (tab === 'audio' || tab === 'video') list = list.filter((m) => m.media_type === tab);
     if (tab === 'favorites') list = list.filter((m) => favoriteIds[m.id]);
+    if (tab === 'categories' && categoryFilter) list = list.filter((m) => categoryForGenre(m.genre) === categoryFilter);
     if (genreFilter) list = list.filter((m) => m.genre === genreFilter);
     if (yearFilter) list = list.filter((m) => m.release_year === yearFilter);
     if (remixFilter === 'remix') list = list.filter((m) => m.is_remix === true);
@@ -201,7 +206,7 @@ export function LibraryScreen() {
         sorted.sort((a, b) => b.created_at.localeCompare(a.created_at));
     }
     return sorted;
-  }, [items, tab, sort, favoriteIds, genreFilter, yearFilter, remixFilter]);
+  }, [items, tab, sort, favoriteIds, categoryFilter, genreFilter, yearFilter, remixFilter]);
 
   function cycleGenre() {
     const index = genreFilter ? genres.indexOf(genreFilter) : -1;
@@ -457,7 +462,7 @@ export function LibraryScreen() {
     : width - spacing.lg * 2;
   const columns = view === 'grid' ? (isDesktop ? Math.max(3, Math.floor(containerWidth / 224)) : 2) : 1;
   const cellSize = (containerWidth - spacing.md * (columns - 1)) / columns;
-  const hasActiveFilters = !!query || !!genreFilter || !!yearFilter || remixFilter !== 'all' || tab === 'favorites';
+  const hasActiveFilters = !!query || !!categoryFilter || !!genreFilter || !!yearFilter || remixFilter !== 'all' || tab === 'favorites';
   // The bar includes safe-area padding and can grow with font scaling. Measure
   // its rendered height so the absolutely positioned player clears it exactly.
   // MiniPlayerBar already clears the mobile dock itself, so do not count that
@@ -473,6 +478,7 @@ export function LibraryScreen() {
 
   function resetFilters() {
     setQuery('');
+    setCategoryFilter(null);
     setGenreFilter(null);
     setYearFilter(null);
     setRemixFilter('all');
@@ -528,7 +534,10 @@ export function LibraryScreen() {
             {TABS.map((t) => (
               <Pressable
                 key={t.key}
-                onPress={() => setTab(t.key)}
+                onPress={() => {
+                  setTab(t.key);
+                  setCategoryFilter(null);
+                }}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: tab === t.key }}
                 style={[styles.tabChip, tab === t.key && styles.tabChipActive]}
@@ -537,8 +546,21 @@ export function LibraryScreen() {
               </Pressable>
             ))}
           </ScrollView>
-          {tab !== 'playlists' && (
+          {tab !== 'playlists' && !(tab === 'categories' && !categoryFilter) && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolRow}>
+              {tab === 'categories' && categoryFilter ? (
+                <Pressable
+                  onPress={() => setCategoryFilter(null)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Back to all smart categories"
+                  style={[styles.toolChip, styles.toolChipActive]}
+                >
+                  <Ionicons name="chevron-back" size={13} color={colors.cyan} />
+                  <Text style={styles.toolLabel}>
+                    {MEDIA_CATEGORIES.find((category) => category.id === categoryFilter)?.label ?? 'Categories'}
+                  </Text>
+                </Pressable>
+              ) : null}
               {unnamedCount > 0 && (
                 <Pressable
                   onPress={handleFixNames}
@@ -628,6 +650,12 @@ export function LibraryScreen() {
           <PlaylistsPane
             playlists={playlists.filter((p) => !query || p.name.toLowerCase().includes(query.toLowerCase()))}
             onOpen={setPlaylistDetailId}
+          />
+        ) : tab === 'categories' && !categoryFilter ? (
+          <SmartCategoriesPane
+            items={items}
+            bottomClearance={bottomChromeClearance}
+            onSelect={setCategoryFilter}
           />
         ) : isLoading && visible.length === 0 ? (
           <SkeletonGrid columns={columns} cellSize={cellSize} view={view} />
@@ -906,7 +934,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: 'rgba(17,30,25,0.6)',
+    backgroundColor: glass.fill,
+    borderWidth: 1,
+    borderColor: glass.stroke,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     height: 48,
@@ -922,9 +952,9 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: spacing.md - 2,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(17,30,25,0.55)',
+    backgroundColor: glass.fill,
   },
-  tabChipActive: { backgroundColor: 'rgba(99,214,181,0.18)' },
+  tabChipActive: { backgroundColor: glass.tintPrimary },
   tabLabel: { ...typography.caption, color: colors.textMuted },
   tabLabelActive: { color: colors.cyan, fontFamily: 'Sora_500Medium' },
   toolRow: { flexDirection: 'row', gap: 6, paddingRight: spacing.lg },
@@ -935,11 +965,11 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: spacing.sm + 2,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(17,30,25,0.55)',
+    backgroundColor: glass.fill,
   },
   toolLabel: { ...typography.caption, fontSize: 12, color: colors.textSecondary },
-  toolChipActive: { backgroundColor: 'rgba(99,214,181,0.18)' },
-  fixNamesChip: { backgroundColor: 'rgba(99,214,181,0.14)', borderWidth: 1, borderColor: 'rgba(99,214,181,0.3)' },
+  toolChipActive: { backgroundColor: glass.tintPrimary },
+  fixNamesChip: { backgroundColor: glass.tintPrimary, borderWidth: 1, borderColor: glass.tintPrimaryStroke },
   gridRow: { gap: spacing.md },
   listReveal: { flex: 1 },
   list: { flex: 1 },
@@ -951,9 +981,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
-    backgroundColor: 'rgba(17,30,25,0.96)',
+    backgroundColor: glass.fillHeavy,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(158,181,170,0.14)',
+    borderTopColor: glass.stroke,
   },
   bulkLabel: { ...typography.subtitle, fontSize: 14, color: colors.textPrimary },
   bulkActions: { flexDirection: 'row', gap: spacing.sm },
@@ -964,9 +994,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(5,10,11,0.5)',
+    backgroundColor: glass.fillDeep,
   },
-  bulkButtonDanger: { backgroundColor: 'rgba(240,131,140,0.14)' },
+  bulkButtonDanger: { backgroundColor: glass.tintDanger },
   bulkButtonLabel: { ...typography.caption, fontSize: 13, color: colors.textPrimary },
   sheetHeader: {
     flexDirection: 'row',

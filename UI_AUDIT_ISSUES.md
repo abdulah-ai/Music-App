@@ -766,6 +766,11 @@ checking before assuming this is a one-line change).
 **Status: fixed in codex/ui-audit-completion** (confirmed gaps only; category
 sorting remains unscoped and was not guessed.)
 
+**Status: category sorting fixed in codex/forest-and-remaining-audit** — the
+Library now exposes non-destructive smart genre categories. Fresh Telegram
+imports missing genre metadata are enriched even when their title is readable,
+including cloud-stored media through a short-lived processing copy.
+
 ---
 
 ## Issue 22 — Rich track details display — data already exists, needs a real UI for it

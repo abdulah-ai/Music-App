@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import asyncio
 import mimetypes
+import os
 import re
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
@@ -198,28 +200,37 @@ async def backfill_track_fades() -> None:
 
 
 async def auto_name_media(user_id: str, media_ids: list[str]) -> None:
-    """Run recognition over freshly imported media whose titles are garbage
-    (base64 blobs, numeric IDs) so new files name themselves instead of the
-    user finding a wall of gibberish. Every eligible item is processed; the
+    """Enrich freshly imported media that needs a usable name or category.
+
+    Telegram items without a genre are recognized even when their embedded
+    title is readable, so the client can place them in a live smart category.
+    Every eligible item is processed; the
     shared semaphore keeps Shazam work sequential even across import batches.
     Creates real Job rows so the runs show up in the Activity feed.
 
     Video is supported by shazam_service's existing ffmpeg fallback, which
     extracts a normalized audio-only MP3 sample with ``-vn``.
 
-    Skips S3-backed media (checked per-row, not via the deployment default —
-    storage_preference can mix backends) since recognition reads straight
-    off local disk."""
+    S3-backed media is materialized only for the recognition call, then
+    deleted immediately; the permanent object remains private in storage."""
     async with _auto_name_semaphore:
         for media_id in media_ids:
             async with SessionLocal() as session:
                 media = await session.get(Media, media_id)
+                needs_name = bool(
+                    media
+                    and media.recognized_title is None
+                    and looks_like_garbage_title(media.title)
+                )
+                needs_telegram_category = bool(
+                    media
+                    and media.source == MediaSource.TELEGRAM
+                    and not media.genre
+                )
                 if (
                     media is None
-                    or media.storage_backend == "s3"
                     or media.media_type not in {MediaType.AUDIO, MediaType.VIDEO}
-                    or media.recognized_title is not None
-                    or not looks_like_garbage_title(media.title)
+                    or not (needs_name or needs_telegram_category)
                 ):
                     continue
                 job = Job(user_id=user_id, job_type=JobType.RECOGNIZE, source_url=media.title)
@@ -227,8 +238,35 @@ async def auto_name_media(user_id: str, media_ids: list[str]) -> None:
                 await session.commit()
                 await session.refresh(job)
                 job_id = job.id
-                file_path = Path(media.file_path)
-            await run_recognition_job(job_id, user_id, file_path, media_id, cleanup=False)
+                storage_kind = media.storage_backend
+                stored_key = media.file_path
+                suffix = Path(media.original_filename or media.file_path).suffix or ".bin"
+
+            temporary_path: Path | None = None
+            try:
+                if storage_kind == "s3":
+                    handle, raw_path = tempfile.mkstemp(prefix="sma_category_", suffix=suffix)
+                    os.close(handle)
+                    temporary_path = Path(raw_path)
+                    await asyncio.to_thread(
+                        storage_backend.copy_to_path,
+                        stored_key,
+                        storage_kind,
+                        temporary_path,
+                    )
+                    file_path = temporary_path
+                else:
+                    file_path = Path(stored_key)
+                await run_recognition_job(
+                    job_id,
+                    user_id,
+                    file_path,
+                    media_id,
+                    cleanup=temporary_path is not None,
+                )
+            finally:
+                if temporary_path is not None:
+                    temporary_path.unlink(missing_ok=True)
 
 
 async def _resolve_user_backend(user_id: str) -> str:

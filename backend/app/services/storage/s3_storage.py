@@ -7,6 +7,7 @@ instead of this free-tier compute instance.
 """
 from __future__ import annotations
 
+import shutil
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -57,6 +58,18 @@ def open_object(key: str) -> tuple[object, int]:
     """
     obj = _client().get_object(Bucket=settings.s3_bucket, Key=key)
     return obj["Body"], obj["ContentLength"]
+
+
+def copy_to_path(key: str, destination: Path) -> None:
+    """Materialize a private object for a short-lived local processor."""
+    body, _ = open_object(key)
+    try:
+        with destination.open("wb") as output:
+            shutil.copyfileobj(body, output)
+    finally:
+        close = getattr(body, "close", None)
+        if close:
+            close()
 
 
 def presigned_url(key: str, content_type: str, expires_seconds: int = 21600) -> str:

@@ -29,6 +29,7 @@ __all__ = [
     "delete_file",
     "presigned_url",
     "open_object",
+    "copy_to_path",
 ]
 
 
@@ -79,3 +80,15 @@ def presigned_url(key: str, content_type: str) -> str:
 def open_object(key: str) -> tuple[object, int]:
     """Only meaningful when is_s3() — callers should branch on that first."""
     return s3_storage.open_object(key)
+
+
+def copy_to_path(key: str, backend: str, destination: Path) -> None:
+    """Copy one stored media object to a temporary local processing path."""
+    if backend == "s3":
+        s3_storage.copy_to_path(key, destination)
+        return
+
+    import shutil
+
+    with Path(key).open("rb") as source, destination.open("wb") as output:
+        shutil.copyfileobj(source, output)

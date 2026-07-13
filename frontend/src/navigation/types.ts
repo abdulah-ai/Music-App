@@ -5,7 +5,7 @@ export type AuthStackParamList = {
   Register: undefined;
 };
 
-export type LibraryTab = 'all' | 'audio' | 'video' | 'favorites' | 'playlists';
+export type LibraryTab = 'all' | 'audio' | 'video' | 'favorites' | 'categories' | 'playlists';
 
 export type MainTabParamList = {
   Home: undefined;
