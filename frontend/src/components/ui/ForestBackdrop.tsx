@@ -33,7 +33,7 @@ export function ForestBackdrop({ variant = 'app' }: Props) {
     >
       <Image
         source={portrait ? FOREST_PORTRAIT : FOREST_LANDSCAPE}
-        style={[StyleSheet.absoluteFill, daylight && lightForestImage]}
+        style={[StyleSheet.absoluteFill, !sanctuary && !daylight && darkAppForestImage, daylight && lightForestImage]}
         contentFit="cover"
         contentPosition="center"
         cachePolicy="memory-disk"
@@ -46,7 +46,7 @@ export function ForestBackdrop({ variant = 'app' }: Props) {
             ? ['rgba(2,7,10,0.18)', 'rgba(3,10,9,0.22)', 'rgba(2,8,6,0.68)']
             : daylight
               ? ['rgba(246,250,246,0.34)', 'rgba(235,244,237,0.46)', 'rgba(218,232,222,0.68)']
-            : ['rgba(4,10,13,0.3)', 'rgba(5,13,12,0.46)', 'rgba(4,10,9,0.72)']
+            : ['rgba(4,10,13,0.04)', 'rgba(5,18,15,0.12)', 'rgba(4,10,9,0.38)']
         }
         locations={[0, 0.48, 1]}
         style={StyleSheet.absoluteFill}
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    backgroundColor: 'rgba(5, 13, 12, 0.08)',
+    backgroundColor: 'rgba(5, 13, 12, 0.02)',
   },
   daylightVeil: { backgroundColor: 'rgba(239, 246, 241, 0.16)' },
 });
@@ -72,3 +72,8 @@ const lightForestImage: ImageStyle =
   Platform.OS === 'web'
     ? ({ filter: 'brightness(1.62) saturate(0.68) contrast(0.82)' } as unknown as ImageStyle)
     : { opacity: 0.88 };
+
+const darkAppForestImage: ImageStyle =
+  Platform.OS === 'web'
+    ? ({ filter: 'brightness(1.28) saturate(0.9) contrast(0.94)' } as unknown as ImageStyle)
+    : { opacity: 1 };
