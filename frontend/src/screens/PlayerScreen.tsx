@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Animated, Easing, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -11,6 +11,7 @@ import { SanctuaryMode } from '../components/scene/SanctuaryMode';
 import { CoverBackdrop } from '../components/player/CoverBackdrop';
 import { LyricsView } from '../components/player/LyricsView';
 import { QueueList } from '../components/player/QueueList';
+import { TrackDetails } from '../components/player/TrackDetails';
 import { WaveformScrubber } from '../components/player/WaveformScrubber';
 import { CompactGlassSheet } from '../components/ui/CompactGlassSheet';
 import { useResponsive } from '../hooks/useResponsive';
@@ -23,6 +24,7 @@ import { colors, radii, spacing, typography } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/types';
 
 type Sheet = 'queue' | 'lyrics' | 'options' | null;
+type MoreTab = 'playback' | 'details';
 
 const PLAYER_SPARKS = [
   { left: '8%', top: '22%', size: 3, color: colors.gold },
@@ -90,12 +92,37 @@ function SheetTabs({ active, onChange }: { active: 'queue' | 'lyrics'; onChange:
   );
 }
 
+function MoreTabs({ active, onChange }: { active: MoreTab; onChange: (next: MoreTab) => void }) {
+  return (
+    <View style={styles.sheetTabs} accessibilityRole="tablist">
+      {(['playback', 'details'] as const).map((item) => {
+        const selected = active === item;
+        const label = item === 'playback' ? 'Playback' : 'Details';
+        return (
+          <Pressable
+            key={item}
+            onPress={() => onChange(item)}
+            accessibilityRole="tab"
+            accessibilityLabel={label}
+            accessibilityState={{ selected }}
+            aria-selected={selected}
+            style={[styles.sheetTab, selected && styles.sheetTabActive]}
+          >
+            <Text style={[styles.sheetTabLabel, selected && styles.sheetTabLabelActive]}>{label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export function PlayerScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const { width, height, isDesktop } = useResponsive();
   const [sheet, setSheet] = useState<Sheet>(null);
   const [sheetTab, setSheetTab] = useState<'queue' | 'lyrics'>('queue');
+  const [moreTab, setMoreTab] = useState<MoreTab>('playback');
   const [sanctuary, setSanctuary] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const artworkEntrance = useRef(new Animated.Value(0)).current;
@@ -115,6 +142,8 @@ export function PlayerScreen() {
   const volume = usePlayerStore((state) => state.volume);
   const muted = usePlayerStore((state) => state.muted);
   const sleepAt = usePlayerStore((state) => state.sleepAt);
+  const crossfadeEnabled = usePlayerStore((state) => state.crossfadeEnabled);
+  const autoplayContinuation = usePlayerStore((state) => state.autoplayContinuation);
   const toggle = usePlayerStore((state) => state.toggle);
   const seek = usePlayerStore((state) => state.seek);
   const playNext = usePlayerStore((state) => state.playNext);
@@ -125,6 +154,8 @@ export function PlayerScreen() {
   const cycleSleepTimer = usePlayerStore((state) => state.cycleSleepTimer);
   const setVolume = usePlayerStore((state) => state.setVolume);
   const toggleMute = usePlayerStore((state) => state.toggleMute);
+  const setCrossfadeEnabled = usePlayerStore((state) => state.setCrossfadeEnabled);
+  const setAutoplayContinuation = usePlayerStore((state) => state.setAutoplayContinuation);
 
   const favoriteIds = useFavoritesStore((state) => state.ids);
   const toggleFavorite = useFavoritesStore((state) => state.toggle);
@@ -210,6 +241,11 @@ export function PlayerScreen() {
   const openPanel = (panel: 'queue' | 'lyrics') => {
     setSheetTab(panel);
     setSheet(panel);
+  };
+
+  const openMore = () => {
+    setMoreTab('playback');
+    setSheet('options');
   };
 
   const artwork = (
@@ -362,7 +398,7 @@ export function PlayerScreen() {
           <Ionicons name="moon" size={17} color={accent} />
           <Text style={[styles.secondaryLabel, { color: accent }]}>Sanctuary</Text>
         </Pressable>
-        <Pressable onPress={() => setSheet('options')} accessibilityRole="button" accessibilityLabel="Playback options" style={styles.secondaryAction}>
+        <Pressable onPress={openMore} accessibilityRole="button" accessibilityLabel="More player options" style={styles.secondaryAction}>
           <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
           <Text style={styles.secondaryLabel}>More</Text>
         </Pressable>
@@ -410,7 +446,7 @@ export function PlayerScreen() {
           <View style={[styles.stateDot, { backgroundColor: crossfading ? colors.violet : accent }]} />
           <Text style={styles.playingStateLabel}>{crossfading ? 'AUTOMIX' : isBuffering ? 'BUFFERING' : 'NOW PLAYING'}</Text>
         </View>
-        <Pressable onPress={() => setSheet('options')} accessibilityRole="button" accessibilityLabel="Playback options" style={styles.topButton}>
+        <Pressable onPress={openMore} accessibilityRole="button" accessibilityLabel="More player options" style={styles.topButton}>
           <Ionicons name="ellipsis-horizontal" size={22} color={colors.textPrimary} />
         </Pressable>
       </View>
@@ -435,31 +471,61 @@ export function PlayerScreen() {
       <CompactGlassSheet
         visible={sheet === 'options'}
         onClose={() => setSheet(null)}
-        accessibilityLabel="Playback options"
-        header={<Text style={styles.sheetTitle}>Playback</Text>}
+        accessibilityLabel={moreTab === 'playback' ? 'Playback options' : 'Track details'}
+        header={<MoreTabs active={moreTab} onChange={setMoreTab} />}
         maxWidth={500}
         maxHeightRatio={0.82}
         scrollable
         contentContainerStyle={styles.optionsContent}
       >
-        <Pressable onPress={cycleRate} style={styles.optionRow} accessibilityRole="button" accessibilityLabel={`Playback speed ${rate} times`}>
-          <View style={styles.optionIcon}><Ionicons name="speedometer-outline" size={19} color={colors.textSecondary} /></View>
-          <View style={styles.optionText}><Text style={styles.optionTitle}>Playback speed</Text><Text style={styles.optionSubtitle}>Useful for long mixes and spoken audio</Text></View>
-          <Text style={styles.optionValue}>{rate}×</Text>
-        </Pressable>
-        <Pressable onPress={cycleSleepTimer} style={styles.optionRow} accessibilityRole="button" accessibilityLabel="Cycle sleep timer">
-          <View style={styles.optionIcon}><Ionicons name="moon-outline" size={19} color={colors.textSecondary} /></View>
-          <View style={styles.optionText}><Text style={styles.optionTitle}>Sleep timer</Text><Text style={styles.optionSubtitle}>Pause automatically</Text></View>
-          <Text style={styles.optionValue}>{sleepMinutes ? `${sleepMinutes} min` : 'Off'}</Text>
-        </Pressable>
-        <Pressable onPress={() => togglePin(currentMedia.id)} style={styles.optionRow} accessibilityRole="button" accessibilityState={{ selected: isPinned }}>
-          <View style={styles.optionIcon}><Ionicons name={isPinned ? 'bookmark' : 'bookmark-outline'} size={19} color={isPinned ? colors.gold : colors.textSecondary} /></View>
-          <View style={styles.optionText}><Text style={styles.optionTitle}>{isPinned ? 'Pinned to Today' : 'Pin to Today'}</Text><Text style={styles.optionSubtitle}>Keep this track close</Text></View>
-        </Pressable>
-        <Pressable onPress={() => toggleFavorite(currentMedia.id)} style={styles.optionRow} accessibilityRole="button" accessibilityState={{ selected: isFavorite }}>
-          <View style={styles.optionIcon}><Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={19} color={isFavorite ? colors.coral : colors.textSecondary} /></View>
-          <View style={styles.optionText}><Text style={styles.optionTitle}>{isFavorite ? 'Remove favorite' : 'Add to favorites'}</Text><Text style={styles.optionSubtitle}>Update your collection</Text></View>
-        </Pressable>
+        {moreTab === 'playback' ? (
+          <>
+            <Pressable onPress={cycleRate} style={styles.optionRow} accessibilityRole="button" accessibilityLabel={`Playback speed ${rate} times`}>
+              <View style={styles.optionIcon}><Ionicons name="speedometer-outline" size={19} color={colors.textSecondary} /></View>
+              <View style={styles.optionText}><Text style={styles.optionTitle}>Playback speed</Text><Text style={styles.optionSubtitle}>Useful for long mixes and spoken audio</Text></View>
+              <Text style={styles.optionValue}>{rate}×</Text>
+            </Pressable>
+            <Pressable onPress={cycleSleepTimer} style={styles.optionRow} accessibilityRole="button" accessibilityLabel="Cycle sleep timer">
+              <View style={styles.optionIcon}><Ionicons name="moon-outline" size={19} color={colors.textSecondary} /></View>
+              <View style={styles.optionText}><Text style={styles.optionTitle}>Sleep timer</Text><Text style={styles.optionSubtitle}>Pause automatically</Text></View>
+              <Text style={styles.optionValue}>{sleepMinutes ? `${sleepMinutes} min` : 'Off'}</Text>
+            </Pressable>
+            <View style={styles.optionRow}>
+              <View style={styles.optionIcon}><Ionicons name="git-merge-outline" size={19} color={colors.textSecondary} /></View>
+              <View style={styles.optionText}><Text style={styles.optionTitle}>Smooth transitions</Text><Text style={styles.optionSubtitle}>Blend one track into the next</Text></View>
+              <Switch
+                accessibilityLabel="Smooth transitions"
+                accessibilityHint="Blend the end of one track into the start of the next instead of a hard cut."
+                value={crossfadeEnabled}
+                onValueChange={setCrossfadeEnabled}
+                trackColor={{ false: colors.surfaceBorderStrong, true: colors.cyan }}
+                thumbColor={crossfadeEnabled ? colors.textInverse : colors.textSecondary}
+              />
+            </View>
+            <View style={styles.optionRow}>
+              <View style={styles.optionIcon}><Ionicons name="infinite-outline" size={19} color={colors.textSecondary} /></View>
+              <View style={styles.optionText}><Text style={styles.optionTitle}>Keep the music going</Text><Text style={styles.optionSubtitle}>Continue from your library when the queue ends</Text></View>
+              <Switch
+                accessibilityLabel="Keep the music going"
+                accessibilityHint="When your queue runs out, keep playing from your library instead of stopping."
+                value={autoplayContinuation}
+                onValueChange={setAutoplayContinuation}
+                trackColor={{ false: colors.surfaceBorderStrong, true: colors.cyan }}
+                thumbColor={autoplayContinuation ? colors.textInverse : colors.textSecondary}
+              />
+            </View>
+            <Pressable onPress={() => togglePin(currentMedia.id)} style={styles.optionRow} accessibilityRole="button" accessibilityState={{ selected: isPinned }}>
+              <View style={styles.optionIcon}><Ionicons name={isPinned ? 'bookmark' : 'bookmark-outline'} size={19} color={isPinned ? colors.gold : colors.textSecondary} /></View>
+              <View style={styles.optionText}><Text style={styles.optionTitle}>{isPinned ? 'Pinned to Today' : 'Pin to Today'}</Text><Text style={styles.optionSubtitle}>Keep this track close</Text></View>
+            </Pressable>
+            <Pressable onPress={() => toggleFavorite(currentMedia.id)} style={styles.optionRow} accessibilityRole="button" accessibilityState={{ selected: isFavorite }}>
+              <View style={styles.optionIcon}><Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={19} color={isFavorite ? colors.coral : colors.textSecondary} /></View>
+              <View style={styles.optionText}><Text style={styles.optionTitle}>{isFavorite ? 'Remove favorite' : 'Add to favorites'}</Text><Text style={styles.optionSubtitle}>Update your collection</Text></View>
+            </Pressable>
+          </>
+        ) : (
+          <TrackDetails media={currentMedia} />
+        )}
       </CompactGlassSheet>
 
       <CompactGlassSheet
@@ -533,7 +599,6 @@ const styles = StyleSheet.create({
   sheetTabLabelActive: { color: colors.textPrimary, fontFamily: 'Sora_600SemiBold' },
   queueSheetBody: { flexShrink: 1, maxHeight: 520 },
   optionsContent: { paddingBottom: spacing.sm },
-  sheetTitle: { ...typography.title, color: colors.textPrimary },
   optionRow: { minHeight: 70, flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.surfaceBorder },
   optionIcon: { width: 40, height: 40, borderRadius: radii.md, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
   optionText: { flex: 1 },

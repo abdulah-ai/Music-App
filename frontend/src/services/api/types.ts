@@ -24,6 +24,9 @@ export type Media = {
   fade_in_ms: number | null;
   fade_out_ms: number | null;
   duration_seconds: number | null;
+  file_size_bytes: number | null;
+  original_filename: string | null;
+  mime_type: string | null;
   created_at: string;
 };
 

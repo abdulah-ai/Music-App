@@ -496,6 +496,11 @@ the current four (Playback speed, Sleep timer, Pin to Today, Add to
 favorites) — specifics not yet defined. **Needs a follow-up conversation**
 before this can be scoped; don't guess at what to add.
 
+**Status: fixed in codex/ui-audit-open-items** — the compact More panel now
+surfaces the two existing persisted playback settings (smooth transitions
+and smart continuation) without inventing unsupported controls, alongside a
+dedicated Details tab.
+
 ---
 
 ## Broader suggestions (not from a specific screenshot — flagging from general review)
@@ -750,6 +755,11 @@ etc.) rather than a truncated caption line. **This connects directly to
 Issue 12** — the user already asked for "more" content in the Player
 screen's "More" panel; a track details section is a natural fit for that
 same panel once it's rebuilt as a compact glass sheet.
+
+**Status: fixed in codex/ui-audit-open-items** — the Player's compact More
+sheet now has a reusable Details view for artwork, cleaned identity, album,
+genre, release year, remix state, duration, source, import date, and available
+file facts; missing optional metadata is omitted instead of shown as blanks.
 
 ---
 

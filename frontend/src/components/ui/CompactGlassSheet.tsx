@@ -164,8 +164,6 @@ export function CompactGlassSheet({
           >
             <View
               testID={testID}
-              accessible
-              accessibilityRole="summary"
               accessibilityLabel={accessibilityLabel}
               style={styles.content}
             >

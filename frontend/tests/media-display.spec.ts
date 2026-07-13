@@ -22,6 +22,9 @@ function media(overrides: Partial<Media>): Media {
     fade_in_ms: null,
     fade_out_ms: null,
     duration_seconds: 240,
+    file_size_bytes: null,
+    original_filename: null,
+    mime_type: null,
     created_at: '2026-07-13T00:00:00Z',
     ...overrides,
   };
