@@ -712,6 +712,9 @@ to cover video-type media too (video recognition would need its own audio
 extraction path if `shazam_service` currently assumes an audio file — worth
 checking before assuming this is a one-line change).
 
+**Status: fixed in codex/ui-audit-completion** (confirmed gaps only; category
+sorting remains unscoped and was not guessed.)
+
 ---
 
 ## Issue 22 — Rich track details display — data already exists, needs a real UI for it

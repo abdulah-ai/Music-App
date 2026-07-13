@@ -34,6 +34,9 @@ from app.workers.broadcaster import broadcaster
 
 _cancelled_job_ids: set[str] = set()
 _download_semaphore = asyncio.Semaphore(max(1, settings.max_concurrent_downloads))
+# A batch can contain any number of files, but this best-effort auto-naming
+# path should never create concurrent Shazam requests across import jobs.
+_auto_name_semaphore = asyncio.Semaphore(1)
 
 # One long unbroken token mixing cases and/or digits — the shape of base64
 # blobs, hex hashes, and numeric IDs that Telegram/yt-dlp sometimes hand back
@@ -193,39 +196,38 @@ async def backfill_track_fades() -> None:
     await analyze_track_fades(media_ids)
 
 
-AUTO_NAME_CAP = 10  # per import batch — shazam lookups are rate-limited
-
-
 async def auto_name_media(user_id: str, media_ids: list[str]) -> None:
-    """Run recognition over freshly imported audio whose titles are garbage
-    (base64 blobs, numeric IDs) so new tracks name themselves instead of the
-    user finding a wall of gibberish. Sequential on purpose. Creates real Job
-    rows so the runs show up in the Activity feed like any other job.
+    """Run recognition over freshly imported media whose titles are garbage
+    (base64 blobs, numeric IDs) so new files name themselves instead of the
+    user finding a wall of gibberish. Every eligible item is processed; the
+    shared semaphore keeps Shazam work sequential even across import batches.
+    Creates real Job rows so the runs show up in the Activity feed.
+
+    Video is supported by shazam_service's existing ffmpeg fallback, which
+    extracts a normalized audio-only MP3 sample with ``-vn``.
+
     Skips S3-backed media (checked per-row, not via the deployment default —
     storage_preference can mix backends) since recognition reads straight
     off local disk."""
-    named = 0
-    for media_id in media_ids:
-        if named >= AUTO_NAME_CAP:
-            break
-        async with SessionLocal() as session:
-            media = await session.get(Media, media_id)
-            if (
-                media is None
-                or media.storage_backend == "s3"
-                or media.media_type != MediaType.AUDIO
-                or media.recognized_title is not None
-                or not looks_like_garbage_title(media.title)
-            ):
-                continue
-            job = Job(user_id=user_id, job_type=JobType.RECOGNIZE, source_url=media.title)
-            session.add(job)
-            await session.commit()
-            await session.refresh(job)
-            job_id = job.id
-            file_path = Path(media.file_path)
-        await run_recognition_job(job_id, user_id, file_path, media_id, cleanup=False)
-        named += 1
+    async with _auto_name_semaphore:
+        for media_id in media_ids:
+            async with SessionLocal() as session:
+                media = await session.get(Media, media_id)
+                if (
+                    media is None
+                    or media.storage_backend == "s3"
+                    or media.media_type not in {MediaType.AUDIO, MediaType.VIDEO}
+                    or media.recognized_title is not None
+                    or not looks_like_garbage_title(media.title)
+                ):
+                    continue
+                job = Job(user_id=user_id, job_type=JobType.RECOGNIZE, source_url=media.title)
+                session.add(job)
+                await session.commit()
+                await session.refresh(job)
+                job_id = job.id
+                file_path = Path(media.file_path)
+            await run_recognition_job(job_id, user_id, file_path, media_id, cleanup=False)
 
 
 async def _resolve_user_backend(user_id: str) -> str:
@@ -378,10 +380,10 @@ async def _run_download_job(
         if media_type == "video":
             await ensure_video_thumbnail(media_id)
         else:
-            # Fire-and-forget: naming/fade analysis shouldn't hold the job's
-            # COMPLETE status hostage to a slow shazam lookup or ffmpeg probe.
-            asyncio.create_task(auto_name_media(user_id, [media_id]))
             asyncio.create_task(analyze_track_fades([media_id]))
+        # Fire-and-forget: naming shouldn't hold the download job's COMPLETE
+        # status hostage to a slow Shazam lookup or ffmpeg probe.
+        asyncio.create_task(auto_name_media(user_id, [media_id]))
     except DownloadCancelled:
         await _touch_job(job_id, status=JobStatus.CANCELLED, stage_label="cancelled")
     except Exception as exc:  # noqa: BLE001 - cleaned before it reaches job.error_message
@@ -589,10 +591,11 @@ async def run_telegram_import_job(
             for media_id in created_media_ids:
                 await ensure_video_thumbnail(media_id)
         else:
-            # Telegram music is the main source of gibberish names (filename
-            # stems). Fire-and-forget so a slow batch doesn't block anything.
-            asyncio.create_task(auto_name_media(user_id, created_media_ids))
             asyncio.create_task(analyze_track_fades(created_media_ids))
+        # Telegram files are a common source of gibberish filename stems.
+        # Name every eligible audio or video file in the serialized background
+        # queue without holding the import job's COMPLETE status open.
+        asyncio.create_task(auto_name_media(user_id, created_media_ids))
     except Exception as exc:  # noqa: BLE001 - cleaned before it reaches job.error_message
         await _touch_job(job_id, status=JobStatus.FAILED, stage_label="failed", error_message=clean_job_error(exc))
     finally:
