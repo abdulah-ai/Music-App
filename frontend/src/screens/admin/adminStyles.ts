@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 import { colors, radii, spacing, typography } from '../../theme/tokens';
 
 export const adminStyles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1, backgroundColor: 'transparent' },
   scroll: { paddingBottom: spacing.xxl },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, marginBottom: spacing.xl },
   screenHeading: { flex: 1 },

@@ -896,7 +896,7 @@ export function LibraryScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1, backgroundColor: 'transparent' },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   headerText: { flex: 1, paddingRight: spacing.md },
   eyebrow: { ...typography.eyebrow, color: colors.cyan, marginBottom: spacing.xs },

@@ -216,7 +216,9 @@ export function MainTabs() {
       screenOptions={{
         headerShown: false,
         animation: 'fade',
-        sceneStyle: isDesktop ? { paddingLeft: RAIL_WIDTH } : undefined,
+        sceneStyle: isDesktop
+          ? { paddingLeft: RAIL_WIDTH, backgroundColor: 'transparent' }
+          : { backgroundColor: 'transparent' },
       }}
     >
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Today' }} />

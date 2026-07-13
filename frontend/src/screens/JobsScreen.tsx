@@ -332,7 +332,7 @@ export function JobsScreen({ embedded = false }: { embedded?: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#050A0B' },
+  root: { flex: 1, backgroundColor: 'transparent' },
   scroll: { paddingBottom: spacing.xxl },
   scrollEmpty: { flexGrow: 1 },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, marginBottom: spacing.lg },

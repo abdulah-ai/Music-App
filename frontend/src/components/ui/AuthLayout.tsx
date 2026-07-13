@@ -118,7 +118,7 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: Props) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1, backgroundColor: 'transparent' },
 
   // ----- Mobile -----
   mobileScroll: {

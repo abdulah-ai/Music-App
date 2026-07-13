@@ -87,6 +87,7 @@ test('the 390px mobile shell navigates across every primary destination without 
 
   expect(page.viewportSize()).toEqual({ width: 390, height: 844 });
 
+  await expect(page.getByTestId('forest-backdrop-app')).toBeVisible();
   await expect(page.getByText('Bring a track home.', { exact: true })).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Media link' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Today' })).toHaveAttribute('aria-selected', 'true');

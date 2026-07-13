@@ -1,5 +1,6 @@
 import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { StyleSheet, View } from 'react-native';
 
 import { AdminScreen } from '../screens/admin/AdminScreen';
 import { JobsScreen } from '../screens/JobsScreen';
@@ -15,6 +16,7 @@ import { DesktopSecondaryRail } from '../components/ui/DesktopSecondaryRail';
 import { Sidebar } from '../components/ui/Sidebar';
 import { UpdateBanner } from '../components/ui/UpdateBanner';
 import { GlobalVideoStage } from '../components/video/GlobalVideoStage';
+import { ForestBackdrop } from '../components/ui/ForestBackdrop';
 import { RAIL_WIDTH, useResponsive } from '../hooks/useResponsive';
 import { useAuthStore } from '../store/authStore';
 import { colors } from '../theme/tokens';
@@ -29,8 +31,8 @@ const navTheme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    background: colors.bg,
-    card: colors.bg,
+    background: 'transparent',
+    card: 'transparent',
     border: colors.surfaceBorder,
     primary: colors.cyan,
     text: colors.textPrimary,
@@ -52,33 +54,43 @@ export function RootNavigator() {
 
   // On desktop the secondary routes render beside the persistent rail, so
   // their content is inset by the rail width. Phones keep the full width.
-  const railInset = isDesktop ? { contentStyle: { paddingLeft: RAIL_WIDTH } } : undefined;
+  const railInset = isDesktop
+    ? { contentStyle: { paddingLeft: RAIL_WIDTH, backgroundColor: 'transparent' } }
+    : undefined;
 
   return (
-    <NavigationContainer ref={navigationRef} theme={navTheme}>
-      {isAuthenticated ? (
-        <>
-          <RootStack.Navigator screenOptions={{ headerShown: false }}>
-            <RootStack.Screen name="Main" component={MainTabs} />
-            <RootStack.Screen name="Player" component={PlayerScreen} options={{ presentation: 'fullScreenModal' }} />
-            <RootStack.Screen name="Telegram" component={TelegramScreen} options={railInset} />
-            <RootStack.Screen name="Jobs" component={JobsScreen} options={railInset} />
-            <RootStack.Screen name="Settings" component={SettingsScreen} options={railInset} />
-            <RootStack.Screen name="Replay" component={ReplayScreen} options={railInset} />
-            <RootStack.Screen name="Admin" component={AdminScreen} options={railInset} />
-          </RootStack.Navigator>
-          <DesktopSecondaryRail />
-          <Sidebar />
-          <AccountPopover />
-          <GlobalVideoStage />
-          <AnnouncementBanner />
-        </>
-      ) : (
-        <AuthNavigator />
-      )}
-      {/* Available before login too — a stale bundle affects the auth
-          screens just as much as the rest of the app. */}
-      <UpdateBanner />
-    </NavigationContainer>
+    <View style={styles.root}>
+      <ForestBackdrop />
+      <NavigationContainer ref={navigationRef} theme={navTheme}>
+        {isAuthenticated ? (
+          <>
+            <RootStack.Navigator screenOptions={{ headerShown: false, contentStyle: styles.transparent }}>
+              <RootStack.Screen name="Main" component={MainTabs} />
+              <RootStack.Screen name="Player" component={PlayerScreen} options={{ presentation: 'fullScreenModal' }} />
+              <RootStack.Screen name="Telegram" component={TelegramScreen} options={railInset} />
+              <RootStack.Screen name="Jobs" component={JobsScreen} options={railInset} />
+              <RootStack.Screen name="Settings" component={SettingsScreen} options={railInset} />
+              <RootStack.Screen name="Replay" component={ReplayScreen} options={railInset} />
+              <RootStack.Screen name="Admin" component={AdminScreen} options={railInset} />
+            </RootStack.Navigator>
+            <DesktopSecondaryRail />
+            <Sidebar />
+            <AccountPopover />
+            <GlobalVideoStage />
+            <AnnouncementBanner />
+          </>
+        ) : (
+          <AuthNavigator />
+        )}
+        {/* Available before login too — a stale bundle affects the auth
+            screens just as much as the rest of the app. */}
+        <UpdateBanner />
+      </NavigationContainer>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.bg },
+  transparent: { backgroundColor: 'transparent' },
+});

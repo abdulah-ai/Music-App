@@ -154,7 +154,7 @@ export function ReplayScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1, backgroundColor: 'transparent' },
   scroll: { flexGrow: 1, paddingBottom: spacing.xxl },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, marginBottom: spacing.xl },
   heroHeader: { flex: 1 },

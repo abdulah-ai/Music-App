@@ -437,7 +437,7 @@ export function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1, backgroundColor: 'transparent' },
   scroll: { paddingBottom: spacing.xxl },
   headerRow: {
     flexDirection: 'row',

@@ -500,7 +500,7 @@ export function TelegramScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1, backgroundColor: 'transparent' },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, marginBottom: spacing.xl },
   headerText: { flex: 1 },
   scroll: { gap: spacing.md, paddingBottom: spacing.xxl },

@@ -4,7 +4,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useResponsive } from '../../hooks/useResponsive';
-import { colors, spacing } from '../../theme/tokens';
+import { spacing } from '../../theme/tokens';
 import { RippleField } from './RippleField';
 
 type Props = PropsWithChildren<{
@@ -40,7 +40,7 @@ export function ScreenContainer({ children, maxWidth = 1100 }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: 'transparent',
   },
   content: {
     flex: 1,

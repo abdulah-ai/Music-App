@@ -445,6 +445,12 @@ alive.
 
 **Status: fixed in codex/ui-audit-open-items**
 
+**Enhancement: upgraded in codex/forest-and-remaining-audit** — the geometric
+aurora and polygon ridge were replaced by responsive, locally bundled
+photorealistic night-forest assets. The same restrained forest environment now
+continues behind the app shell and primary screens without weakening the glass
+surface hierarchy or offline behavior.
+
 ---
 
 ## Issue 10 — Lyrics don't work — confirmed root cause, tied to the title-cleaning issue

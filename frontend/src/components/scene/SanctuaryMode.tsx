@@ -12,14 +12,13 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { usePlayerStore } from '../../store/playerStore';
 import { colors, motion, radii, spacing, typography } from '../../theme/tokens';
 import { displayArtist, displayTitle } from '../../utils/mediaDisplay';
 import { Artwork } from '../ui/Artwork';
+import { ForestBackdrop } from '../ui/ForestBackdrop';
 import { QueueList } from '../player/QueueList';
 
 type Props = {
@@ -113,11 +112,9 @@ function VisualizerBar({ index, playing, accent }: { index: number; playing: boo
 /**
  * Sanctuary Mode — the immersive night-garden playback scene.
  *
- * The whole screen becomes the hollow: a drifting aurora, a twinkling
- * starfield, pine ridges at the horizon, and a soft ambient visualizer under
- * minimal controls. Controls fade away after a few seconds; tapping anywhere
- * brings them back. Everything animates through native-driver transforms and
- * opacity so an hour in here costs no more than the regular player.
+ * The whole screen becomes the hollow: a real moonlit forest, a restrained
+ * twinkling star layer, and a soft ambient visualizer under minimal controls.
+ * Controls fade away after a few seconds; tapping anywhere brings them back.
  */
 export function SanctuaryMode({ visible, onClose, accent = colors.cyan }: Props) {
   const { width, height } = useWindowDimensions();
@@ -126,7 +123,6 @@ export function SanctuaryMode({ visible, onClose, accent = colors.cyan }: Props)
   const [queueOpen, setQueueOpen] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const controlsOpacity = useRef(new Animated.Value(1)).current;
-  const auroraDrift = useRef(new Animated.Value(0)).current;
   const starTwinkle = useRef(new Animated.Value(0.5)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -149,23 +145,6 @@ export function SanctuaryMode({ visible, onClose, accent = colors.cyan }: Props)
       subscription.remove();
     };
   }, []);
-
-  // The aurora slowly sways side to side, always.
-  useEffect(() => {
-    auroraDrift.stopAnimation();
-    if (!visible || reduceMotion) {
-      auroraDrift.setValue(0.5);
-      return;
-    }
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(auroraDrift, { toValue: 1, duration: 16000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(auroraDrift, { toValue: 0, duration: 16000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [auroraDrift, reduceMotion, visible]);
 
   // One shared phase gives the denser sky three offset twinkle patterns
   // without running a separate animation loop for every star.
@@ -219,72 +198,12 @@ export function SanctuaryMode({ visible, onClose, accent = colors.cyan }: Props)
         onPress={() => setControlsVisible((value) => !value)}
         accessibilityLabel={controlsVisible ? 'Hide controls' : 'Show controls'}
       >
-        {/* Sky */}
-        <LinearGradient
-          colors={['#03080A', '#071310', '#0B1A14']}
-          style={StyleSheet.absoluteFill}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-        />
-
-        {/* Aurora bands drifting behind everything. */}
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.aurora,
-            {
-              width: width * 1.6,
-              height: height * 0.55,
-              transform: [
-                { translateX: auroraDrift.interpolate({ inputRange: [0, 1], outputRange: [-width * 0.25, width * 0.05] }) },
-                { rotate: '-9deg' },
-              ],
-            },
-          ]}
-        >
-          <LinearGradient
-            colors={['rgba(99,214,181,0)', 'rgba(99,214,181,0.15)', 'rgba(169,155,219,0.12)', 'rgba(99,214,181,0)']}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={StyleSheet.absoluteFill}
-          />
-        </Animated.View>
-
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.aurora,
-            styles.auroraSecondary,
-            {
-              width: width * 1.45,
-              height: height * 0.42,
-              transform: [
-                { translateX: auroraDrift.interpolate({ inputRange: [0, 1], outputRange: [width * 0.08, -width * 0.2] }) },
-                { rotate: '12deg' },
-              ],
-            },
-          ]}
-        >
-          <LinearGradient
-            colors={['rgba(169,155,219,0)', 'rgba(169,155,219,0.11)', 'rgba(99,214,181,0.09)', 'rgba(169,155,219,0)']}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={StyleSheet.absoluteFill}
-          />
-        </Animated.View>
+        <ForestBackdrop variant="sanctuary" />
 
         {/* Starfield */}
         {stars.map((index) => (
           <Star key={index} index={index} width={width} height={height} twinkle={starTwinkle} />
         ))}
-
-        {/* Pine ridge horizon */}
-        <View pointerEvents="none" style={styles.ridge}>
-          <Svg width="100%" height="100%" viewBox="0 0 100 24" preserveAspectRatio="none">
-            <Path d="M0,20 L8,10 L15,17 L24,7 L32,15 L42,5 L52,15 L60,8 L70,16 L80,6 L90,14 L100,9 L100,24 L0,24 Z" fill="#050D0A" opacity={0.9} />
-            <Path d="M0,24 L10,16 L22,21 L34,14 L48,21 L62,15 L76,21 L88,16 L100,20 L100,24 Z" fill="#030906" />
-          </Svg>
-        </View>
 
         {/* Content */}
         <View style={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xl }]}>
@@ -393,9 +312,6 @@ export function SanctuaryMode({ visible, onClose, accent = colors.cyan }: Props)
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#03080A' },
-  aurora: { position: 'absolute', top: '6%', left: '-20%', opacity: 0.9 },
-  auroraSecondary: { top: '22%', left: '-10%', opacity: 0.72 },
-  ridge: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '30%' },
   content: { flex: 1, justifyContent: 'space-between', paddingHorizontal: spacing.lg },
   chrome: { minHeight: 44 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

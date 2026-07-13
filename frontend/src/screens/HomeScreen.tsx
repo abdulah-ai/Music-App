@@ -661,7 +661,7 @@ export function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#050A0B' },
+  root: { flex: 1, backgroundColor: 'transparent' },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
   headerCopy: { flex: 1 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
