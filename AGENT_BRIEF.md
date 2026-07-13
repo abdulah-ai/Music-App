@@ -94,6 +94,18 @@ npm run build:android-web
 
 Minimum frontend verification is `npm run typecheck`; production-facing changes should also pass `npm run build:web`. Run Playwright smoke tests for navigation, auth, offline, responsive, or interaction changes. Android hardware behavior (microphone, media session, long playback) still requires a physical-device check.
 
+### APK release fast path
+
+Do not rescan the repository for an APK refresh. The release workflow is `.github/workflows/android-apk.yml`, and the rolling download page is `https://github.com/3boodabbas2026-debug/Music-App/releases/tag/apk-latest`.
+
+1. Check only `git status --short --branch`, `git rev-parse HEAD`, and `git rev-parse origin/main`.
+2. A push to `main` starts the workflow only when `frontend/**` or `.github/workflows/android-apk.yml` changed. Backend-only fixes already reach installed apps through the live API; manually dispatch the workflow only when a newly numbered APK is explicitly requested.
+3. Manual dispatch: open `https://github.com/3boodabbas2026-debug/Music-App/actions/workflows/android-apk.yml`, choose **Run workflow**, keep branch `main`, and confirm **Run workflow**.
+4. Poll the run-specific public API URL instead of repeatedly reopening GitHub: `https://api.github.com/repos/3boodabbas2026-debug/Music-App/actions/runs/<run-id>`.
+5. After a successful run, verify the `apk-latest` release contains both `starhollow.apk` and `version.json`, and that `versionCode` increased. The stable APK URL is `https://github.com/3boodabbas2026-debug/Music-App/releases/download/apk-latest/starhollow.apk`.
+
+The quality gates, signed Android build, and release replacement normally take about four minutes in GitHub Actions. No local Android build is needed for this release path.
+
 ## Configuration and deployment cautions
 
 - Frontend local API: `EXPO_PUBLIC_API_BASE_URL=http://<LAN-IP>:8095`; a physical phone cannot use the development computer's `127.0.0.1`. Android emulator host alias is `10.0.2.2`.
