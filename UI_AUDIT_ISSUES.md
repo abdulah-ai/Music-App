@@ -54,6 +54,8 @@ everywhere content can sit near the tab bar or mini player.
    instead of a full-bleed sheet. Can stay near-full-height on mobile if
    needed, but should read as a floating panel on desktop.
 
+   **Status: fixed in codex/ui-audit-completion**
+
 2. **Reorder up/down arrow buttons look bland, low-affordance, and don't
    show disabled state at list boundaries** (first item's "up", last item's
    "down").
@@ -76,6 +78,8 @@ everywhere content can sit near the tab bar or mini player.
    Suggested fix: short scale+fade or slide-up transition using the existing
    `motion` duration/easing tokens in `theme/theme.ts` rather than new values.
 
+   **Status: fixed in codex/ui-audit-completion**
+
 6. **Too dense** — every widget row repeats icon + title + subtitle + two
    arrow buttons + a toggle for 8 rows.
    Suggested fix: simplify per-row chrome (see #2 — drag handle removes two
@@ -84,6 +88,8 @@ everywhere content can sit near the tab bar or mini player.
 7. **Bottom tab bar bleeds through the modal** — "Listening stats" row is
    half-covered by the tab bar. Same root cause as Issue 1b; should resolve
    once this becomes a proper centered dialog (#1).
+
+   **Status: fixed in codex/ui-audit-completion**
 
 ---
 
@@ -252,6 +258,8 @@ menu" pattern as the dashboard modal (Issue 2.1).
 using the frosted-glass surface language already built this session
 (`GlassPanel`/`glass` tokens in `theme/theme.ts`), anchored near where it was
 triggered — not a heavy opaque full-height sheet.
+
+**Status: fixed in codex/ui-audit-completion**
 
 ---
 
@@ -425,6 +433,8 @@ row of content on top of a large empty void.
 **Suggested fix:** Same as Issue 7 — compact, glass/blur-styled panel sized
 to its content, not a fixed full-height sheet.
 
+**Status: fixed in codex/ui-audit-completion**
+
 ---
 
 ## Issue 12 — "More" (Playback) panel — same full-screen issue, plus a feature request
@@ -433,6 +443,8 @@ to its content, not a fixed full-height sheet.
 
 **Problem:** Same full-screen display complaint as Issue 11 (wants smaller +
 glass/blur treatment).
+
+**Status: fixed in codex/ui-audit-completion**
 
 **Feature request (needs scoping):** User wants more options here beyond
 the current four (Playback speed, Sleep timer, Pin to Today, Add to
@@ -592,6 +604,8 @@ occurrence.
 
 **Suggested fix:** Same as the others — migrate onto the shared compact
 glass-sheet component recommended in Broader Suggestions below, once built.
+
+**Status: fixed in codex/ui-audit-completion**
 
 ---
 

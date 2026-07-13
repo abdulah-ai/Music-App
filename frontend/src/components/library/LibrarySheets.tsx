@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Artwork } from '../ui/Artwork';
+import { CompactGlassSheet } from '../ui/CompactGlassSheet';
 import { EmptyState } from '../ui/EmptyState';
 import { PressableScale } from '../ui/PressableScale';
 import { useResponsive } from '../../hooks/useResponsive';
@@ -130,8 +131,6 @@ export function PlaylistPickerModal({
   onClose: () => void;
   onDone: () => void;
 }) {
-  const insets = useSafeAreaInsets();
-  const { isDesktop } = useResponsive();
   const playlists = usePlaylistStore((state) => state.playlists);
   const addItem = usePlaylistStore((state) => state.addItem);
   const createPlaylist = usePlaylistStore((state) => state.create);
@@ -184,56 +183,61 @@ export function PlaylistPickerModal({
   }
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <View style={[styles.modalRoot, isDesktop && styles.modalRootDesktop]}>
-        <Pressable style={styles.modalBackdrop} onPress={onClose} />
-        <View style={[styles.sheet, isDesktop && styles.sheetDesktop, { paddingBottom: insets.bottom + spacing.lg }]}>
-          {!isDesktop && <View style={styles.sheetHandle} />}
+    <CompactGlassSheet
+      visible
+      onClose={onClose}
+      accessibilityLabel={`Add ${label} to a playlist`}
+      closeAccessibilityLabel="Close playlist picker"
+      maxWidth={460}
+      maxHeightRatio={0.72}
+      scrollable
+      header={
+        <View>
           <Text style={styles.editTitle}>Add to playlist</Text>
           <Text numberOfLines={1} style={styles.sheetSub}>{label}</Text>
-
-          <View style={[styles.createRow, { marginTop: spacing.md }]}>
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="New playlist name"
-              placeholderTextColor={colors.textMuted}
-              selectionColor={colors.cyan}
-              style={styles.createInput}
-              onSubmitEditing={createAndPick}
-            />
-            <PressableScale onPress={createAndPick} disabled={busy || !name.trim()} scaleTo={0.9}>
-              <LinearGradient
-                colors={colors.gradientPrimary}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.createButton}
-              >
-                <Ionicons name="add" size={20} color="#0B1411" />
-              </LinearGradient>
-            </PressableScale>
-          </View>
-
-          {playlists.map((playlist) => (
-            <Pressable
-              key={playlist.id}
-              onPress={() => pick(playlist)}
-              disabled={busy}
-              style={({ pressed }) => [styles.sheetRow, pressed && styles.sheetRowPressed]}
-            >
-              <Ionicons name="list" size={19} color={colors.textSecondary} />
-              <Text style={styles.sheetRowLabel}>{playlist.name}</Text>
-              <Text style={styles.sheetSub}>{playlist.items.length}</Text>
-            </Pressable>
-          ))}
-          {playlists.length === 0 && (
-            <Text style={[styles.sheetSub, { textAlign: 'center', paddingVertical: spacing.md }]}>
-              No playlists yet — create one above.
-            </Text>
-          )}
         </View>
+      }
+    >
+      <View style={[styles.createRow, { marginBottom: spacing.md }]}>
+        <TextInput
+          value={name}
+          onChangeText={setName}
+          placeholder="New playlist name"
+          placeholderTextColor={colors.textMuted}
+          selectionColor={colors.cyan}
+          style={styles.createInput}
+          onSubmitEditing={createAndPick}
+        />
+        <PressableScale onPress={createAndPick} disabled={busy || !name.trim()} scaleTo={0.9}>
+          <LinearGradient
+            colors={colors.gradientPrimary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.createButton}
+          >
+            <Ionicons name="add" size={20} color="#0B1411" />
+          </LinearGradient>
+        </PressableScale>
       </View>
-    </Modal>
+
+      {playlists.map((playlist) => (
+        <Pressable
+          key={playlist.id}
+          onPress={() => pick(playlist)}
+          disabled={busy}
+          style={({ pressed }) => [styles.sheetRow, pressed && styles.sheetRowPressed]}
+        >
+          <Ionicons name="list" size={19} color={colors.textSecondary} />
+          <Text style={styles.sheetRowLabel}>{playlist.name}</Text>
+          <Text style={styles.sheetSub}>{playlist.items.length}</Text>
+        </Pressable>
+      ))}
+      {playlists.length === 0 && (
+        <Text style={[styles.sheetSub, { textAlign: 'center', paddingVertical: spacing.md }]}>
+          No playlists yet — create one above.
+        </Text>
+      )}
+    </CompactGlassSheet>
   );
 }
 

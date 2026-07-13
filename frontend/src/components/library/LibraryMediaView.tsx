@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react';
-import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -20,7 +20,7 @@ type MediaItemProps = {
   selectMode?: boolean;
   selected?: boolean;
   onPress: () => void;
-  onLongPress: () => void;
+  onLongPress: (event: GestureResponderEvent) => void;
 };
 
 export function formatDuration(seconds: number | null): string {

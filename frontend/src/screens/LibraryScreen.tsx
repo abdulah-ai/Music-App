@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   FlatList,
   Linking,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -11,6 +10,7 @@ import {
   Text,
   TextInput,
   View,
+  type GestureResponderEvent,
   useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -38,6 +38,7 @@ import { RAIL_WIDTH, useResponsive } from '../hooks/useResponsive';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Artwork } from '../components/ui/Artwork';
 import { Reveal } from '../components/ui/Reveal';
+import { CompactGlassSheet, type SheetAnchor } from '../components/ui/CompactGlassSheet';
 import { tokenStorage } from '../services/storage/tokenStorage';
 import { PressableScale } from '../components/ui/PressableScale';
 import { ScreenContainer } from '../components/ui/ScreenContainer';
@@ -56,7 +57,7 @@ import { usePlaylistStore } from '../store/playlistStore';
 import { useVideoPlayerStore } from '../store/videoPlayerStore';
 import { toast } from '../store/toastStore';
 import { apiErrorMessage } from '../utils/apiError';
-import { colors, gradients, layout, radii, shadows, spacing, typography } from '../theme/tokens';
+import { colors, gradients, layout, radii, spacing, typography } from '../theme/tokens';
 import type { MainTabParamList, RootStackParamList } from '../navigation/types';
 
 type Tab = 'all' | 'audio' | 'video' | 'favorites' | 'playlists';
@@ -123,6 +124,7 @@ export function LibraryScreen() {
   const [remixFilter, setRemixFilter] = useState<RemixFilter>('all');
   const [view, setView] = useState<ViewMode>('grid');
   const [sheetMedia, setSheetMedia] = useState<Media | null>(null);
+  const [sheetAnchor, setSheetAnchor] = useState<SheetAnchor | null>(null);
   const [editMedia, setEditMedia] = useState<Media | null>(null);
   const [playlistDetailId, setPlaylistDetailId] = useState<string | null>(null);
   const [playlistPickTarget, setPlaylistPickTarget] = useState<{ ids: string[]; label: string } | null>(null);
@@ -205,6 +207,22 @@ export function LibraryScreen() {
     setYearFilter(index >= years.length - 1 ? null : years[index + 1]);
   }
 
+  function openTrackSheet(media: Media, event: GestureResponderEvent) {
+    const { pageX, pageY } = event.nativeEvent;
+    setSheetAnchor(
+      Number.isFinite(pageX) && Number.isFinite(pageY) && (pageX !== 0 || pageY !== 0)
+        ? { x: pageX, y: pageY }
+        : null,
+    );
+    setSheetMedia(media);
+  }
+
+  function closeTrackSheet() {
+    setSheetMedia(null);
+    setSheetAnchor(null);
+    setConfirmDelete(false);
+  }
+
   async function handlePlay(media: Media) {
     if (media.media_type === 'video') {
       useVideoPlayerStore.getState().openExpanded(media.id);
@@ -217,7 +235,7 @@ export function LibraryScreen() {
   }
 
   async function handleSaveFile(media: Media) {
-    setSheetMedia(null);
+    closeTrackSheet();
     const token = await tokenStorage.getAccessToken();
     const url = token
       ? `${libraryApi.streamUrl(media.id)}?token=${encodeURIComponent(token)}`
@@ -258,7 +276,7 @@ export function LibraryScreen() {
       toast(apiErrorMessage(err, "Couldn't save offline. Check your connection and try again."), 'error');
     } finally {
       setSavingOffline(false);
-      setSheetMedia(null);
+      closeTrackSheet();
     }
   }
 
@@ -334,8 +352,7 @@ export function LibraryScreen() {
   }
 
   async function handleDelete(media: Media) {
-    setSheetMedia(null);
-    setConfirmDelete(false);
+    closeTrackSheet();
     try {
       await remove(media.id);
       toast('Removed from your collection', 'success');
@@ -642,7 +659,7 @@ export function LibraryScreen() {
                 selectMode={selectMode}
                 selected={!!selectedIds[item.id]}
                 onPress={() => (selectMode ? toggleSelect(item.id) : handlePlay(item))}
-                onLongPress={() => (selectMode ? toggleSelect(item.id) : setSheetMedia(item))}
+                onLongPress={(event) => (selectMode ? toggleSelect(item.id) : openTrackSheet(item, event))}
               />
             ) : (
               <ListRow
@@ -651,7 +668,7 @@ export function LibraryScreen() {
                 selectMode={selectMode}
                 selected={!!selectedIds[item.id]}
                 onPress={() => (selectMode ? toggleSelect(item.id) : handlePlay(item))}
-                onLongPress={() => (selectMode ? toggleSelect(item.id) : setSheetMedia(item))}
+                onLongPress={(event) => (selectMode ? toggleSelect(item.id) : openTrackSheet(item, event))}
               />
             )
           }
@@ -718,39 +735,46 @@ export function LibraryScreen() {
       <MiniPlayerBar bottomOffset={bulkBarOffset} />
 
       {/* Track actions sheet */}
-      <Modal visible={!!sheetMedia} transparent animationType="fade" onRequestClose={() => setSheetMedia(null)}>
+      <CompactGlassSheet
+        visible={!!sheetMedia}
+        onClose={closeTrackSheet}
+        accessibilityLabel={sheetMedia ? `Actions for ${displayTitle(sheetMedia)}` : 'Track actions'}
+        closeAccessibilityLabel="Close track actions"
+        maxWidth={460}
+        maxHeightRatio={0.82}
+        anchor={sheetAnchor}
+        scrollable
+        header={sheetMedia ? (
+          <View style={styles.sheetHeader}>
+            <Artwork media={sheetMedia} size={52} borderRadius={radii.sm} />
+            <View style={styles.sheetHeaderText}>
+              <Text numberOfLines={1} style={styles.sheetTitle}>{displayTitle(sheetMedia)}</Text>
+              <Text numberOfLines={1} style={styles.sheetSub}>
+                {displayArtist(sheetMedia)} · {sheetMedia.media_type} · {formatDuration(sheetMedia.duration_seconds)}
+              </Text>
+              {metadataLine(sheetMedia) ? (
+                <Text numberOfLines={1} style={[styles.sheetSub, { color: colors.cyan }]}>
+                  {metadataLine(sheetMedia)}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+        ) : null}
+      >
         {sheetMedia && (
-          <View style={[styles.modalRoot, isDesktop && styles.modalRootDesktop]}>
-            <Pressable style={styles.modalBackdrop} onPress={() => setSheetMedia(null)} />
-            <View style={[styles.sheet, isDesktop && styles.sheetDesktop, { paddingBottom: insets.bottom + spacing.lg }]}>
-              {!isDesktop && <View style={styles.sheetHandle} />}
-              <View style={styles.sheetHeader}>
-                <Artwork media={sheetMedia} size={52} borderRadius={radii.sm} />
-                <View style={styles.sheetHeaderText}>
-                  <Text numberOfLines={1} style={styles.sheetTitle}>{displayTitle(sheetMedia)}</Text>
-                  <Text numberOfLines={1} style={styles.sheetSub}>
-                    {displayArtist(sheetMedia)} · {sheetMedia.media_type} · {formatDuration(sheetMedia.duration_seconds)}
-                  </Text>
-                  {metadataLine(sheetMedia) && (
-                    <Text numberOfLines={1} style={[styles.sheetSub, { color: colors.cyan }]}>
-                      {metadataLine(sheetMedia)}
-                    </Text>
-                  )}
-                </View>
-              </View>
-
-              <SheetAction icon="play" label="Play" onPress={() => { setSheetMedia(null); handlePlay(sheetMedia); }} />
-              <SheetAction
+          <>
+            <SheetAction icon="play" label="Play" onPress={() => { closeTrackSheet(); handlePlay(sheetMedia); }} />
+            <SheetAction
                 icon="return-down-forward"
                 label="Play next"
-                onPress={() => { playNextInQueue(sheetMedia); setSheetMedia(null); toast('Playing next', 'success'); }}
-              />
-              <SheetAction
+                onPress={() => { playNextInQueue(sheetMedia); closeTrackSheet(); toast('Playing next', 'success'); }}
+            />
+            <SheetAction
                 icon="add"
                 label="Add to queue"
-                onPress={() => { addToQueue(sheetMedia); setSheetMedia(null); toast('Added to queue', 'success'); }}
-              />
-              <SheetAction
+                onPress={() => { addToQueue(sheetMedia); closeTrackSheet(); toast('Added to queue', 'success'); }}
+            />
+            <SheetAction
                 icon={favoriteIds[sheetMedia.id] ? 'heart' : 'heart-outline'}
                 label={favoriteIds[sheetMedia.id] ? 'Remove from favorites' : 'Add to favorites'}
                 tint={colors.pink}
@@ -771,17 +795,17 @@ export function LibraryScreen() {
               <SheetAction
                 icon="list"
                 label="Add to playlist"
-                onPress={() => { setPlaylistPickTarget({ ids: [sheetMedia.id], label: displayTitle(sheetMedia) }); setSheetMedia(null); }}
+                onPress={() => { setPlaylistPickTarget({ ids: [sheetMedia.id], label: displayTitle(sheetMedia) }); closeTrackSheet(); }}
               />
               <SheetAction
                 icon="person-outline"
                 label={`More by ${displayArtist(sheetMedia)}`}
-                onPress={() => { setQuery(displayArtist(sheetMedia)); setTab('all'); setSheetMedia(null); }}
+                onPress={() => { setQuery(displayArtist(sheetMedia)); setTab('all'); closeTrackSheet(); }}
               />
               <SheetAction
                 icon="pencil"
                 label="Rename / edit details"
-                onPress={() => { setEditMedia(sheetMedia); setSheetMedia(null); }}
+                onPress={() => { setEditMedia(sheetMedia); closeTrackSheet(); }}
               />
               <SheetAction
                 icon="checkmark-circle-outline"
@@ -789,7 +813,7 @@ export function LibraryScreen() {
                 onPress={() => {
                   setSelectMode(true);
                   setSelectedIds({ [sheetMedia.id]: true });
-                  setSheetMedia(null);
+                  closeTrackSheet();
                 }}
               />
               <SheetAction icon="download-outline" label="Save file" onPress={() => handleSaveFile(sheetMedia)} />
@@ -806,11 +830,10 @@ export function LibraryScreen() {
                 label={confirmDelete ? 'Sure? Tap again to delete' : 'Delete'}
                 tint={colors.danger}
                 onPress={() => (confirmDelete ? handleDelete(sheetMedia) : setConfirmDelete(true))}
-              />
-            </View>
-          </View>
+            />
+          </>
         )}
-      </Modal>
+      </CompactGlassSheet>
 
       {editMedia && (
         <EditMediaModal
@@ -924,34 +947,6 @@ const styles = StyleSheet.create({
   },
   bulkButtonDanger: { backgroundColor: 'rgba(240,131,140,0.14)' },
   bulkButtonLabel: { ...typography.caption, fontSize: 13, color: colors.textPrimary },
-  modalRoot: { flex: 1, justifyContent: 'flex-end' },
-  modalRootDesktop: { justifyContent: 'center', alignItems: 'center' },
-  modalBackdrop: { ...StyleSheet.absoluteFill as object, backgroundColor: 'rgba(3,5,3,0.65)' },
-  sheet: {
-    backgroundColor: '#1B1426',
-    borderTopLeftRadius: radii.lg + 8,
-    borderTopRightRadius: radii.lg + 8,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-  },
-  // Desktop: the bottom sheet becomes a centered dialog card.
-  sheetDesktop: {
-    width: '100%',
-    maxWidth: 460,
-    borderRadius: radii.lg + 8,
-    paddingTop: spacing.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(158,181,170,0.16)',
-    ...shadows.card,
-  },
-  sheetHandle: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: radii.pill,
-    backgroundColor: 'rgba(158,181,170,0.3)',
-    marginBottom: spacing.md,
-  },
   sheetHeader: {
     flexDirection: 'row',
     alignItems: 'center',

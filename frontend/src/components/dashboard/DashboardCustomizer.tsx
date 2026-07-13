@@ -1,8 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useEscapeToClose } from '../../hooks/useEscapeToClose';
 import {
   DEFAULT_ORDER,
   WIDGET_META,
@@ -10,6 +8,7 @@ import {
   type WidgetId,
 } from '../../store/dashboardStore';
 import { colors, radii, spacing, typography } from '../../theme/tokens';
+import { CompactGlassSheet } from '../ui/CompactGlassSheet';
 import { IconButton } from '../ui/IconButton';
 import { SegmentedControl } from '../ui/SegmentedControl';
 
@@ -25,8 +24,7 @@ type Props = {
  * visible behind it the moment they're made.
  */
 export function DashboardCustomizer({ visible, onClose }: Props) {
-  const { width, height } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const order = useDashboardStore((s) => s.order);
   const hidden = useDashboardStore((s) => s.hidden);
   const density = useDashboardStore((s) => s.density);
@@ -36,10 +34,6 @@ export function DashboardCustomizer({ visible, onClose }: Props) {
   const setDensity = useDashboardStore((s) => s.setDensity);
   const setAccent = useDashboardStore((s) => s.setAccent);
   const reset = useDashboardStore((s) => s.reset);
-
-  useEscapeToClose(visible, onClose);
-
-  if (!visible) return null;
 
   const isWide = width >= 720;
 
@@ -82,68 +76,63 @@ export function DashboardCustomizer({ visible, onClose }: Props) {
   }
 
   return (
-    <View style={StyleSheet.absoluteFill} accessibilityViewIsModal>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close dashboard settings" />
-      <View
-        style={[
-          styles.card,
-          isWide
-            ? { width: 520, alignSelf: 'center', top: Math.max(48, height * 0.08), maxHeight: height * 0.84 }
-            : { left: spacing.sm, right: spacing.sm, bottom: 0, maxHeight: height * 0.88, paddingBottom: insets.bottom + spacing.md },
-        ]}
-      >
-        <View style={styles.header}>
-          <View style={styles.headerText}>
-            <Text style={styles.eyebrow}>YOUR DASHBOARD</Text>
-            <Text style={styles.title}>Arrange your hollow</Text>
-          </View>
-          <IconButton icon="close" accessibilityLabel="Done customizing" onPress={onClose} />
+    <CompactGlassSheet
+      visible={visible}
+      onClose={onClose}
+      accessibilityLabel="Arrange your hollow dashboard settings"
+      closeAccessibilityLabel="Done customizing"
+      maxWidth={520}
+      maxHeightRatio={0.88}
+      header={
+        <View style={styles.headerText}>
+          <Text style={styles.eyebrow}>YOUR DASHBOARD</Text>
+          <Text style={styles.title}>Arrange your hollow</Text>
+        </View>
+      }
+    >
+      <View style={[styles.preferences, isWide && styles.preferencesWide]}>
+        <View style={styles.preferenceGroup}>
+          <Text style={styles.sectionLabel}>LAYOUT</Text>
+          <SegmentedControl
+            options={[
+              { value: 'spacious', label: 'Spacious', icon: 'resize-outline' },
+              { value: 'compact', label: 'Compact', icon: 'contract-outline' },
+            ]}
+            value={density}
+            onChange={setDensity}
+            accessibilityLabel="Dashboard density"
+          />
         </View>
 
-        <View style={[styles.preferences, isWide && styles.preferencesWide]}>
-          <View style={styles.preferenceGroup}>
-            <Text style={styles.sectionLabel}>LAYOUT</Text>
-            <SegmentedControl
-              options={[
-                { value: 'spacious', label: 'Spacious', icon: 'resize-outline' },
-                { value: 'compact', label: 'Compact', icon: 'contract-outline' },
-              ]}
-              value={density}
-              onChange={setDensity}
-              accessibilityLabel="Dashboard density"
-            />
-          </View>
-
-          <View style={styles.preferenceGroup}>
-            <Text style={styles.sectionLabel}>ACCENT</Text>
-            <SegmentedControl
-              options={[
-                { value: 'forest', label: 'Forest Night', icon: 'leaf-outline' },
-                { value: 'cosmic', label: 'Cosmic Night', icon: 'planet-outline' },
-              ]}
-              value={accent}
-              onChange={setAccent}
-              accessibilityLabel="Dashboard accent"
-            />
-          </View>
+        <View style={styles.preferenceGroup}>
+          <Text style={styles.sectionLabel}>ACCENT</Text>
+          <SegmentedControl
+            options={[
+              { value: 'forest', label: 'Forest Night', icon: 'leaf-outline' },
+              { value: 'cosmic', label: 'Cosmic Night', icon: 'planet-outline' },
+            ]}
+            value={accent}
+            onChange={setAccent}
+            accessibilityLabel="Dashboard accent"
+          />
         </View>
-
-        <ScrollView style={styles.widgetScroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-          <Text style={styles.sectionLabel}>WIDGETS</Text>
-          <View style={styles.rows}>{order.map(renderRow)}</View>
-
-          <Pressable
-            onPress={reset}
-            accessibilityRole="button"
-            accessibilityLabel="Reset dashboard layout"
-            style={({ pressed }) => [styles.resetRow, pressed && styles.pressed]}
-          >
-            <Ionicons name="refresh-outline" size={16} color={colors.textMuted} />
-            <Text style={styles.resetLabel}>Reset to default layout</Text>
-          </Pressable>
-        </ScrollView>
       </View>
-    </View>
+
+      <ScrollView style={styles.widgetScroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <Text style={styles.sectionLabel}>WIDGETS</Text>
+        <View style={styles.rows}>{order.map(renderRow)}</View>
+
+        <Pressable
+          onPress={reset}
+          accessibilityRole="button"
+          accessibilityLabel="Reset dashboard layout"
+          style={({ pressed }) => [styles.resetRow, pressed && styles.pressed]}
+        >
+          <Ionicons name="refresh-outline" size={16} color={colors.textMuted} />
+          <Text style={styles.resetLabel}>Reset to default layout</Text>
+        </Pressable>
+      </ScrollView>
+    </CompactGlassSheet>
   );
 }
 
@@ -152,17 +141,6 @@ const _exhaustive: readonly WidgetId[] = DEFAULT_ORDER;
 void _exhaustive;
 
 const styles = StyleSheet.create({
-  backdrop: { ...(StyleSheet.absoluteFill as object), backgroundColor: 'rgba(3,7,6,0.66)' },
-  card: {
-    position: 'absolute',
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.surfaceBorder,
-    backgroundColor: colors.bgElevated,
-    padding: spacing.md,
-    overflow: 'hidden',
-  },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   headerText: { flex: 1 },
   eyebrow: { ...typography.eyebrow, fontSize: 9, lineHeight: 12, letterSpacing: 2, color: colors.cyan },
   title: { ...typography.title, fontSize: 20, lineHeight: 26, color: colors.textPrimary },

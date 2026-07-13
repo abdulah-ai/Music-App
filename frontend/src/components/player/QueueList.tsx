@@ -1,4 +1,4 @@
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Artwork } from '../ui/Artwork';
@@ -26,7 +26,7 @@ function artist(media: Media): string {
  * The live play queue: the current track glows, any other row is one tap away,
  * and upcoming tracks can be dropped without stopping the music.
  */
-export function QueueList() {
+export function QueueList({ style }: { style?: StyleProp<ViewStyle> }) {
   const queue = usePlayerStore((s) => s.queue);
   const queueIndex = usePlayerStore((s) => s.queueIndex);
   const playing = usePlayerStore((s) => s.playing);
@@ -35,7 +35,7 @@ export function QueueList() {
 
   if (queue.length === 0) {
     return (
-      <View style={styles.emptyWrap}>
+      <View style={[styles.emptyWrap, style]}>
         <Ionicons name="list-outline" size={26} color={colors.textMuted} />
         <Text style={styles.emptyText}>The queue is empty.</Text>
       </View>
@@ -44,6 +44,7 @@ export function QueueList() {
 
   return (
     <FlatList
+      style={[styles.list, style]}
       data={queue}
       keyExtractor={(item, index) => `${item.id}-${index}`}
       showsVerticalScrollIndicator={false}
@@ -89,6 +90,7 @@ export function QueueList() {
 }
 
 const styles = StyleSheet.create({
+  list: { flexGrow: 0 },
   content: { paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, gap: 2 },
   row: {
     flexDirection: 'row',
@@ -122,7 +124,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyWrap: {
-    flex: 1,
+    minHeight: 132,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
