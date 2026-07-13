@@ -276,6 +276,8 @@ safe-area inset. This is the "systemic bottom-clearance" issue already
 flagged in Broader Suggestions below; this is now the **third** confirmed
 occurrence (Issue 1b, Issue 2.7, and this one).
 
+**Status: fixed in codex/ui-audit-correctness**
+
 ### Issue 8b — Selection display consistency for video items (needs clarification)
 
 **Problem (as reported, needs confirmation):** the selected-item visual

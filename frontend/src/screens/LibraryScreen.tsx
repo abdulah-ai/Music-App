@@ -437,8 +437,11 @@ export function LibraryScreen() {
   const hasActiveFilters = !!query || !!genreFilter || !!yearFilter || remixFilter !== 'all' || tab === 'favorites';
   // The bar includes safe-area padding and can grow with font scaling. Measure
   // its rendered height so the absolutely positioned player clears it exactly.
-  // The conservative first-layout value prevents a one-frame collision.
-  const bulkBarOffset = selectMode ? Math.max(bulkBarHeight, insets.bottom + spacing.xxxl) : 0;
+  // MiniPlayerBar already clears the mobile dock itself, so do not count that
+  // shared dock padding a second time when lifting it above this bar.
+  const bulkBarOffset = selectMode
+    ? Math.max(bulkBarHeight - (isDesktop ? 0 : layout.dockClearance), insets.bottom + spacing.xxxl)
+    : 0;
 
   function resetFilters() {
     setQuery('');
@@ -659,7 +662,10 @@ export function LibraryScreen() {
       {selectMode && (
         <View
           onLayout={(event) => setBulkBarHeight(Math.ceil(event.nativeEvent.layout.height))}
-          style={[styles.bulkBar, { paddingBottom: insets.bottom + spacing.sm }]}
+          style={[
+            styles.bulkBar,
+            { paddingBottom: insets.bottom + spacing.sm + (isDesktop ? 0 : layout.dockClearance) },
+          ]}
         >
           <Text style={styles.bulkLabel}>
             {Object.keys(selectedIds).length === 0
