@@ -2,8 +2,8 @@
 
 Working list from a screenshot-by-screenshot pass over the app (mobile-first,
 current build). Each issue has a description, and where useful, a suggested
-direction. **Nothing here has been implemented yet** — this file is the
-handoff spec for whoever fixes these.
+direction. Completed work is recorded inline with a bold status so this file
+remains the source of truth for both the original report and its resolution.
 
 Keep the existing dark Star Hollow identity (navy night sky, frosted glass
 surfaces, forest accents) while fixing these — none of this should turn into
@@ -783,39 +783,29 @@ file facts; missing optional metadata is omitted instead of shown as blanks.
 
 ---
 
-## Suggested working order (for whoever picks this up)
+## Suggested working order — completion record
 
-Numeric order isn't fix priority. Suggested order, grouped by leverage and
-risk:
+Numeric order was not fix priority. The work was completed in the intended
+leverage/risk order:
 
-1. **Confirmed bugs/correctness first:**
-   - Issue 4 (cross-account state leak — privacy/correctness bug)
-   - Issue 8 (selection bar overlaps tab bar — confirmed root cause)
-   - Issue 5.1 (square shadow behind play button — confirmed root cause)
-2. **High-leverage broader fixes (each resolves multiple logged issues at once):**
-   - Title/metadata cleaning in `displayTitle` (fixes Issues 5.3, 10, and
-     the repeated-title notes across Issues 18/20 — six+ surfaces at once)
-   - Shared compact glass-sheet component (fixes Issues 2.1, 7, 11, 12, 19
-     — five surfaces at once)
-   - `useTrackAccent` contrast floor (fixes Issue 9.2 and the mini-player /
-     Home resume-button contrast bugs — three surfaces at once)
-   - Playlist sheet hardcoded color (Issue 20 — quick, isolated)
-3. **Then the remaining confirmed/scoped issues:** 1, 1b, 2 (remaining
-   sub-items), 3 (excluding 3.4), 5.2, 6, 13, 16, 21 (the confirmed-gap
-   parts only)
-4. **Then the open design asks** (need a direction agreed, not just a
-   ticket): 9.1, 14 (visual upgrade part), 15
-5. **Skip entirely for now:** Issue 17, Issue 3.4 (see Deferred above), and
-   anything marked "needs clarification" until that clarification happens
-   (Issue 8b, Issue 12's specific feature list, Issue 21's category-sorting
-   scope, Issue 22's exact panel design).
+1. **Confirmed bugs/correctness:** complete.
+2. **High-leverage broader fixes:** complete.
+3. **Remaining confirmed/scoped issues:** complete, including the bounded
+   parts of Issue 21.
+4. **Open visual design asks:** complete as one connected Star Hollow
+   signature-moments pass.
+5. **Intentionally still open:** Issue 2.3's true light-theme architecture,
+   Issue 3.3 multi-account support, Issue 5.5's unexplained yellow status dot,
+   and Issue 21's category-sorting definition all still require clarification
+   or product scoping. Issue 3.4 and Issue 17 remain explicitly deferred.
 
 ---
 
 ## Status
 
-All confirmed, bounded fixes are complete on `codex/ui-audit-completion`;
-each completed entry is marked inline above. The items intentionally left
-open are the ones this file says require clarification, reproduction, a
-product/design decision, or separate feasibility work. Deferred items were
+All confirmed, bounded fixes are complete across `codex/ui-audit-completion`
+and `codex/ui-audit-open-items`; each completed entry is marked inline above.
+No bounded implementation item was left accidentally open. The only remaining
+entries are the four clarification/product-scope items and the two explicitly
+deferred items listed in the completion record above. Deferred behavior was
 not changed.
