@@ -114,9 +114,15 @@ everywhere content can sit near the tab bar or mini player.
    (this one is subjective; needs a design pass, not just a token swap — the
    glass surface language from the recent dashboard work is the natural
    direction here since the sidebar currently doesn't use it).
+
+   **Status: fixed in codex/ui-audit-completion**
+
 2. **No animations** on nav item selection, hover, or expand/collapse.
    Suggested fix: subtle transition on the active-row accent bar and
    background tint (reuse `motion` tokens), plus a hover micro-interaction.
+
+   **Status: fixed in codex/ui-audit-completion**
+
 3. **No "Add account" option** — the account row at the bottom only supports
    a single signed-in user with sign-out; no multi-account switching.
    Suggested fix: needs product scoping first (does this mean multiple

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -10,9 +10,10 @@ import { useAuthStore } from '../../store/authStore';
 import { useLibraryStore } from '../../store/libraryStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { useUiStore } from '../../store/uiStore';
-import { colors, glass, radii, spacing, typography } from '../../theme/tokens';
+import { colors, glass, motion, radii, spacing, typography } from '../../theme/tokens';
 import { displayTitle } from '../../utils/mediaDisplay';
 import { BrandMark } from './BrandMark';
+import { GlassPanel } from './GlassPanel';
 
 type DestinationBase = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -56,6 +57,122 @@ function destinationKey(destination: NavDestination): string {
   return destination.kind === 'tab' ? `${destination.tab}:${destination.label}` : destination.route;
 }
 
+function initialReducedMotion() {
+  return Platform.OS === 'web' && typeof window !== 'undefined'
+    ? window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+    : false;
+}
+
+function useReducedMotion() {
+  const [reducedMotion, setReducedMotion] = useState(initialReducedMotion);
+
+  useEffect(() => {
+    let alive = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (alive) setReducedMotion(enabled);
+    });
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReducedMotion);
+    return () => {
+      alive = false;
+      subscription.remove();
+    };
+  }, []);
+
+  return reducedMotion;
+}
+
+function SidebarNavRow({
+  destination,
+  focused,
+  reducedMotion,
+  onPress,
+}: {
+  destination: NavDestination;
+  focused: boolean;
+  reducedMotion: boolean;
+  onPress: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const activeProgress = useRef(new Animated.Value(focused ? 1 : 0)).current;
+  const hoverProgress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (reducedMotion) {
+      activeProgress.setValue(focused ? 1 : 0);
+      return;
+    }
+    const animation = Animated.timing(activeProgress, {
+      toValue: focused ? 1 : 0,
+      duration: motion.duration.base,
+      easing: Easing.bezier(...motion.easing.standard),
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [activeProgress, focused, reducedMotion]);
+
+  useEffect(() => {
+    if (reducedMotion) {
+      hoverProgress.setValue(hovered ? 1 : 0);
+      return;
+    }
+    const animation = Animated.timing(hoverProgress, {
+      toValue: hovered ? 1 : 0,
+      duration: motion.duration.fast,
+      easing: Easing.bezier(...motion.easing.standard),
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [hoverProgress, hovered, reducedMotion]);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      accessibilityRole="button"
+      accessibilityLabel={destination.label}
+      accessibilityState={{ selected: focused }}
+      style={({ pressed }) => [styles.navPressable, pressed && styles.navRowPressed]}
+    >
+      <Animated.View
+        style={[
+          styles.navRow,
+          {
+            transform: [
+              {
+                translateX: hoverProgress.interpolate({ inputRange: [0, 1], outputRange: [0, 2] }),
+              },
+            ],
+          },
+        ]}
+      >
+        <Animated.View pointerEvents="none" style={[styles.navHoverFill, { opacity: hoverProgress }]} />
+        <Animated.View pointerEvents="none" style={[styles.navActiveFill, { opacity: activeProgress }]} />
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.navAccent,
+            {
+              opacity: activeProgress,
+              transform: [{ scaleY: activeProgress }],
+            },
+          ]}
+        />
+        <Ionicons
+          name={focused && destination.activeIcon ? destination.activeIcon : destination.icon}
+          size={20}
+          color={focused ? colors.cyan : hovered ? colors.textSecondary : colors.textMuted}
+        />
+        <Text style={[styles.navLabel, (hovered || focused) && styles.navLabelHovered, focused && styles.navLabelActive]}>
+          {destination.label}
+        </Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 export function AppSidebar({
   variant,
   activeTab,
@@ -73,13 +190,30 @@ export function AppSidebar({
   const accountMenuOpen = useUiStore((state) => state.accountMenuOpen);
   const toggleAccountMenu = useUiStore((state) => state.toggleAccountMenu);
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+  const reducedMotion = useReducedMotion();
+  const accountProgress = useRef(new Animated.Value(accountMenuOpen ? 1 : 0)).current;
 
   const isRail = variant === 'rail';
   const offline = !networkOnline || backendOnline === false;
   const initial = (user?.display_name?.trim()?.[0] ?? user?.email?.[0] ?? '♪').toUpperCase();
-  const currentRoute = navigationRef.getCurrentRoute()?.name;
+  const currentRoute = navigationRef.isReady() ? navigationRef.getCurrentRoute()?.name : undefined;
   const resolvedActiveTab = activeTab ?? (currentRoute && currentRoute in TAB_ROUTE_NAMES ? (currentRoute as keyof MainTabParamList) : undefined);
   const secondaryItems = user?.is_admin ? [...SECONDARY_NAV_ITEMS, ADMIN_NAV_ITEM] : SECONDARY_NAV_ITEMS;
+
+  useEffect(() => {
+    if (reducedMotion) {
+      accountProgress.setValue(accountMenuOpen ? 1 : 0);
+      return;
+    }
+    const animation = Animated.timing(accountProgress, {
+      toValue: accountMenuOpen ? 1 : 0,
+      duration: motion.duration.base,
+      easing: Easing.bezier(...motion.easing.standard),
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [accountMenuOpen, accountProgress, reducedMotion]);
 
   function go(destination: NavDestination) {
     if (!navigationRef.isReady()) return;
@@ -97,33 +231,14 @@ export function AppSidebar({
       destination.kind === 'tab'
         ? destination.tab === resolvedActiveTab && destination.label !== 'Playlists'
         : destination.route === currentRoute;
-    const hovered = hoveredKey === key;
-
     return (
-      <Pressable
+      <SidebarNavRow
         key={key}
+        destination={destination}
+        focused={focused}
+        reducedMotion={reducedMotion}
         onPress={() => go(destination)}
-        onHoverIn={() => setHoveredKey(key)}
-        onHoverOut={() => setHoveredKey((value) => (value === key ? null : value))}
-        accessibilityRole="button"
-        accessibilityLabel={destination.label}
-        accessibilityState={{ selected: focused }}
-        style={({ pressed }) => [
-          styles.navRow,
-          (hovered || pressed) && styles.navRowHovered,
-          focused && styles.navRowActive,
-        ]}
-      >
-        <View style={[styles.navAccent, focused && styles.navAccentActive]} />
-        <Ionicons
-          name={focused && destination.activeIcon ? destination.activeIcon : destination.icon}
-          size={20}
-          color={focused ? colors.cyan : hovered ? colors.textSecondary : colors.textMuted}
-        />
-        <Text style={[styles.navLabel, (hovered || focused) && styles.navLabelHovered, focused && styles.navLabelActive]}>
-          {destination.label}
-        </Text>
-      </Pressable>
+      />
     );
   }
 
@@ -139,11 +254,14 @@ export function AppSidebar({
         </View>
       </View>
 
-      <Text style={styles.sectionLabel}>LISTEN</Text>
-      <View style={styles.navList}>{PRIMARY_NAV_ITEMS.map(renderDestination)}</View>
+      <GlassPanel style={styles.navigationPanel} overlayColor={glass.fillDeep}>
+        <Text style={styles.sectionLabel}>LISTEN</Text>
+        <View style={styles.navList}>{PRIMARY_NAV_ITEMS.map(renderDestination)}</View>
 
-      <Text style={[styles.sectionLabel, styles.secondarySection]}>MORE</Text>
-      <View style={styles.navList}>{secondaryItems.map(renderDestination)}</View>
+        <View style={styles.sectionDivider} />
+        <Text style={styles.sectionLabel}>MORE</Text>
+        <View style={styles.navList}>{secondaryItems.map(renderDestination)}</View>
+      </GlassPanel>
 
       {currentMedia ? (
         <Pressable
@@ -179,10 +297,16 @@ export function AppSidebar({
 
       <Pressable
         onPress={isRail ? toggleAccountMenu : undefined}
+        onHoverIn={() => setHoveredKey('Account')}
+        onHoverOut={() => setHoveredKey((value) => (value === 'Account' ? null : value))}
         accessibilityRole={isRail ? 'button' : undefined}
         accessibilityLabel={isRail ? 'Open account menu' : undefined}
         accessibilityState={isRail ? { expanded: accountMenuOpen } : undefined}
-        style={[styles.accountRow, isRail && accountMenuOpen && styles.accountRowActive]}
+        style={({ pressed }) => [
+          styles.accountRow,
+          isRail && (hoveredKey === 'Account' || pressed) && styles.accountRowHovered,
+          isRail && accountMenuOpen && styles.accountRowActive,
+        ]}
       >
         <LinearGradient colors={colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.avatar}>
           <Text style={styles.avatarInitial}>{initial}</Text>
@@ -195,7 +319,19 @@ export function AppSidebar({
             {user?.email ?? ''}
           </Text>
         </View>
-        {isRail ? <Ionicons name="ellipsis-horizontal" size={17} color={colors.textMuted} /> : null}
+        {isRail ? (
+          <Animated.View
+            style={{
+              transform: [
+                {
+                  rotate: accountProgress.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }),
+                },
+              ],
+            }}
+          >
+            <Ionicons name="chevron-up" size={17} color={accountMenuOpen ? colors.cyan : colors.textMuted} />
+          </Animated.View>
+        ) : null}
       </Pressable>
 
       {!isRail ? (
@@ -237,7 +373,9 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(99,214,181,0.12)',
+    backgroundColor: glass.tintPrimary,
+    borderWidth: 1,
+    borderColor: glass.tintPrimaryStroke,
   },
   brand: { ...typography.eyebrow, fontSize: 13, letterSpacing: 3, color: colors.textPrimary },
   brandSub: { ...typography.caption, fontSize: 11, color: colors.textMuted },
@@ -250,8 +388,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     paddingLeft: spacing.sm,
   },
-  secondarySection: { marginTop: spacing.md },
+  navigationPanel: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.sm,
+    borderColor: glass.stroke,
+    borderRadius: radii.lg,
+  },
+  sectionDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: spacing.sm,
+    marginVertical: spacing.sm,
+    backgroundColor: glass.stroke,
+  },
   navList: { gap: 2 },
+  navPressable: { borderRadius: radii.md },
   navRow: {
     minHeight: 44,
     flexDirection: 'row',
@@ -261,9 +411,18 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.md - 4,
     paddingRight: spacing.sm,
     borderRadius: radii.md - 4,
+    overflow: 'hidden',
   },
-  navRowHovered: { backgroundColor: 'rgba(158,181,170,0.08)' },
-  navRowActive: { backgroundColor: 'rgba(99,214,181,0.11)' },
+  navRowPressed: { opacity: 0.78 },
+  navHoverFill: {
+    ...(StyleSheet.absoluteFill as object),
+    backgroundColor: glass.fillBright,
+  },
+  navActiveFill: {
+    ...(StyleSheet.absoluteFill as object),
+    backgroundColor: glass.tintPrimary,
+  },
+  navRowHovered: { backgroundColor: glass.fillBright },
   navAccent: {
     position: 'absolute',
     left: 0,
@@ -271,9 +430,8 @@ const styles = StyleSheet.create({
     bottom: 11,
     width: 3,
     borderRadius: radii.pill,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.cyan,
   },
-  navAccentActive: { backgroundColor: colors.cyan },
   navLabel: { ...typography.subtitle, fontSize: 14, color: colors.textMuted, flex: 1 },
   navLabelHovered: { color: colors.textSecondary },
   navLabelActive: { color: colors.textPrimary },
@@ -309,11 +467,23 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.sm,
     marginBottom: spacing.sm,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: glass.stroke,
+    backgroundColor: glass.fillDeep,
   },
   statusDot: { width: 6, height: 6, borderRadius: radii.pill, backgroundColor: colors.success },
   statusDotOffline: { backgroundColor: colors.danger },
   statusLabel: { ...typography.caption, fontSize: 11, color: colors.textMuted, flex: 1 },
-  libraryChip: { ...typography.caption, fontSize: 11, color: colors.textMuted },
+  libraryChip: {
+    ...typography.caption,
+    fontSize: 10,
+    color: colors.textSecondary,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: radii.pill,
+    backgroundColor: glass.fillBright,
+  },
   accountRow: {
     minHeight: 54,
     flexDirection: 'row',
@@ -326,6 +496,7 @@ const styles = StyleSheet.create({
     backgroundColor: glass.fill,
   },
   accountRowActive: { backgroundColor: glass.fillHeavy, borderColor: glass.tintPrimaryStroke },
+  accountRowHovered: { backgroundColor: glass.fillBright, borderColor: glass.strokeStrong },
   avatar: { width: 36, height: 36, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
   avatarInitial: { ...typography.title, fontSize: 16, color: '#0B1411' },
   accountText: { flex: 1 },
