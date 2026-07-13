@@ -401,6 +401,11 @@ specifically about how video-classified media interacts with the
 audio-only queue system, not Sanctuary Mode's next/prev controls
 themselves being broken.
 
+**Status: resolved by verification in codex/ui-audit-completion** — with two
+audio tracks queued, Sanctuary's Previous moved to the other track and Next
+moved back. The controls themselves are working; the reported case was the
+single video-classified queue limitation described above.
+
 ---
 
 ## Issue 14 — Ambient starfield/aurora in Sanctuary Mode feels completely static and "empty" (likely root cause found)
