@@ -160,6 +160,8 @@ per identity.
    Suggested fix: move `borderRadius: radii.pill` onto `playFabWrap` itself
    (or otherwise wrap the shadow around an already-rounded element).
 
+   **Status: fixed in codex/ui-audit-correctness**
+
 2. **Blank/black fallback thumbnails — confirmed root cause.** Tracks with no
    real artwork fall back to a dark `coverGradient` plus a glyph icon
    rendered at only `0x59` (~35%) opacity (`LibraryMediaView.tsx`, glyph

@@ -317,6 +317,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: spacing.sm + 2,
     bottom: 54,
+    borderRadius: radii.pill,
     shadowColor: colors.cyan,
     shadowOpacity: 0.5,
     shadowRadius: 16,
