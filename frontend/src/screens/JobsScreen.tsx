@@ -237,7 +237,7 @@ export function JobsScreen({ embedded = false }: { embedded?: boolean }) {
           </View>
 
           {jobs && jobs.length > 0 ? (
-            <View style={styles.summaryRow}>
+            <GlassPanel style={styles.summaryRow}>
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryValue}>{active.length}</Text>
                 <Text style={styles.summaryLabel}>Active</Text>
@@ -254,7 +254,7 @@ export function JobsScreen({ embedded = false }: { embedded?: boolean }) {
                 </Text>
                 <Text style={styles.summaryLabel}>Attention</Text>
               </View>
-            </View>
+            </GlassPanel>
           ) : null}
 
           {jobs === null ? (
@@ -356,9 +356,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     paddingHorizontal: spacing.md,
     marginBottom: spacing.md,
-    backgroundColor: 'rgba(17,30,25,0.64)',
-    borderWidth: 1,
-    borderColor: 'rgba(158,181,170,0.09)',
   },
   summaryItem: { flex: 1, alignItems: 'center', gap: 2 },
   summaryValue: { ...typography.title, fontSize: 20, lineHeight: 25, color: colors.textPrimary },

@@ -621,6 +621,8 @@ screen brought in line with the visual language established by the rest of
 this session's edits (frosted-glass surfaces, navy-sky background) rather
 than left on the older flat-card style.
 
+**Status: fixed in codex/ui-audit-completion**
+
 **Note (reinforces an existing issue, not new):** "Take It Off – Kesha
 #kesha #lyrics_songs #lyricsedit …" appears here too — the **fourth**
 confirmed surface with the raw-scraped-title problem (Home, Library, Issue
