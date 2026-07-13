@@ -1,5 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 
+// The animated Identify scene is one of the heaviest bundles to mount when
+// the entire browser suite runs six workers in parallel on Windows.
+test.describe.configure({ timeout: 30_000 });
+
 const user = {
   id: 'recognition-user', email: 'recognition@starhollow.test', display_name: 'Melody Listener',
   storage_preference: 'auto', is_admin: false, cloud_storage_available: false,
