@@ -46,7 +46,7 @@ export function ForestBackdrop({ variant = 'app' }: Props) {
             ? ['rgba(2,7,10,0.18)', 'rgba(3,10,9,0.22)', 'rgba(2,8,6,0.68)']
             : daylight
               ? ['rgba(246,250,246,0.34)', 'rgba(235,244,237,0.46)', 'rgba(218,232,222,0.68)']
-            : ['rgba(4,10,13,0.04)', 'rgba(5,18,15,0.12)', 'rgba(4,10,9,0.38)']
+            : ['rgba(4,10,13,0.02)', 'rgba(5,18,15,0.06)', 'rgba(4,10,9,0.22)']
         }
         locations={[0, 0.48, 1]}
         style={StyleSheet.absoluteFill}
@@ -75,5 +75,5 @@ const lightForestImage: ImageStyle =
 
 const darkAppForestImage: ImageStyle =
   Platform.OS === 'web'
-    ? ({ filter: 'brightness(1.28) saturate(0.9) contrast(0.94)' } as unknown as ImageStyle)
+    ? ({ filter: 'brightness(2.05) saturate(1.05) contrast(0.96)' } as unknown as ImageStyle)
     : { opacity: 1 };

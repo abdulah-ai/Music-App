@@ -1,9 +1,8 @@
 import { memo, useId } from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Defs, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 
-import { ambient, gradients, palette } from '../../theme/theme';
+import { ambient, palette } from '../../theme/theme';
 
 type RippleFieldProps = {
   dimmed?: boolean;
@@ -33,9 +32,9 @@ const STATIC_STAR_STYLES = Array.from({ length: STAR_COUNT }, (_, index): ViewSt
 });
 
 /**
- * Static atmospheric canvas. It keeps the dusk identity while doing no work
- * after first paint: no timers, store subscriptions, per-frame JS updates or
- * tab-hidden animation loops.
+ * Transparent atmospheric overlay for the shared forest. It keeps the stars,
+ * distant ridges and subtle color glows without painting an opaque screen over
+ * the realistic backdrop underneath.
  */
 export const RippleField = memo(function RippleField({ dimmed = false, accentColor }: RippleFieldProps) {
   const signal = accentColor ?? palette.primary;
@@ -44,8 +43,7 @@ export const RippleField = memo(function RippleField({ dimmed = false, accentCol
   const horizonGradientId = `dusk-horizon-${id}`;
 
   return (
-    <View pointerEvents="none" style={[styles.root, dimmed && styles.dimmed]}>
-      <LinearGradient colors={[...gradients.screenIdle]} style={StyleSheet.absoluteFill} />
+    <View testID="forest-atmosphere" pointerEvents="none" style={[styles.root, dimmed && styles.dimmed]}>
       <Svg width="100%" height="100%" style={StyleSheet.absoluteFill} preserveAspectRatio="none">
         <Defs>
           <RadialGradient id={topGradientId} cx="82%" cy="8%" rx="58%" ry="42%">
@@ -90,7 +88,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     overflow: 'hidden',
-    backgroundColor: palette.void,
+    backgroundColor: 'transparent',
   },
   dimmed: { opacity: 0.58 },
   ridge: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '18%' },
