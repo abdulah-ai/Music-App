@@ -61,15 +61,25 @@ failing with that error, export fresh cookies and set them as a Render secret:
    browser extension).
 4. Close the private window afterward and don't reopen that session.
 
-Paste the full contents of `cookies.txt` into the backend env var `SMA_YTDLP_COOKIES_TEXT`, or base64-encode
-it first and use `SMA_YTDLP_COOKIES_B64` instead (handy for values Render's dashboard mangles):
+Store the export as a Render **Secret File**, not as a raw environment variable. Large browser exports can
+exceed Linux's process environment limit and prevent Render from starting the build at all.
+
+1. In `supermediaapp-api > Environment > Secret Files`, add a file named `youtube_cookies.txt` and paste
+   the export into its Contents field.
+2. Set `SMA_YTDLP_COOKIES_FILE=/etc/secrets/youtube_cookies.txt`.
+3. Delete any old `SMA_YTDLP_COOKIES_TEXT` and `SMA_YTDLP_COOKIES_B64` variables.
+4. Choose **Save and deploy**. The backend also auto-detects that secret-file path.
+
+The command below validates the export and strips unrelated browser cookies. Set `RENDER_API_KEY` (or add
+`--api-key`) before running it if you also want the tool to upload, migrate, and redeploy automatically:
 
 ```powershell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\path\to\cookies.txt")) | Set-Clipboard
+cd backend
+python tools/upload_youtube_cookies.py C:\path\to\cookies.txt
 ```
 
-Redeploy after setting either variable. Cookies are private account credentials — never commit them to
-GitHub, and re-export them if YouTube starts challenging downloads again. yt-dlp's Chrome request
+Cookies are private account credentials — never commit them to GitHub, and re-export them if YouTube
+starts challenging downloads again. yt-dlp's Chrome request
 impersonation (via `curl-cffi`) is already enabled by default (`SMA_YTDLP_IMPERSONATE=chrome`); if cookies
 are fresh but YouTube still rejects the Render IP, set `SMA_YTDLP_PROXY_URL` to a clean residential/ISP
 proxy and redeploy.

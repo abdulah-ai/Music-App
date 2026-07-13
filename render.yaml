@@ -60,10 +60,10 @@ services:
         value: "25"
       - key: SMA_YTDLP_IMPERSONATE
         value: chrome
-      - key: SMA_YTDLP_COOKIES_TEXT
-        sync: false
-      - key: SMA_YTDLP_COOKIES_B64
-        sync: false
+      # Add Render Secret File "youtube_cookies.txt" for challenged YouTube
+      # sessions. The backend auto-detects /etc/secrets/youtube_cookies.txt;
+      # do not put a browser export in an environment variable because a
+      # large value can prevent the build shell from starting.
       - key: SMA_YTDLP_PROXY_URL
         sync: false
       # Optional but recommended for a public demo. If set, registration

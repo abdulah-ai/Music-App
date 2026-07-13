@@ -60,7 +60,7 @@ Frontend runtime rule: optimize for a mobile WebView first while retaining respo
 
 Backend architecture note: jobs run in-process with FastAPI/asyncio rather than Celery. Mutate-then-serialize flows with SQLAlchemy relationships should follow the `select(...).options(selectinload(...)).execution_options(populate_existing=True)` pattern already used in recognition/playlist endpoints; `expire_all()` plus `session.get()` can cause `MissingGreenlet` failures.
 
-Downloader reliability note: TLS verification must stay enabled. Local installs use the host certificate store; hosted deployments can opt into curl-cffi impersonation, with an automatic native/system-trust fallback for certificate-chain failures. YouTube cookie precedence is text, base64, explicit file, then the ignored conventional file at `backend/cookies/youtube_cookies.txt`. Job status uses WebSocket updates plus authenticated polling so terminal states survive dropped sockets.
+Downloader reliability note: TLS verification must stay enabled. Local installs use the host certificate store; hosted deployments can opt into curl-cffi impersonation, with an automatic native/system-trust fallback for certificate-chain failures. Render YouTube cookies belong in Secret File `/etc/secrets/youtube_cookies.txt`; the backend copies it to a writable temporary file for yt-dlp. Never paste a full browser export into `SMA_YTDLP_COOKIES_TEXT` because a large value can prevent Render's build shell from starting. Local installs can still use the ignored conventional file at `backend/cookies/youtube_cookies.txt`. Job status uses WebSocket updates plus authenticated polling so terminal states survive dropped sockets.
 
 ## Common task routing
 

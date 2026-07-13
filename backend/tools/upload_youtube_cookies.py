@@ -4,11 +4,12 @@ Usage:
     python tools/upload_youtube_cookies.py path\\to\\cookies.txt --api-key rnd_xxx
     python tools/upload_youtube_cookies.py path\\to\\cookies.txt          (validate only)
 
-With an API key (flag or RENDER_API_KEY env var) it sets SMA_YTDLP_COOKIES_TEXT
-on the `supermediaapp-api` service and triggers a redeploy. Without one it just
-validates the file so you can paste it into the Render dashboard yourself.
+With an API key (flag or RENDER_API_KEY env var), this uploads a Render Secret
+File, points SMA_YTDLP_COOKIES_FILE at it, removes legacy raw-cookie environment
+variables, and triggers a redeploy. Without an API key, it validates the export
+and prints the manual Render steps.
 
-Stdlib only — runs with any Python 3.9+.
+Stdlib only - runs with any Python 3.9+.
 """
 from __future__ import annotations
 
@@ -23,15 +24,47 @@ import urllib.request
 from pathlib import Path
 
 RENDER_API = "https://api.render.com/v1"
+SECRET_FILE_NAME = "youtube_cookies.txt"
+SECRET_FILE_PATH = f"/etc/secrets/{SECRET_FILE_NAME}"
+LEGACY_COOKIE_ENV_KEYS = ("SMA_YTDLP_COOKIES_TEXT", "SMA_YTDLP_COOKIES_B64")
 
-# Cookies that a signed-in YouTube session must carry for yt-dlp to be useful.
-REQUIRED_COOKIES = {"__Secure-3PSID", "__Secure-3PAPISID"}
-NICE_TO_HAVE = {"SAPISID", "LOGIN_INFO", "__Secure-1PSID"}
+# This mirrors yt-dlp's YoutubeBaseInfoExtractor._has_auth_cookies check:
+# LOGIN_INFO plus at least one SID cookie applicable to www.youtube.com.
+LOGIN_COOKIE = "LOGIN_INFO"
+SID_COOKIES = {"SAPISID", "__Secure-1PAPISID", "__Secure-3PAPISID"}
 
 
 def fail(message: str) -> None:
     print(f"[x] {message}")
     sys.exit(1)
+
+
+def _cookie_fields(raw: str) -> list[str] | None:
+    line = raw.strip()
+    if not line:
+        return None
+    if line.startswith("#HttpOnly_"):
+        line = line.removeprefix("#HttpOnly_")
+    elif line.startswith("#"):
+        return None
+
+    fields = line.split("\t")
+    if len(fields) != 7:
+        fail(
+            "This is not a Netscape-format export (each cookie line needs 7 tab-separated fields).\n"
+            "    Use a 'Get cookies.txt LOCALLY'-style extension and export for youtube.com.",
+        )
+    return fields
+
+
+def _is_youtube_or_google_domain(domain: str) -> bool:
+    normalized = domain.lower().lstrip(".")
+    return normalized in {"youtube.com", "google.com"} or normalized.endswith((".youtube.com", ".google.com"))
+
+
+def _is_youtube_domain(domain: str) -> bool:
+    normalized = domain.lower().lstrip(".")
+    return normalized == "youtube.com" or normalized.endswith(".youtube.com")
 
 
 def validate(path: Path) -> str:
@@ -41,51 +74,55 @@ def validate(path: Path) -> str:
     if not text:
         fail("The cookie file is empty.")
 
-    names: set[str] = set()
-    youtube_lines = 0
-    newest_expiry = 0
+    current_youtube_names: set[str] = set()
+    scoped_lines: list[str] = []
+    cookie_lines = 0
+    now = time.time()
     for raw in text.splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#"):
+        fields = _cookie_fields(raw)
+        if fields is None:
             continue
-        fields = line.split("\t")
-        if len(fields) != 7:
-            fail(
-                "This is not a Netscape-format export (each cookie line needs 7 tab-separated fields).\n"
-                "    Use a 'Get cookies.txt LOCALLY'-style extension and export for youtube.com.",
-            )
+        cookie_lines += 1
         domain, _, _, _, expiry, name, _ = fields
-        if "youtube.com" in domain or "google.com" in domain:
-            youtube_lines += 1
-            names.add(name)
-            try:
-                newest_expiry = max(newest_expiry, int(float(expiry)))
-            except ValueError:
-                pass
+        if not _is_youtube_or_google_domain(domain):
+            continue
+        scoped_lines.append(raw.strip())
+        try:
+            expiry_value = int(float(expiry))
+        except ValueError:
+            fail(f"Cookie {name} has an invalid expiry value.")
+        if _is_youtube_domain(domain) and (expiry_value <= 0 or expiry_value >= now):
+            current_youtube_names.add(name)
 
-    if youtube_lines == 0:
-        fail("No youtube.com / google.com cookies in this file — export while on youtube.com.")
+    if not scoped_lines:
+        fail("No youtube.com / google.com cookies in this file - export while on youtube.com.")
 
-    missing = REQUIRED_COOKIES - names
-    if missing:
+    if LOGIN_COOKIE not in current_youtube_names:
         fail(
-            f"Missing signed-in session cookies: {', '.join(sorted(missing))}.\n"
-            "    You are probably not logged in — sign in to YouTube in a private window first, then export.",
+            "The export has no current YouTube LOGIN_INFO cookie.\n"
+            "    Sign in to YouTube in a private window first, then export that window's YouTube cookies.",
+        )
+    if not SID_COOKIES.intersection(current_youtube_names):
+        fail(
+            "The export has LOGIN_INFO but no current YouTube authentication SID cookie.\n"
+            "    Re-export only youtube.com cookies from the signed-in private window.",
         )
 
-    absent_nice = NICE_TO_HAVE - names
-    if absent_nice:
-        print(f"[!] Heads up, some optional cookies are absent: {', '.join(sorted(absent_nice))}")
-    if newest_expiry and newest_expiry < time.time():
-        fail("Every cookie in this export is already expired — do a fresh export.")
-
-    print(f"[ok] Looks like a valid signed-in export: {youtube_lines} YouTube/Google cookies.")
-    if not text.startswith("# Netscape HTTP Cookie File"):
-        text = "# Netscape HTTP Cookie File\n" + text
-    return text
+    print(f"[ok] Looks like a valid signed-in export: {len(scoped_lines)} YouTube/Google cookies.")
+    dropped = cookie_lines - len(scoped_lines)
+    if dropped:
+        print(f"[ok] Removed {dropped} unrelated browser cookies before upload.")
+    return "# Netscape HTTP Cookie File\n" + "\n".join(scoped_lines) + "\n"
 
 
-def render_call(api_key: str, method: str, path: str, payload: dict | None = None):
+def render_call(
+    api_key: str,
+    method: str,
+    path: str,
+    payload: dict | None = None,
+    *,
+    ignore_statuses: set[int] | None = None,
+):
     req = urllib.request.Request(
         RENDER_API + path,
         data=json.dumps(payload).encode() if payload is not None else None,
@@ -101,6 +138,8 @@ def render_call(api_key: str, method: str, path: str, payload: dict | None = Non
             body = res.read()
             return json.loads(body) if body else None
     except urllib.error.HTTPError as error:
+        if ignore_statuses and error.code in ignore_statuses:
+            return None
         detail = error.read().decode(errors="replace")[:300]
         fail(f"Render API {method} {path} -> {error.code}: {detail}")
 
@@ -113,8 +152,27 @@ def push_to_render(api_key: str, service_name: str, cookies_text: str) -> None:
     service_id = match["id"]
     print(f"[ok] Found service {service_name} ({service_id})")
 
-    render_call(api_key, "PUT", f"/services/{service_id}/env-vars/SMA_YTDLP_COOKIES_TEXT", {"value": cookies_text})
-    print("[ok] SMA_YTDLP_COOKIES_TEXT updated.")
+    secret_name = urllib.parse.quote(SECRET_FILE_NAME, safe="")
+    render_call(api_key, "PUT", f"/services/{service_id}/secret-files/{secret_name}", {"content": cookies_text})
+    print(f"[ok] Render Secret File {SECRET_FILE_NAME} updated.")
+
+    render_call(
+        api_key,
+        "PUT",
+        f"/services/{service_id}/env-vars/SMA_YTDLP_COOKIES_FILE",
+        {"value": SECRET_FILE_PATH},
+    )
+    print(f"[ok] SMA_YTDLP_COOKIES_FILE points to {SECRET_FILE_PATH}.")
+
+    for key in LEGACY_COOKIE_ENV_KEYS:
+        encoded_key = urllib.parse.quote(key, safe="")
+        render_call(
+            api_key,
+            "DELETE",
+            f"/services/{service_id}/env-vars/{encoded_key}",
+            ignore_statuses={404},
+        )
+    print("[ok] Removed legacy raw-cookie environment variables.")
 
     deploy = render_call(api_key, "POST", f"/services/{service_id}/deploys", {"clearCache": "do_not_clear"})
     deploy_id = (deploy or {}).get("id", "unknown")
@@ -132,10 +190,11 @@ def main() -> None:
 
     if not args.api_key:
         print()
-        print("[i] No Render API key given — validation only.")
-        print("    Paste the file's full contents into Render > supermediaapp-api >")
-        print("    Environment > SMA_YTDLP_COOKIES_TEXT, then Manual Deploy > Deploy latest commit.")
-        print("    Or rerun with --api-key rnd_... to do both automatically.")
+        print("[i] No Render API key given - validation only.")
+        print("    In Render > supermediaapp-api > Environment, add a Secret File named")
+        print(f"    {SECRET_FILE_NAME}, set SMA_YTDLP_COOKIES_FILE={SECRET_FILE_PATH},")
+        print("    and delete SMA_YTDLP_COOKIES_TEXT / SMA_YTDLP_COOKIES_B64 before deploying.")
+        print("    Or rerun with --api-key rnd_... to upload and redeploy automatically.")
         return
 
     push_to_render(args.api_key, args.service, cookies_text)

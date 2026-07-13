@@ -43,6 +43,7 @@ def _pick_output_file(out_dir: Path, video_id: str) -> Path:
 AUDIO_FORMATS = {"mp3-320", "mp3-192", "m4a", "source"}
 VIDEO_QUALITIES = {"2160p", "1080p", "720p", "source"}
 DEFAULT_YOUTUBE_COOKIES_FILE = BACKEND_ROOT / "cookies" / "youtube_cookies.txt"
+RENDER_YOUTUBE_COOKIES_FILE = Path("/etc/secrets/youtube_cookies.txt")
 _CERTIFICATE_ERROR_MARKERS = (
     "certificate verify failed",
     "ssl certificate problem",
@@ -95,43 +96,59 @@ def _cookie_bytes_from_env() -> bytes | None:
 
 
 @contextmanager
+def _temporary_cookie_file(cookie_bytes: bytes) -> Iterator[str]:
+    # yt-dlp writes its cookie jar back when YoutubeDL closes. Always give it
+    # a writable disposable copy so read-only secret mounts and source exports
+    # are never modified.
+    handle = tempfile.NamedTemporaryFile("wb", suffix=".cookies.txt", delete=False)
+    temp_path = Path(handle.name)
+    try:
+        handle.write(cookie_bytes)
+        handle.close()
+        yield str(temp_path)
+    finally:
+        if not handle.closed:
+            handle.close()
+        temp_path.unlink(missing_ok=True)
+
+
+@contextmanager
 def _cookies_file() -> Iterator[str | None]:
     # Text/base64 is the deployment-safe source and deliberately wins over
     # disk paths. This keeps a stale local file from shadowing freshly rotated
     # hosted credentials.
     cookie_bytes = _cookie_bytes_from_env()
     if cookie_bytes is not None:
-        # Windows prevents yt-dlp from reopening a NamedTemporaryFile while
-        # this process still has it open. Close it before yielding, then
-        # remove it reliably after yt-dlp finishes.
-        handle = tempfile.NamedTemporaryFile("wb", suffix=".cookies.txt", delete=False)
-        temp_path = Path(handle.name)
-        try:
-            handle.write(cookie_bytes)
-            handle.close()
-            yield str(temp_path)
-        finally:
-            if not handle.closed:
-                handle.close()
-            temp_path.unlink(missing_ok=True)
+        with _temporary_cookie_file(cookie_bytes) as temp_path:
+            yield temp_path
         return
 
     cookies_file = _clean(settings.ytdlp_cookies_file)
-    cookie_path = Path(cookies_file).expanduser() if cookies_file else DEFAULT_YOUTUBE_COOKIES_FILE
-    if cookie_path.is_file():
+    if cookies_file:
+        cookie_paths = (Path(cookies_file).expanduser(),)
+    else:
+        # Render secret files do not consume the process environment, so they
+        # remain safe even when a browser export is too large for ARG_MAX.
+        cookie_paths = (RENDER_YOUTUBE_COOKIES_FILE, DEFAULT_YOUTUBE_COOKIES_FILE)
+
+    for cookie_path in cookie_paths:
+        if not cookie_path.is_file():
+            continue
         try:
-            _validate_cookie_bytes(cookie_path.read_bytes())
+            cookie_bytes = cookie_path.read_bytes()
+            _validate_cookie_bytes(cookie_bytes)
         except OSError as exc:
             raise RuntimeError(f"Could not read YouTube cookies file: {cookie_path}") from exc
-        yield str(cookie_path)
+        with _temporary_cookie_file(cookie_bytes) as temp_path:
+            yield temp_path
         return
     if cookies_file:
-        raise RuntimeError(f"SMA_YTDLP_COOKIES_FILE does not exist: {cookie_path}")
+        raise RuntimeError(f"SMA_YTDLP_COOKIES_FILE does not exist: {cookie_paths[0]}")
     yield None
 
 
 def _has_cookie_settings() -> bool:
-    return DEFAULT_YOUTUBE_COOKIES_FILE.is_file() or any(
+    return any(path.is_file() for path in (RENDER_YOUTUBE_COOKIES_FILE, DEFAULT_YOUTUBE_COOKIES_FILE)) or any(
         _clean(value)
         for value in (
             settings.ytdlp_cookies_text,
@@ -203,15 +220,16 @@ def _friendly_download_error(exc: DownloadError) -> RuntimeError:
         return RuntimeError(
             "YouTube blocked this server as a bot. The backend now supports cookies, browser impersonation, "
             "Node/EJS challenges, optional proxies, and PO tokens, but this Render IP still needs authenticated "
-            "YouTube cookies. Set Render env var SMA_YTDLP_COOKIES_TEXT to a fresh Netscape cookies.txt export "
-            "from a private YouTube session, then redeploy."
+            "YouTube cookies. Add a Render Secret File named youtube_cookies.txt, set "
+            "SMA_YTDLP_COOKIES_FILE=/etc/secrets/youtube_cookies.txt, then redeploy."
         )
     if needs_cookies and has_cookies:
         return RuntimeError(
             "YouTube still rejected the configured cookies. Export a fresh Netscape cookies.txt from a new "
             "private/incognito YouTube session, navigate that tab to https://www.youtube.com/robots.txt before "
-            "exporting, update SMA_YTDLP_COOKIES_TEXT, then redeploy. If it still fails, Render's IP is blocked "
-            "for that account/session and you need SMA_YTDLP_PROXY_URL with a clean residential/ISP proxy."
+            "exporting, replace the Render Secret File youtube_cookies.txt, then redeploy. If it still fails, "
+            "Render's IP is blocked for that account/session and you need SMA_YTDLP_PROXY_URL with a clean "
+            "residential/ISP proxy."
         )
     return RuntimeError(message)
 

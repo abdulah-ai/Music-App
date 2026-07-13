@@ -40,10 +40,35 @@ class YoutubeDlServiceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             cookie_path = Path(tmp) / "youtube_cookies.txt"
             cookie_path.write_text(VALID_COOKIES, encoding="utf-8")
-            with patch.object(ytdlp_service, "DEFAULT_YOUTUBE_COOKIES_FILE", cookie_path):
+            with (
+                patch.object(ytdlp_service, "RENDER_YOUTUBE_COOKIES_FILE", Path(tmp) / "missing-render.txt"),
+                patch.object(ytdlp_service, "DEFAULT_YOUTUBE_COOKIES_FILE", cookie_path),
+            ):
                 with ytdlp_service._cookies_file() as resolved:
-                    self.assertEqual(resolved, str(cookie_path))
+                    temp_path = Path(resolved)
+                    self.assertNotEqual(resolved, str(cookie_path))
+                    self.assertEqual(temp_path.read_text(encoding="utf-8"), VALID_COOKIES)
                 self.assertTrue(ytdlp_service._has_cookie_settings())
+                self.assertFalse(temp_path.exists())
+
+    def test_uses_render_secret_cookie_file_before_local_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            render_cookie_path = Path(tmp) / "render-youtube-cookies.txt"
+            local_cookie_path = Path(tmp) / "local-youtube-cookies.txt"
+            render_cookie_path.write_text(VALID_COOKIES, encoding="utf-8")
+            local_cookie_path.write_text(VALID_COOKIES.replace("test", "stale"), encoding="utf-8")
+
+            with (
+                patch.object(ytdlp_service, "RENDER_YOUTUBE_COOKIES_FILE", render_cookie_path),
+                patch.object(ytdlp_service, "DEFAULT_YOUTUBE_COOKIES_FILE", local_cookie_path),
+            ):
+                with ytdlp_service._cookies_file() as resolved:
+                    temp_path = Path(resolved)
+                    self.assertNotEqual(resolved, str(render_cookie_path))
+                    temp_path.write_text(VALID_COOKIES.replace("test", "yt-dlp-update"), encoding="utf-8")
+                self.assertTrue(ytdlp_service._has_cookie_settings())
+                self.assertEqual(render_cookie_path.read_text(encoding="utf-8"), VALID_COOKIES)
+                self.assertFalse(temp_path.exists())
 
     def test_environment_cookie_text_is_readable_and_deleted_after_use(self) -> None:
         settings.ytdlp_cookies_text = VALID_COOKIES

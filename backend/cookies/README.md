@@ -21,16 +21,24 @@ ignored by Git and Docker and must never be committed.
 
 ## Hosted deployments
 
-YouTube may challenge datacenter IPs as bots. Set `SMA_YTDLP_COOKIES_TEXT` to
-the full Netscape cookie export; it takes priority over base64 and file-based
-settings. `SMA_YTDLP_COOKIES_B64` is available when multiline environment
-values are inconvenient.
+YouTube may challenge datacenter IPs as bots. On Render, upload the export as a
+Secret File named `youtube_cookies.txt`, then set:
+
+```text
+SMA_YTDLP_COOKIES_FILE=/etc/secrets/youtube_cookies.txt
+```
+
+Delete any old `SMA_YTDLP_COOKIES_TEXT` or `SMA_YTDLP_COOKIES_B64` values.
+Putting a full browser export in an environment variable can exceed Linux's
+process environment limit and stop the Render build before Python starts.
 
 Validate an export, and optionally upload it to Render and redeploy, with:
 
 ```powershell
 python tools/upload_youtube_cookies.py path\to\cookies.txt
-python tools/upload_youtube_cookies.py path\to\cookies.txt --api-key rnd_...
+$env:RENDER_API_KEY = Read-Host "Render API key"
+python tools/upload_youtube_cookies.py path\to\cookies.txt
+Remove-Item Env:RENDER_API_KEY
 ```
 
 Cookies expire and may be invalidated by YouTube. Rotate them when the job
