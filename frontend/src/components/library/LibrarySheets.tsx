@@ -23,8 +23,8 @@ import type { Media, Playlist } from '../../services/api/types';
 import { usePlaylistStore } from '../../store/playlistStore';
 import { toast } from '../../store/toastStore';
 import { apiErrorMessage } from '../../utils/apiError';
-import { displayArtist as artistOf, displayTitle } from '../../utils/mediaDisplay';
-import { colors, gradients, layout, radii, shadows, spacing, typography } from '../../theme/tokens';
+import { displayArtist as artistOf, displayTitle, firstPlaylistArtworkItem } from '../../utils/mediaDisplay';
+import { colors, layout, radii, shadows, spacing, typography } from '../../theme/tokens';
 
 function displayArtist(media: Media): string {
   return artistOf(media) ?? 'Unknown artist';
@@ -93,19 +93,22 @@ export function PlaylistsPane({ playlists, onOpen }: { playlists: Playlist[]; on
         </View>
       }
       renderItem={({ item }) => {
-        const coverMedia = item.items.find((media) => media.thumbnail_url);
+        const coverMedia = firstPlaylistArtworkItem(item.items) ?? {
+          id: `playlist-${item.id}`,
+          title: item.name,
+          media_type: 'audio' as const,
+        };
         return (
           <Pressable
             onPress={() => onOpen(item.id)}
             style={({ pressed }) => [styles.listRow, pressed && styles.listRowPressed]}
           >
-            {coverMedia ? (
-              <Artwork media={coverMedia} size={48} borderRadius={radii.sm} />
-            ) : (
-              <LinearGradient colors={gradients.coverFallback} style={styles.listCover}>
-                <Ionicons name="list" size={16} color="rgba(248,250,252,0.4)" />
-              </LinearGradient>
-            )}
+            <Artwork
+              media={coverMedia}
+              size={48}
+              borderRadius={radii.sm}
+              accessibilityLabel={`${item.name} playlist artwork`}
+            />
             <View style={styles.listText}>
               <Text numberOfLines={1} style={styles.cardTitle}>{item.name}</Text>
               <Text numberOfLines={1} style={styles.cardArtist}>
@@ -483,13 +486,6 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   listRowPressed: { backgroundColor: 'rgba(99,214,181,0.10)' },
-  listCover: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   listText: { flex: 1 },
   modalRoot: { flex: 1, justifyContent: 'flex-end' },
   modalRootDesktop: { justifyContent: 'center', alignItems: 'center' },

@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
 import { API_BASE_URL } from '../../config';
-import { colors, radii } from '../../theme/tokens';
+import { colors, glass, radii } from '../../theme/tokens';
 import { coverGlyphColor, coverGradient, displayArtist, displayTitle } from '../../utils/mediaDisplay';
 
 export type ArtworkMedia = {
@@ -29,6 +29,7 @@ type Props = {
   priority?: boolean;
   accessibilityLabel?: string;
   borderRadius?: number;
+  contentFit?: 'cover' | 'contain';
 };
 
 function resolveUri(media: ArtworkMedia | null | undefined) {
@@ -45,6 +46,7 @@ export function Artwork({
   priority = false,
   accessibilityLabel,
   borderRadius = radii.sm,
+  contentFit = 'cover',
 }: Props) {
   const key = String(media?.id ?? resolveUri(media) ?? 'untitled');
   const uri = resolveUri(media);
@@ -59,6 +61,10 @@ export function Artwork({
   });
   const label = accessibilityLabel ?? `${title}${artist ? ` by ${artist}` : ''} artwork`;
   const dimensions: ViewStyle = { width: size, height: size };
+  const fallbackBadgeSize = typeof size === 'number'
+    ? Math.max(28, Math.min(72, size * 0.48))
+    : 64;
+  const fallbackGlyphSize = Math.max(16, Math.round(fallbackBadgeSize * 0.44));
 
   return (
     <View
@@ -69,18 +75,25 @@ export function Artwork({
     >
       <LinearGradient colors={[...coverGradient(key)]} style={StyleSheet.absoluteFill}>
         <View style={styles.fallbackIcon}>
-          <Ionicons
-            name={media?.media_type === 'video' ? 'play' : 'musical-note'}
-            size={typeof size === 'number' ? Math.max(14, Math.min(30, size * 0.3)) : 24}
-            color={coverGlyphColor(key)}
-          />
+          <View
+            style={[
+              styles.fallbackBadge,
+              { width: fallbackBadgeSize, height: fallbackBadgeSize },
+            ]}
+          >
+            <Ionicons
+              name={media?.media_type === 'video' ? 'videocam' : 'musical-notes'}
+              size={fallbackGlyphSize}
+              color={coverGlyphColor(key)}
+            />
+          </View>
         </View>
       </LinearGradient>
       {uri ? (
         <Image
           source={{ uri }}
           style={[StyleSheet.absoluteFill, { borderRadius }]}
-          contentFit="cover"
+          contentFit={contentFit}
           cachePolicy="memory-disk"
           priority={priority ? 'high' : 'normal'}
           loading={priority ? 'eager' : 'lazy'}
@@ -105,6 +118,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    opacity: 0.78,
+  },
+  fallbackBadge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.pill,
+    backgroundColor: glass.fillBright,
+    borderWidth: 1,
+    borderColor: glass.strokeStrong,
   },
 });

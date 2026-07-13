@@ -107,6 +107,12 @@ export function thumbnailUri(media: Pick<Media, 'thumbnail_url'>): string | null
   return url;
 }
 
+/** Prefer real art for a playlist cover, then the first item so its stable,
+ * intentional fallback still gives the playlist a recognizable identity. */
+export function firstPlaylistArtworkItem(items: readonly Media[]): Media | null {
+  return items.find((item) => Boolean(thumbnailUri(item))) ?? items[0] ?? null;
+}
+
 /** Stable per-track cover gradient for tracks with no artwork — hue seeded
  * from the media id so the same track always wears the same color. Muted,
  * dark, on-palette: identity without shouting. */

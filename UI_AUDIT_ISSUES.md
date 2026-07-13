@@ -197,6 +197,8 @@ per identity.
    solid tinted background instead of relying on a faint icon alone, so a
    missing-artwork card still looks intentional.
 
+   **Status: fixed in codex/ui-audit-completion**
+
 3. **Raw scraped titles again** — e.g. "Take It Off – Kesha #kesha
    #lyrics_songs #lyricsedit #…" and "Children – Robert Miles (Intermediate
    Piano Tutorial)" dump source-site metadata straight into the display

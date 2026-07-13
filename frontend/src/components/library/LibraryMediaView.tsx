@@ -3,14 +3,11 @@ import { Animated, Platform, Pressable, StyleSheet, Text, View, type GestureResp
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { FadeImage } from '../ui/FadeImage';
+import { Artwork } from '../ui/Artwork';
 import type { Media } from '../../services/api/types';
 import {
-  coverGlyphColor,
-  coverGradient,
   displayArtist,
   displayTitle,
-  thumbnailUri,
 } from '../../utils/mediaDisplay';
 import { colors, gradients, radii, spacing, typography } from '../../theme/tokens';
 
@@ -49,7 +46,6 @@ export const GridCard = memo(function GridCard({
   onLongPress,
 }: MediaItemProps & { size: number }) {
   const [hovered, setHovered] = useState(false);
-  const coverUri = thumbnailUri(media);
   const artist = displayArtist(media);
   const metadata = metadataLine(media);
 
@@ -73,30 +69,14 @@ export const GridCard = memo(function GridCard({
       >
         {/* Video posters are letterboxed so their 16:9 framing survives the
             square card. Audio artwork remains a full-bleed cover crop. */}
-        <LinearGradient
-          colors={coverGradient(media.id)}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+        <Artwork
+          media={media}
+          size="100%"
+          borderRadius={radii.lg}
+          contentFit={media.media_type === 'video' ? 'contain' : 'cover'}
           style={StyleSheet.absoluteFill}
         />
-        {coverUri && (
-          <FadeImage
-            uri={coverUri}
-            resizeMode={media.media_type === 'video' ? 'contain' : 'cover'}
-            style={StyleSheet.absoluteFill as object}
-          />
-        )}
         <LinearGradient colors={gradients.coverScrim} style={styles.scrim} />
-
-        {!coverUri && (
-          <View style={styles.glyphWrap}>
-            <Ionicons
-              name={media.media_type === 'video' ? 'videocam' : 'musical-notes'}
-              size={38}
-              color={`${coverGlyphColor(media.id)}59`}
-            />
-          </View>
-        )}
 
         <View style={styles.durationChip}>
           <Ionicons
@@ -160,7 +140,6 @@ export const ListRow = memo(function ListRow({
   onLongPress,
 }: MediaItemProps) {
   const [hovered, setHovered] = useState(false);
-  const coverUri = thumbnailUri(media);
   const artist = displayArtist(media);
   const metadata = metadataLine(media);
 
@@ -185,22 +164,12 @@ export const ListRow = memo(function ListRow({
           {selected && <Ionicons name="checkmark" size={12} color="#0B1411" />}
         </View>
       )}
-      {coverUri ? (
-        <FadeImage uri={coverUri} style={styles.listCover as object} />
-      ) : (
-        <LinearGradient
-          colors={coverGradient(media.id)}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.listCover}
-        >
-          <Ionicons
-            name={media.media_type === 'video' ? 'videocam' : 'musical-notes'}
-            size={16}
-            color={`${coverGlyphColor(media.id)}73`}
-          />
-        </LinearGradient>
-      )}
+      <Artwork
+        media={media}
+        size={48}
+        borderRadius={radii.sm}
+        contentFit={media.media_type === 'video' ? 'contain' : 'cover'}
+      />
       <View style={styles.listText}>
         <Text numberOfLines={1} style={styles.cardTitle}>{displayTitle(media)}</Text>
         {artist && <Text numberOfLines={1} style={styles.cardArtist}>{artist}</Text>}
@@ -339,15 +308,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   scrim: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '60%' },
-  glyphWrap: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   durationChip: {
     position: 'absolute',
     top: spacing.sm,
@@ -389,13 +349,6 @@ const styles = StyleSheet.create({
   listRowHovered: { backgroundColor: 'rgba(17,30,25,0.85)' },
   listRowPressed: { backgroundColor: 'rgba(99,214,181,0.10)' },
   listRowSelected: { borderWidth: 1, borderColor: colors.cyan },
-  listCover: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   listText: { flex: 1 },
   skeletonGridWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   skeletonListWrap: { gap: spacing.md },
