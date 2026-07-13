@@ -43,31 +43,33 @@ export function DashboardCustomizer({ visible, onClose }: Props) {
     return (
       <View key={id} style={[styles.row, isHidden && styles.rowHidden]}>
         <View style={styles.rowText}>
-          <Text style={styles.rowLabel}>{meta.label}</Text>
-          <Text numberOfLines={1} style={styles.rowDescription}>{meta.description}</Text>
+          <Text numberOfLines={1} style={styles.rowLabel}>{meta.label}</Text>
         </View>
-        <IconButton
-          icon="chevron-up"
-          accessibilityLabel={`Move ${meta.label} up`}
-          variant="surface"
-          size={48}
-          iconSize={20}
-          disabled={index === 0}
-          onPress={() => moveWidget(id, -1)}
-        />
-        <IconButton
-          icon="chevron-down"
-          accessibilityLabel={`Move ${meta.label} down`}
-          variant="surface"
-          size={48}
-          iconSize={20}
-          disabled={index === order.length - 1}
-          onPress={() => moveWidget(id, 1)}
-        />
+        <View style={styles.orderControls} accessibilityLabel={`Reorder ${meta.label}`}>
+          <IconButton
+            icon="chevron-up"
+            accessibilityLabel={`Move ${meta.label} up`}
+            variant="surface"
+            size={44}
+            iconSize={18}
+            disabled={index === 0}
+            onPress={() => moveWidget(id, -1)}
+          />
+          <IconButton
+            icon="chevron-down"
+            accessibilityLabel={`Move ${meta.label} down`}
+            variant="surface"
+            size={44}
+            iconSize={18}
+            disabled={index === order.length - 1}
+            onPress={() => moveWidget(id, 1)}
+          />
+        </View>
         <Switch
           value={!isHidden}
           onValueChange={() => toggleWidget(id)}
           accessibilityLabel={`Show ${meta.label} widget`}
+          accessibilityHint={meta.description}
           trackColor={{ false: colors.surfaceElevated, true: colors.cyan }}
           thumbColor={colors.textPrimary}
         />
@@ -108,8 +110,8 @@ export function DashboardCustomizer({ visible, onClose }: Props) {
           <Text style={styles.sectionLabel}>ACCENT</Text>
           <SegmentedControl
             options={[
-              { value: 'forest', label: 'Forest Night', icon: 'leaf-outline' },
-              { value: 'cosmic', label: 'Cosmic Night', icon: 'planet-outline' },
+              { value: 'forest', label: 'Forest Night', icon: 'leaf-outline', tintColor: colors.cyan },
+              { value: 'cosmic', label: 'Cosmic Night', icon: 'planet-outline', tintColor: colors.violet },
             ]}
             value={accent}
             onChange={setAccent}
@@ -152,7 +154,7 @@ const styles = StyleSheet.create({
   sectionLabel: { ...typography.eyebrow, fontSize: 9, lineHeight: 12, letterSpacing: 1.8, color: colors.textMuted, marginBottom: spacing.sm },
   rows: { gap: 2 },
   row: {
-    minHeight: 48,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
@@ -163,7 +165,7 @@ const styles = StyleSheet.create({
   rowHidden: { opacity: 0.55 },
   rowText: { flex: 1, marginRight: spacing.xs },
   rowLabel: { ...typography.subtitle, fontSize: 14, lineHeight: 19, color: colors.textPrimary },
-  rowDescription: { ...typography.caption, fontSize: 11, color: colors.textMuted },
+  orderControls: { flexDirection: 'row', gap: 2 },
   resetRow: {
     minHeight: 44,
     flexDirection: 'row',

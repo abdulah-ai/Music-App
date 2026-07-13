@@ -62,6 +62,8 @@ everywhere content can sit near the tab bar or mini player.
    Suggested fix: either a proper drag handle for drag-to-reorder, or keep
    arrows but give them a real disabled visual state and more contrast.
 
+   **Status: fixed in codex/ui-audit-completion**
+
 3. **No real light/dark theme — "Forest Night" / "Cosmic Night" read as two
    near-identical dark variants**, not a genuine light/dark pair, and both
    use the same generic leaf icon rather than previewing their own accent.
@@ -69,10 +71,15 @@ everywhere content can sit near the tab bar or mini player.
    selector; if a real light mode is wanted, it needs its own token set (see
    "Broader suggestions" below).
 
+   **Status: fixed in codex/ui-audit-completion** (accent previews; a true
+   light theme remains an unscoped product decision.)
+
 4. **Layout/Accent segmented controls feel generic** — selected state is a
    subtle background tint, easy to miss.
    Suggested fix: reuse the glass/glow selected-state treatment already built
    for `Button` and `IconButton` so selection is unmistakable.
+
+   **Status: fixed in codex/ui-audit-completion**
 
 5. **Weak/no open-close animation.**
    Suggested fix: short scale+fade or slide-up transition using the existing
@@ -84,6 +91,8 @@ everywhere content can sit near the tab bar or mini player.
    arrow buttons + a toggle for 8 rows.
    Suggested fix: simplify per-row chrome (see #2 — drag handle removes two
    buttons per row) and tighten row height.
+
+   **Status: fixed in codex/ui-audit-completion**
 
 7. **Bottom tab bar bleeds through the modal** — "Listening stats" row is
    half-covered by the tab bar. Same root cause as Issue 1b; should resolve
