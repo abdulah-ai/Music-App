@@ -452,23 +452,24 @@ async def run_telegram_import_job(
             await _touch_job(job_id, status=JobStatus.FAILED, stage_label="failed", error_message="Telegram is not linked")
             return
 
+        # Database-backed StringSession deliberately does not carry Telethon's
+        # local entity cache. Resolve numeric dialog/folder IDs against a
+        # fresh listing once per import so private chats/channels still have
+        # the access hashes get_entity(int) used to read from SQLite.
+        resolved_chats = await telegram_service.resolve_chat_entities(client, chat_refs)
+
         message_filter = InputMessagesFilterMusic if media_kind == "music" else InputMessagesFilterVideo
         target_type = MediaType.AUDIO if media_kind == "music" else MediaType.VIDEO
         default_ext = ".mp3" if media_kind == "music" else ".mp4"
         backend = await _resolve_user_backend(user_id)
 
-        for chat_ref in chat_refs:
+        for chat_ref, entity in resolved_chats:
             if imported >= effective_limit:
                 break
             if job_id in _cancelled_job_ids:
                 await _touch_job(job_id, status=JobStatus.CANCELLED, stage_label="cancelled")
                 return
 
-            ref = chat_ref.strip()
-            try:
-                entity = await client.get_entity(int(ref)) if ref.lstrip("-").isdigit() else await client.get_entity(ref)
-            except Exception:  # noqa: BLE001 - a chat we can no longer resolve shouldn't sink the whole batch
-                continue
             chat_title = getattr(entity, "title", None) or getattr(entity, "first_name", None) or chat_ref
 
             await _touch_job(job_id, stage_label=f"scanning {chat_title}")

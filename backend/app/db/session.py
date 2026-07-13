@@ -109,7 +109,7 @@ async def _add_missing_columns(conn) -> None:
     await add_columns("users", {"storage_preference": "VARCHAR(10)", "role": "VARCHAR(20)"})
     await add_columns(
         "telegram_accounts",
-        {"api_hash_encrypted": "TEXT", "phone_encrypted": "TEXT"},
+        {"api_hash_encrypted": "TEXT", "phone_encrypted": "TEXT", "session_encrypted": "TEXT"},
     )
     await add_columns(
         "jobs",

@@ -141,6 +141,10 @@ everywhere content can sit near the tab bar or mini player.
    assuming the fix — it may turn out to be entangled with Issue 4's account
    state bleed rather than a Telegram-specific bug.
 
+   **Status: fixed in codex/forest-and-remaining-audit** — authorization is
+   now stored as an encrypted database-backed StringSession, with automatic
+   migration from intact legacy local sessions and explicit disconnect.
+
 ---
 
 ## Issue 4 — Cross-account data leak: playback/library state isn't cleared on account switch (bug, not cosmetic)

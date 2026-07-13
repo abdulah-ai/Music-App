@@ -63,7 +63,7 @@ async def health() -> dict:
 
 @app.get("/version")
 async def version() -> dict:
-    return {"name": settings.app_name, "api_version": "1", "schema_version": 2}
+    return {"name": settings.app_name, "api_version": "1", "schema_version": 3}
 
 
 @app.get("/{full_path:path}", include_in_schema=False)

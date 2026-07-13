@@ -31,6 +31,12 @@ async def _get_account(user_id: str, db: AsyncSession) -> TelegramAccount | None
     return await db.get(TelegramAccount, user_id)
 
 
+def _store_durable_session(account: TelegramAccount, session: str | None) -> None:
+    if not session:
+        raise RuntimeError("Telegram authorized the client without a reusable session")
+    account.session_encrypted = encrypt_secret(session)
+
+
 @router.get("/status", response_model=TelegramStatusOut)
 async def telegram_status(
     current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -39,9 +45,17 @@ async def telegram_status(
     if account is None:
         return TelegramStatusOut(configured=False, authorized=False)
     try:
-        authorized = await telegram_service.is_authorized(account)
+        authorized, session = await telegram_service.authorization_snapshot(account)
     except Exception:  # noqa: BLE001 - bad credentials shouldn't 500 the status check
         authorized = False
+        session = None
+    # Migrate an already-authorized legacy SQLite session on its first status
+    # check. Commit before deleting the local copy so a failed DB write never
+    # destroys the only working authorization.
+    if authorized and session and not account.session_encrypted:
+        _store_durable_session(account, session)
+        await db.commit()
+        telegram_service.clear_legacy_session_files(current_user.id)
     return TelegramStatusOut(configured=True, authorized=authorized, phone=telegram_service.account_phone(account))
 
 
@@ -68,7 +82,11 @@ async def save_settings(
         account.phone = "encrypted"
         account.api_hash_encrypted = encrypt_secret(payload.api_hash)
         account.phone_encrypted = encrypt_secret(payload.phone)
+        # Saving a new credential set starts an intentional re-link. Never
+        # carry a previous phone account's authorization into that flow.
+        account.session_encrypted = None
     await db.commit()
+    telegram_service.clear_legacy_session_files(current_user.id)
     return TelegramStatusOut(configured=True, authorized=False, phone=payload.phone)
 
 
@@ -85,7 +103,11 @@ async def send_code(
     client = telegram_service.make_client(account)
     await client.connect()
     if await client.is_user_authorized():
+        if not account.session_encrypted:
+            _store_durable_session(account, telegram_service.export_session(client))
+            await db.commit()
         await client.disconnect()
+        telegram_service.clear_legacy_session_files(current_user.id)
         return {"status": "authorized"}
 
     try:
@@ -115,9 +137,14 @@ async def verify_code(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Sign-in failed: {exc}")
 
     if await client.is_user_authorized():
-        await telegram_service.drop_pending(current_user.id)
+        account = await _get_account(current_user.id, db)
+        if account is None:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Telegram settings disappeared; start again")
+        _store_durable_session(account, telegram_service.export_session(client))
         await log_event(db, "telegram_linked", user_id=current_user.id)
         await db.commit()
+        await telegram_service.drop_pending(current_user.id)
+        telegram_service.clear_legacy_session_files(current_user.id)
         return {"status": "authorized"}
     return {"status": "code_sent"}
 
@@ -134,10 +161,55 @@ async def verify_password(
         await client.sign_in(password=payload.password)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"2FA sign-in failed: {exc}")
-    await telegram_service.drop_pending(current_user.id)
+    if not await client.is_user_authorized():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Telegram did not authorize this session")
+    account = await _get_account(current_user.id, db)
+    if account is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Telegram settings disappeared; start again")
+    _store_durable_session(account, telegram_service.export_session(client))
     await log_event(db, "telegram_linked", user_id=current_user.id)
     await db.commit()
+    await telegram_service.drop_pending(current_user.id)
+    telegram_service.clear_legacy_session_files(current_user.id)
     return {"status": "authorized"}
+
+
+@router.delete("/connection", response_model=TelegramStatusOut)
+async def disconnect_telegram(
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+) -> TelegramStatusOut:
+    """Revoke Telegram authorization and forget its durable local secret.
+
+    Local state is cleared even if Telegram cannot be reached: after an
+    explicit disconnect this app must not retain an account-equivalent
+    session token. Telegram's own active-sessions screen can revoke a remote
+    session if the network failed before ``log_out`` reached it.
+    """
+    account = await _get_account(current_user.id, db)
+    if account is None:
+        return TelegramStatusOut(configured=False, authorized=False)
+
+    phone = telegram_service.account_phone(account)
+    await telegram_service.drop_pending(current_user.id)
+    client = None
+    try:
+        client = telegram_service.make_client(account)
+        await client.connect()
+        if await client.is_user_authorized():
+            await client.log_out()
+    except Exception:  # noqa: BLE001 - local revocation remains mandatory
+        pass
+    finally:
+        if client is not None:
+            try:
+                await client.disconnect()
+            except Exception:  # noqa: BLE001 - best-effort teardown
+                pass
+
+    account.session_encrypted = None
+    await db.commit()
+    telegram_service.clear_legacy_session_files(current_user.id)
+    return TelegramStatusOut(configured=True, authorized=False, phone=phone)
 
 
 @router.get("/dialogs", response_model=list[TelegramDialogOut])
