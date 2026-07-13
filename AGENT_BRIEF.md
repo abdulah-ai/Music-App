@@ -60,6 +60,8 @@ Frontend runtime rule: optimize for a mobile WebView first while retaining respo
 
 Backend architecture note: jobs run in-process with FastAPI/asyncio rather than Celery. Mutate-then-serialize flows with SQLAlchemy relationships should follow the `select(...).options(selectinload(...)).execution_options(populate_existing=True)` pattern already used in recognition/playlist endpoints; `expire_all()` plus `session.get()` can cause `MissingGreenlet` failures.
 
+Downloader reliability note: TLS verification must stay enabled. Local installs use the host certificate store; hosted deployments can opt into curl-cffi impersonation, with an automatic native/system-trust fallback for certificate-chain failures. YouTube cookie precedence is text, base64, explicit file, then the ignored conventional file at `backend/cookies/youtube_cookies.txt`. Job status uses WebSocket updates plus authenticated polling so terminal states survive dropped sockets.
+
 ## Common task routing
 
 - Authentication: frontend `store/authStore.ts` + `services/api/auth.ts`; backend `endpoints/auth.py`, `schemas/auth.py`, `models/user.py`.

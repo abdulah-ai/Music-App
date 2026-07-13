@@ -185,9 +185,8 @@ export function JobsScreen({ embedded = false }: { embedded?: boolean }) {
   }
 
   async function handleRetry(job: Job) {
-    if (!job.source_url) return;
     try {
-      const replacement = await downloadsApi.createDownload(job.source_url, job.result_media?.media_type ?? 'audio');
+      const replacement = await downloadsApi.retryDownload(job.id);
       updateJob(replacement);
       toast('Import restarted.', 'success');
     } catch (caught) {

@@ -15,6 +15,7 @@ backend/*.db-journal
 backend/media_storage/
 backend/vault_data_backup/
 backend/server.log
+backend/cookies/*.txt
 
 # Expo frontend
 frontend/node_modules/

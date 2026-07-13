@@ -15,7 +15,7 @@ import yt_dlp
 from yt_dlp.networking.impersonate import ImpersonateTarget
 from yt_dlp.utils import DownloadError
 
-from app.core.config import settings
+from app.core.config import BACKEND_ROOT, settings
 
 ProgressCallback = Callable[[int, str], None]
 
@@ -42,9 +42,11 @@ def _pick_output_file(out_dir: Path, video_id: str) -> Path:
 
 AUDIO_FORMATS = {"mp3-320", "mp3-192", "m4a", "source"}
 VIDEO_QUALITIES = {"2160p", "1080p", "720p", "source"}
-DEFAULT_USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+DEFAULT_YOUTUBE_COOKIES_FILE = BACKEND_ROOT / "cookies" / "youtube_cookies.txt"
+_CERTIFICATE_ERROR_MARKERS = (
+    "certificate verify failed",
+    "ssl certificate problem",
+    "unable to get local issuer certificate",
 )
 
 
@@ -94,27 +96,42 @@ def _cookie_bytes_from_env() -> bytes | None:
 
 @contextmanager
 def _cookies_file() -> Iterator[str | None]:
-    cookies_file = _clean(settings.ytdlp_cookies_file)
-    if cookies_file:
-        cookie_path = Path(cookies_file)
-        if cookie_path.is_file():
-            yield str(cookie_path)
-            return
-        raise RuntimeError(f"SMA_YTDLP_COOKIES_FILE does not exist: {cookie_path}")
-
+    # Text/base64 is the deployment-safe source and deliberately wins over
+    # disk paths. This keeps a stale local file from shadowing freshly rotated
+    # hosted credentials.
     cookie_bytes = _cookie_bytes_from_env()
-    if cookie_bytes is None:
-        yield None
+    if cookie_bytes is not None:
+        # Windows prevents yt-dlp from reopening a NamedTemporaryFile while
+        # this process still has it open. Close it before yielding, then
+        # remove it reliably after yt-dlp finishes.
+        handle = tempfile.NamedTemporaryFile("wb", suffix=".cookies.txt", delete=False)
+        temp_path = Path(handle.name)
+        try:
+            handle.write(cookie_bytes)
+            handle.close()
+            yield str(temp_path)
+        finally:
+            if not handle.closed:
+                handle.close()
+            temp_path.unlink(missing_ok=True)
         return
 
-    with tempfile.NamedTemporaryFile("wb", suffix=".cookies.txt", delete=True) as tmp:
-        tmp.write(cookie_bytes)
-        tmp.flush()
-        yield tmp.name
+    cookies_file = _clean(settings.ytdlp_cookies_file)
+    cookie_path = Path(cookies_file).expanduser() if cookies_file else DEFAULT_YOUTUBE_COOKIES_FILE
+    if cookie_path.is_file():
+        try:
+            _validate_cookie_bytes(cookie_path.read_bytes())
+        except OSError as exc:
+            raise RuntimeError(f"Could not read YouTube cookies file: {cookie_path}") from exc
+        yield str(cookie_path)
+        return
+    if cookies_file:
+        raise RuntimeError(f"SMA_YTDLP_COOKIES_FILE does not exist: {cookie_path}")
+    yield None
 
 
 def _has_cookie_settings() -> bool:
-    return any(
+    return DEFAULT_YOUTUBE_COOKIES_FILE.is_file() or any(
         _clean(value)
         for value in (
             settings.ytdlp_cookies_text,
@@ -122,6 +139,36 @@ def _has_cookie_settings() -> bool:
             settings.ytdlp_cookies_file,
         )
     )
+
+
+def _is_certificate_error(error: object) -> bool:
+    message = str(error).lower()
+    return any(marker in message for marker in _CERTIFICATE_ERROR_MARKERS)
+
+
+def _extract_info(url: str, ydl_opts: dict) -> dict | None:
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        return ydl.extract_info(url, download=True)
+
+
+def _extract_with_transport_fallback(url: str, ydl_opts: dict) -> dict | None:
+    """Retry a failed impersonated request through the OS trust store.
+
+    curl-cffi supplies browser impersonation but uses a separate CA bundle.
+    On managed machines that bundle can reject a certificate already trusted
+    by the operating system. For that certificate failure only, retry through
+    yt-dlp's native transport. Certificate verification remains enabled.
+    """
+    try:
+        return _extract_info(url, ydl_opts)
+    except DownloadError as exc:
+        if "impersonate" not in ydl_opts or not _is_certificate_error(exc):
+            raise
+
+    fallback_opts = dict(ydl_opts)
+    fallback_opts.pop("impersonate", None)
+    fallback_opts["compat_opts"] = set(fallback_opts.get("compat_opts", ())) | {"no-certifi"}
+    return _extract_info(url, fallback_opts)
 
 
 def _youtube_extractor_args() -> dict[str, dict[str, list[str]]]:
@@ -144,7 +191,13 @@ def _youtube_extractor_args() -> dict[str, dict[str, list[str]]]:
 
 def _friendly_download_error(exc: DownloadError) -> RuntimeError:
     message = str(exc)
-    needs_cookies = "Sign in to confirm" in message or "not a bot" in message
+    if _is_certificate_error(exc):
+        return RuntimeError(
+            "The backend could not verify the media site's secure connection. Update the host's trusted "
+            "CA certificates, or enable SMA_YTDLP_PREFER_SYSTEM_CERTS so yt-dlp uses the operating system store."
+        )
+    lower_message = message.lower()
+    needs_cookies = "sign in to confirm" in lower_message or "not a bot" in lower_message
     has_cookies = _has_cookie_settings()
     if needs_cookies and not has_cookies:
         return RuntimeError(
@@ -189,13 +242,16 @@ def download_media(
         "outtmpl": str(out_dir / "%(id)s.%(ext)s"),
         "ffmpeg_location": imageio_ffmpeg.get_ffmpeg_exe(),
         "progress_hooks": [hook],
-        "http_headers": {"User-Agent": DEFAULT_USER_AGENT},
         "js_runtimes": {"node": {}},
         "noplaylist": True,
         "quiet": True,
         "no_warnings": True,
         "restrictfilenames": True,
     }
+    if settings.ytdlp_prefer_system_certs:
+        # `no-certifi` still performs full TLS verification; it changes only
+        # the source of trusted roots from certifi to the host OS.
+        ydl_opts["compat_opts"] = {"no-certifi"}
     impersonate = _clean(settings.ytdlp_impersonate)
     if impersonate:
         ydl_opts["impersonate"] = ImpersonateTarget.from_str(impersonate)
@@ -229,8 +285,7 @@ def download_media(
             ydl_opts["cookiefile"] = cookiefile
 
         try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
+            info = _extract_with_transport_fallback(url, ydl_opts)
         except DownloadError as exc:
             raise _friendly_download_error(exc) from exc
 

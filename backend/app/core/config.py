@@ -32,7 +32,14 @@ class Settings(BaseSettings):
     ytdlp_cookies_text: str | None = None
     ytdlp_cookies_b64: str | None = None
     ytdlp_cookies_file: str | None = None
-    ytdlp_impersonate: str | None = "chrome"
+    # Hosted deployments can opt into curl-cffi browser impersonation (the
+    # Render blueprint does). Local installs default to yt-dlp's native
+    # transport so it can use the machine's trusted certificate store.
+    ytdlp_impersonate: str | None = None
+    # Prefer the host OS certificate store over certifi. This matters on
+    # managed machines where an administrator-installed root CA is trusted
+    # by browsers but is not present in Python's bundled CA file.
+    ytdlp_prefer_system_certs: bool = True
     ytdlp_proxy_url: str | None = None
     ytdlp_youtube_player_clients: str | None = None
     ytdlp_youtube_visitor_data: str | None = None

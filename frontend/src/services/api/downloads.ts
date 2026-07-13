@@ -32,3 +32,8 @@ export async function cancelDownload(jobId: string): Promise<Job> {
   const { data } = await apiClient.delete<Job>(`/downloads/${jobId}`);
   return data;
 }
+
+export async function retryDownload(jobId: string): Promise<Job> {
+  const { data } = await apiClient.post<Job>(`/downloads/${jobId}/retry`);
+  return data;
+}
