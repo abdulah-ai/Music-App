@@ -51,6 +51,7 @@ import {
 } from '../components/library/PlaylistDropStrip';
 import { TrackActionList } from '../components/library/TrackActions';
 import { SmartCategoriesPane } from '../components/library/SmartCategoriesPane';
+import { LibraryFreshnessBanner } from '../components/library/LibraryFreshnessBanner';
 import { useBottomChromeClearance, useDockClearance } from '../hooks/useBottomChromeClearance';
 import { RAIL_WIDTH, useResponsive } from '../hooks/useResponsive';
 import { useReducedMotion } from '../hooks/useReducedMotion';
@@ -128,6 +129,8 @@ export function LibraryScreen() {
   const {
     items: canonicalItems,
     isLoading: canonicalLoading,
+    isStale: canonicalStale,
+    lastUpdatedAt: canonicalLastUpdatedAt,
     refresh: refreshCanonical,
     upsert,
     remove,
@@ -174,10 +177,12 @@ export function LibraryScreen() {
   const [advancedFilters, setAdvancedFilters] = useState<LibraryAdvancedFilters>(EMPTY_LIBRARY_FILTERS);
   const [filteredItems, setFilteredItems] = useState<Media[] | null>(null);
   const [filterLoading, setFilterLoading] = useState(false);
+  const [filterError, setFilterError] = useState<string | null>(null);
   const [offlineIds, setOfflineIds] = useState<Record<string, boolean>>({});
   const [savingOffline, setSavingOffline] = useState(false);
   const [bulkDownloading, setBulkDownloading] = useState(false);
   const [bulkDownloadProgress, setBulkDownloadProgress] = useState<{ done: number; total: number } | null>(null);
+  const [nativeDownloadQueue, setNativeDownloadQueue] = useState<{ items: Media[]; index: number; failed: number } | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Record<string, true>>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -208,7 +213,9 @@ export function LibraryScreen() {
     () => Object.values(serverQuery).some((value) => value !== undefined && value !== ''),
     [serverQuery],
   );
-  const items = hasServerFilters ? filteredItems ?? [] : canonicalItems;
+  // Keep the last successful render in place while a query changes or fails.
+  // This prevents an unavailable server from impersonating an empty library.
+  const items = hasServerFilters ? filteredItems ?? canonicalItems : canonicalItems;
   const isLoading = hasServerFilters ? filterLoading : canonicalLoading;
 
   useEffect(() => {
@@ -229,17 +236,23 @@ export function LibraryScreen() {
     if (!hasServerFilters) {
       setFilteredItems(null);
       setFilterLoading(false);
+      setFilterError(null);
       return;
     }
-    setFilteredItems(null);
     setFilterLoading(true);
+    setFilterError(null);
     const timeout = setTimeout(() => {
       void libraryApi.listLibrary(serverQuery)
         .then((result) => {
-          if (filterRequestIdRef.current === requestId) setFilteredItems(result);
+          if (filterRequestIdRef.current === requestId) {
+            setFilteredItems(result);
+            setFilterError(null);
+          }
         })
-        .catch(() => {
-          if (filterRequestIdRef.current === requestId) setFilteredItems([]);
+        .catch((error) => {
+          if (filterRequestIdRef.current === requestId) {
+            setFilterError(apiErrorMessage(error, 'Couldn’t update these library results.'));
+          }
         })
         .finally(() => {
           if (filterRequestIdRef.current === requestId) setFilterLoading(false);
@@ -252,11 +265,14 @@ export function LibraryScreen() {
     if (!hasServerFilters) return;
     const requestId = ++filterRequestIdRef.current;
     setFilterLoading(true);
+    setFilterError(null);
     try {
       const result = await libraryApi.listLibrary(serverQuery);
       if (filterRequestIdRef.current === requestId) setFilteredItems(result);
-    } catch {
-      if (filterRequestIdRef.current === requestId) setFilteredItems((current) => current ?? []);
+    } catch (error) {
+      if (filterRequestIdRef.current === requestId) {
+        setFilterError(apiErrorMessage(error, 'Couldn’t update these library results.'));
+      }
     } finally {
       if (filterRequestIdRef.current === requestId) setFilterLoading(false);
     }
@@ -406,21 +422,20 @@ export function LibraryScreen() {
     }
   }
 
-  // Native has no offline cache yet (offlineMedia is web-only, see its file
-  // header) — the best "save to device" we can do there is trigger the OS's
-  // own download/share sheet per file, one at a time so rapid Linking.openURL
-  // calls don't fight each other. Capped since firing hundreds of native
-  // download intents back-to-back isn't a real "download all" experience.
-  const NATIVE_DOWNLOAD_CAP = 50;
-
+  // Native has no durable offline cache yet (offlineMedia is web-only), so it
+  // uses the explicit, cancellable handoff queue below.
   async function handleDownloadMany(mediaList: Media[]) {
     if (bulkDownloading || mediaList.length === 0) return;
     const webSupported = offlineMedia.isSupported();
-    const targets = webSupported ? mediaList : mediaList.slice(0, NATIVE_DOWNLOAD_CAP);
-    if (!webSupported && mediaList.length > NATIVE_DOWNLOAD_CAP) {
-      toast(`Downloading the first ${NATIVE_DOWNLOAD_CAP} — run this again for the rest`, 'info');
+    if (!webSupported) {
+      // R4 native-manager service hook: queue every target and require one
+      // explicit user action per OS handoff. Never dump external intents.
+      setNativeDownloadQueue({ items: [...mediaList], index: 0, failed: 0 });
+      setBulkDownloadProgress({ done: 0, total: mediaList.length });
+      return;
     }
 
+    const targets = mediaList;
     setBulkDownloading(true);
     setBulkDownloadProgress({ done: 0, total: targets.length });
     const token = await tokenStorage.getAccessToken();
@@ -433,20 +448,12 @@ export function LibraryScreen() {
         if (i >= targets.length) return;
         const media = targets[i];
         try {
-          if (webSupported) {
-            if (!offlineIds[media.id]) {
-              const url = token
-                ? `${libraryApi.streamUrl(media.id)}?proxy=1&token=${encodeURIComponent(token)}`
-                : `${libraryApi.streamUrl(media.id)}?proxy=1`;
-              await offlineMedia.saveOffline(media, url);
-              setOfflineIds((prev) => ({ ...prev, [media.id]: true }));
-            }
-          } else {
+          if (!offlineIds[media.id]) {
             const url = token
-              ? `${libraryApi.streamUrl(media.id)}?token=${encodeURIComponent(token)}`
-              : libraryApi.streamUrl(media.id);
-            await Linking.openURL(url);
-            await new Promise((resolve) => setTimeout(resolve, 400));
+              ? `${libraryApi.streamUrl(media.id)}?proxy=1&token=${encodeURIComponent(token)}`
+              : `${libraryApi.streamUrl(media.id)}?proxy=1`;
+            await offlineMedia.saveOffline(media, url);
+            setOfflineIds((prev) => ({ ...prev, [media.id]: true }));
           }
         } catch (err) {
           apiErrorMessage(err, "Couldn't download that track.");
@@ -456,21 +463,15 @@ export function LibraryScreen() {
         }
         return worker();
       };
-      // Concurrent fetches are fine for the web cache path; native OS-intent
-      // downloads run one at a time (see comment above).
-      const concurrency = webSupported ? 3 : 1;
+      const concurrency = 3;
       await Promise.all(Array.from({ length: Math.min(concurrency, targets.length) }, worker));
 
-      if (webSupported) {
-        toast(
-          failed > 0
-            ? `Saved ${targets.length - failed} of ${targets.length} for offline playback`
-            : `Saved ${targets.length} track${targets.length === 1 ? '' : 's'} for offline playback`,
-          failed > 0 ? 'info' : 'success',
-        );
-      } else {
-        toast(`Started ${targets.length} download${targets.length === 1 ? '' : 's'}`, 'success');
-      }
+      toast(
+        failed > 0
+          ? `Saved ${targets.length - failed} of ${targets.length} for offline playback`
+          : `Saved ${targets.length} track${targets.length === 1 ? '' : 's'} for offline playback`,
+        failed > 0 ? 'info' : 'success',
+      );
     } finally {
       setBulkDownloading(false);
       setBulkDownloadProgress(null);
@@ -538,6 +539,43 @@ export function LibraryScreen() {
       setNaming(false);
       setNamingProgress(null);
     }
+  }
+
+  async function openNextNativeDownload() {
+    if (!nativeDownloadQueue || bulkDownloading) return;
+    const media = nativeDownloadQueue.items[nativeDownloadQueue.index];
+    if (!media) return;
+    setBulkDownloading(true);
+    let failed = nativeDownloadQueue.failed;
+    try {
+      const token = await tokenStorage.getAccessToken();
+      const url = token
+        ? `${libraryApi.streamUrl(media.id)}?token=${encodeURIComponent(token)}`
+        : libraryApi.streamUrl(media.id);
+      if (!(await Linking.canOpenURL(url))) throw new Error('No download handler is available on this device.');
+      await Linking.openURL(url);
+    } catch (err) {
+      failed += 1;
+      toast(apiErrorMessage(err, "Couldn't open that download."), 'error');
+    } finally {
+      const nextIndex = nativeDownloadQueue.index + 1;
+      setBulkDownloadProgress({ done: nextIndex, total: nativeDownloadQueue.items.length });
+      setBulkDownloading(false);
+      if (nextIndex >= nativeDownloadQueue.items.length) {
+        toast(failed ? `Queue complete · ${failed} failed` : 'Download queue complete', failed ? 'info' : 'success');
+        setNativeDownloadQueue(null);
+        setBulkDownloadProgress(null);
+      } else {
+        setNativeDownloadQueue({ ...nativeDownloadQueue, index: nextIndex, failed });
+      }
+    }
+  }
+
+  function cancelNativeDownloads() {
+    const remaining = nativeDownloadQueue ? nativeDownloadQueue.items.length - nativeDownloadQueue.index : 0;
+    setNativeDownloadQueue(null);
+    setBulkDownloadProgress(null);
+    if (remaining > 0) toast(`Download queue cancelled · ${remaining} not opened`, 'info');
   }
 
   function toggleSelect(mediaId: string) {
@@ -636,14 +674,27 @@ export function LibraryScreen() {
       return;
     }
     setConfirmBulkDelete(false);
-    try {
-      for (const id of ids) await removeFromLibraryViews(id);
-      toast(`Removed ${ids.length} track${ids.length === 1 ? '' : 's'}`, 'success');
-    } catch (err) {
-      toast(apiErrorMessage(err, "Couldn't remove every selected track."), 'error');
-    } finally {
-      exitSelectMode();
+    const failedIds: string[] = [];
+    let removedCount = 0;
+    for (const id of ids) {
+      try {
+        await removeFromLibraryViews(id);
+        removedCount += 1;
+      } catch {
+        failedIds.push(id);
+      }
     }
+    if (failedIds.length === 0) {
+      toast(`Removed ${removedCount} track${removedCount === 1 ? '' : 's'}`, 'success');
+      exitSelectMode();
+      return;
+    }
+    setSelectedIds(Object.fromEntries(failedIds.map((id) => [id, true])));
+    setSelectMode(true);
+    toast(
+      `Removed ${removedCount}; ${failedIds.length} failed and remain selected. Retry delete when you're ready.`,
+      'error',
+    );
   }
 
   const unnamedCount = useMemo(
@@ -763,6 +814,33 @@ export function LibraryScreen() {
             </View>
           )}
         </Reveal>
+
+        <LibraryFreshnessBanner
+          stale={canonicalStale}
+          lastUpdatedAt={canonicalLastUpdatedAt}
+          refreshing={canonicalLoading}
+          onRetry={() => void refreshScreenLibrary()}
+        />
+
+        {filterError && hasServerFilters ? (
+          <View style={styles.filterError} accessibilityRole="alert" accessibilityLiveRegion="polite">
+            <Ionicons name="cloud-offline-outline" size={18} color={colors.warning} />
+            <View style={styles.filterErrorCopy}>
+              <Text style={styles.filterErrorTitle}>Results couldn’t be updated</Text>
+              <Text style={styles.filterErrorDetail}>{filterError} Your last results are still shown.</Text>
+            </View>
+            <Pressable
+              onPress={() => void refreshFilteredNow()}
+              disabled={filterLoading}
+              accessibilityRole="button"
+              accessibilityLabel="Retry library search"
+              style={styles.filterRetry}
+            >
+              {filterLoading ? <ActivityIndicator size="small" color={colors.cyan} /> : <Ionicons name="refresh" size={16} color={colors.cyan} />}
+              <Text style={styles.filterRetryLabel}>Retry</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         {!selectMode && <Reveal delay={70}>
         <View style={styles.searchCapsule}>
@@ -956,6 +1034,8 @@ export function LibraryScreen() {
             items={items}
             bottomClearance={bottomChromeClearance}
             onSelect={setCategoryFilter}
+            onNameTracks={() => void handleFixNames()}
+            onReturnAll={() => setTab('all')}
           />
         ) : isLoading && visible.length === 0 ? (
           <SkeletonGrid columns={columns} cellSize={cellSize} view={view} />
@@ -1229,6 +1309,51 @@ export function LibraryScreen() {
         />
       )}
 
+      <CompactGlassSheet
+        visible={!!nativeDownloadQueue}
+        onClose={cancelNativeDownloads}
+        accessibilityLabel="Managed download queue"
+        closeAccessibilityLabel="Cancel download queue"
+        maxWidth={460}
+        header={
+          <View>
+            <Text style={styles.sheetTitle}>Download queue</Text>
+            <Text style={styles.sheetSub}>
+              {nativeDownloadQueue
+                ? `${nativeDownloadQueue.index} of ${nativeDownloadQueue.items.length} opened · ${nativeDownloadQueue.items.length - nativeDownloadQueue.index} remaining`
+                : ''}
+            </Text>
+          </View>
+        }
+      >
+        {nativeDownloadQueue ? (
+          <View style={styles.nativeQueueBody}>
+            <View style={styles.nativeQueueNotice}>
+              <Ionicons name="phone-portrait-outline" size={20} color={colors.warning} />
+              <Text style={styles.nativeQueueNoticeText}>
+                Native managed storage is not installed yet. Star Hollow will open one system download at a time, only when you approve it here.
+              </Text>
+            </View>
+            <View style={styles.nativeQueueTrack}>
+              <Artwork media={nativeDownloadQueue.items[nativeDownloadQueue.index]} size={48} borderRadius={radii.sm} />
+              <View style={styles.sheetHeaderText}>
+                <Text numberOfLines={1} style={styles.sheetTitle}>{displayTitle(nativeDownloadQueue.items[nativeDownloadQueue.index])}</Text>
+                <Text style={styles.sheetSub}>Next in queue</Text>
+              </View>
+            </View>
+            <View style={styles.nativeQueueActions}>
+              <Pressable onPress={cancelNativeDownloads} style={styles.nativeQueueCancel} accessibilityRole="button">
+                <Text style={styles.bulkButtonLabel}>Cancel queue</Text>
+              </Pressable>
+              <Pressable onPress={() => void openNextNativeDownload()} disabled={bulkDownloading} style={styles.nativeQueueNext} accessibilityRole="button">
+                {bulkDownloading ? <ActivityIndicator size="small" color={colors.textInverse} /> : <Ionicons name="open-outline" size={17} color={colors.textInverse} />}
+                <Text style={styles.nativeQueueNextLabel}>Open next</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
+      </CompactGlassSheet>
+
       <LibraryFilterSheet
         visible={filterSheetOpen}
         value={advancedFilters}
@@ -1266,6 +1391,39 @@ const styles = StyleSheet.create({
   eyebrow: { ...typography.eyebrow, color: colors.cyan, marginBottom: spacing.xs },
   megaTitle: { ...typography.mega, color: colors.textPrimary },
   librarySummary: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.md },
+  filterError: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.warning,
+    backgroundColor: glass.fillHeavy,
+  },
+  filterErrorCopy: { flex: 1, minWidth: 180 },
+  filterErrorTitle: { ...typography.subtitle, fontSize: 13, color: colors.textPrimary },
+  filterErrorDetail: { ...typography.caption, color: colors.textMuted },
+  filterRetry: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    backgroundColor: glass.fillBright,
+  },
+  filterRetryLabel: { ...typography.subtitle, fontSize: 12, color: colors.cyan },
+  nativeQueueBody: { gap: spacing.md },
+  nativeQueueNotice: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, padding: spacing.md, borderRadius: radii.md, backgroundColor: glass.fillDeep },
+  nativeQueueNoticeText: { ...typography.body, flex: 1, fontSize: 13, color: colors.textSecondary },
+  nativeQueueTrack: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.sm, borderRadius: radii.md, backgroundColor: glass.fill },
+  nativeQueueActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm },
+  nativeQueueCancel: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.lg, borderRadius: radii.md, backgroundColor: glass.fill },
+  nativeQueueNext: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: spacing.lg, borderRadius: radii.md, backgroundColor: colors.cyan },
+  nativeQueueNextLabel: { ...typography.subtitle, fontSize: 13, color: colors.textInverse },
   selectionContext: {
     gap: spacing.sm,
     marginBottom: spacing.md,

@@ -8,6 +8,9 @@ type PlaylistState = {
   isLoading: boolean;
   refresh: () => Promise<void>;
   create: (name: string) => Promise<Playlist>;
+  update: (playlistId: string, payload: { name: string; artwork_url: string | null }) => Promise<Playlist>;
+  move: (playlistId: string, direction: -1 | 1) => Promise<void>;
+  reorderItems: (playlistId: string, mediaIds: string[]) => Promise<Playlist>;
   addItem: (playlistId: string, mediaId: string) => Promise<Playlist>;
   addItems: (playlistId: string, mediaIds: string[]) => Promise<Playlist>;
   removeItem: (playlistId: string, mediaId: string) => Promise<Playlist>;
@@ -38,6 +41,35 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
   async addItem(playlistId, mediaId) {
     const updated = await playlistsApi.addToPlaylist(playlistId, mediaId);
     set({ playlists: get().playlists.map((p) => (p.id === updated.id ? updated : p)) });
+    return updated;
+  },
+
+  async update(playlistId, payload) {
+    const updated = await playlistsApi.updatePlaylist(playlistId, payload);
+    set({ playlists: get().playlists.map((playlist) => (playlist.id === playlistId ? updated : playlist)) });
+    return updated;
+  },
+
+  async move(playlistId, direction) {
+    const current = get().playlists;
+    const index = current.findIndex((playlist) => playlist.id === playlistId);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= current.length) return;
+    const ordered = [...current];
+    [ordered[index], ordered[target]] = [ordered[target], ordered[index]];
+    set({ playlists: ordered });
+    try {
+      const persisted = await playlistsApi.reorderPlaylists(ordered.map((playlist) => playlist.id));
+      set({ playlists: persisted });
+    } catch (error) {
+      set({ playlists: current });
+      throw error;
+    }
+  },
+
+  async reorderItems(playlistId, mediaIds) {
+    const updated = await playlistsApi.reorderPlaylistItems(playlistId, mediaIds);
+    set({ playlists: get().playlists.map((playlist) => (playlist.id === playlistId ? updated : playlist)) });
     return updated;
   },
 

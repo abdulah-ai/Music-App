@@ -58,6 +58,7 @@ export type Job = {
 export type Playlist = {
   id: string;
   name: string;
+  artwork_url?: string | null;
   created_at: string;
   items: Media[];
 };

@@ -194,19 +194,6 @@ export const GridCard = memo(function GridCard({
           </View>
         )}
 
-        {!selectMode && (
-          <Pressable
-            onPress={(event) => {
-              event.stopPropagation();
-              onMenuPress(event);
-            }}
-            accessibilityLabel={`More options for ${displayTitle(media)}`}
-            style={[styles.moreChip, hovered && styles.moreChipHovered]}
-            hitSlop={8}
-          >
-            <Ionicons name="ellipsis-horizontal" size={15} color={colors.textPrimary} />
-          </Pressable>
-        )}
         {hovered && !selectMode && (
           <View pointerEvents="none" style={styles.playFabWrap}>
             <LinearGradient
@@ -227,6 +214,16 @@ export const GridCard = memo(function GridCard({
         </View>
       </View>
       </Pressable>
+      {!selectMode && (
+        <Pressable
+          onPress={onMenuPress}
+          accessibilityRole="button"
+          accessibilityLabel={`More options for ${displayTitle(media)}`}
+          style={[styles.moreChip, hovered && styles.moreChipHovered]}
+        >
+          <Ionicons name="ellipsis-horizontal" size={15} color={colors.textPrimary} />
+        </Pressable>
+      )}
     </DragSurface>
   );
 });
@@ -294,21 +291,18 @@ export const ListRow = memo(function ListRow({
         color={colors.textMuted}
       />
       {favorite && <Ionicons name="heart" size={14} color={colors.pink} />}
+      <Text style={styles.durationText}>{formatDuration(media.duration_seconds)}</Text>
+      </Pressable>
       {!selectMode && (
         <Pressable
-          onPress={(event) => {
-            event.stopPropagation();
-            onMenuPress(event);
-          }}
+          onPress={onMenuPress}
+          accessibilityRole="button"
           accessibilityLabel={`More options for ${displayTitle(media)}`}
-          hitSlop={10}
           style={styles.rowMoreButton}
         >
           <Ionicons name="ellipsis-horizontal" size={16} color={colors.textSecondary} />
         </Pressable>
       )}
-      <Text style={styles.durationText}>{formatDuration(media.duration_seconds)}</Text>
-      </Pressable>
     </DragSurface>
   );
 });
@@ -399,8 +393,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.sm,
     left: spacing.sm,
-    width: 30,
-    height: 30,
+    width: 44,
+    height: 44,
     borderRadius: radii.pill,
     backgroundColor: 'rgba(5,10,11,0.55)',
     alignItems: 'center',
@@ -426,8 +420,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rowMoreButton: {
-    width: 30,
-    height: 30,
+    position: 'absolute',
+    right: 42,
+    top: 12,
+    width: 44,
+    height: 44,
     borderRadius: radii.pill,
     backgroundColor: 'rgba(5,10,11,0.55)',
     alignItems: 'center',
@@ -473,6 +470,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     borderRadius: radii.md,
     padding: spacing.sm,
+    paddingRight: 92,
   },
   listRowHovered: { backgroundColor: glass.fillBright },
   listRowPressed: { backgroundColor: glass.tintPrimary },

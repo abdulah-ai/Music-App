@@ -11,14 +11,17 @@ import {
 import { Artwork } from '../ui/Artwork';
 import { GlassPanel } from '../ui/GlassPanel';
 import { PressableScale } from '../ui/PressableScale';
+import { EmptyState } from '../ui/EmptyState';
 
 type Props = {
   items: readonly Media[];
   bottomClearance: number;
   onSelect: (category: MediaCategoryId) => void;
+  onNameTracks: () => void;
+  onReturnAll: () => void;
 };
 
-export function SmartCategoriesPane({ items, bottomClearance, onSelect }: Props) {
+export function SmartCategoriesPane({ items, bottomClearance, onSelect, onNameTracks, onReturnAll }: Props) {
   const { width } = useWindowDimensions();
   const groups = groupMediaByCategory(items);
   const columns = width >= 980 ? 3 : 2;
@@ -26,6 +29,7 @@ export function SmartCategoriesPane({ items, bottomClearance, onSelect }: Props)
   const horizontalPadding = 0;
   const availableWidth = Math.min(width, 1160) - spacing.xl * 2 - horizontalPadding * 2;
   const cardWidth = Math.max(150, (availableWidth - gap * (columns - 1)) / columns);
+  const hasCategories = MEDIA_CATEGORIES.some((category) => groups[category.id].length > 0);
 
   return (
     <ScrollView
@@ -44,7 +48,24 @@ export function SmartCategoriesPane({ items, bottomClearance, onSelect }: Props)
         </View>
       </View>
 
-      <View style={styles.grid}>
+      {!hasCategories ? (
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            icon="pricetags-outline"
+            title="Categories need track details"
+            subtitle="Star Hollow builds these views from genre metadata. Name recognized tracks or edit their Genre field to create categories."
+            actionLabel="Name tracks"
+            onAction={onNameTracks}
+          />
+          <PressableScale
+            onPress={onReturnAll}
+            accessibilityLabel="Return to all library tracks"
+            style={styles.returnButton}
+          >
+            <Text style={styles.returnLabel}>Return to All</Text>
+          </PressableScale>
+        </View>
+      ) : <View style={styles.grid}>
         {MEDIA_CATEGORIES.map((category) => {
           const categoryItems = groups[category.id];
           if (categoryItems.length === 0) return null;
@@ -76,7 +97,7 @@ export function SmartCategoriesPane({ items, bottomClearance, onSelect }: Props)
             </PressableScale>
           );
         })}
-      </View>
+      </View>}
     </ScrollView>
   );
 }
@@ -105,6 +126,9 @@ const styles = StyleSheet.create({
   introTitle: { ...typography.subtitle, color: colors.textPrimary },
   introBody: { ...typography.caption, color: colors.textSecondary },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  emptyWrap: { alignItems: 'center', paddingVertical: spacing.lg },
+  returnButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.lg },
+  returnLabel: { ...typography.subtitle, fontSize: 13, color: colors.cyan },
   card: {
     minHeight: 100,
     flexDirection: 'row',

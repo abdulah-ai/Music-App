@@ -37,8 +37,12 @@ export const EMPTY_LIBRARY_FILTERS: LibraryAdvancedFilters = {
 const SOURCE_OPTIONS: { value: LibrarySourceFilter | null; label: string }[] = [
   { value: null, label: 'Any' },
   { value: 'youtube', label: 'YouTube' },
+  { value: 'tiktok', label: 'TikTok' },
+  { value: 'instagram', label: 'Instagram' },
   { value: 'telegram', label: 'Telegram' },
+  { value: 'other_url', label: 'Other URL' },
   { value: 'recognized', label: 'Recognized' },
+  { value: 'recognized_upload', label: 'Recognized upload' },
   { value: 'uploaded', label: 'Uploaded' },
 ];
 
@@ -50,7 +54,7 @@ const SOURCE_LABELS: Partial<Record<LibrarySourceFilter, string>> = {
   tiktok: 'TikTok',
   instagram: 'Instagram',
   other_url: 'Other URL',
-  recognized_upload: 'Uploaded',
+  recognized_upload: 'Recognized upload',
 };
 
 function asDateBoundary(value: string, endOfDay: boolean): string | undefined {
@@ -131,7 +135,11 @@ function ChoiceRow<T extends string | boolean | null>({
   return (
     <View style={styles.fieldGroup}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={styles.choiceWrap}>
+      <View
+        style={styles.choiceWrap}
+        accessibilityRole="radiogroup"
+        accessibilityLabel={`${label} filter`}
+      >
         {options.map((option) => {
           const selected = value === option.value;
           return (
@@ -139,7 +147,9 @@ function ChoiceRow<T extends string | boolean | null>({
               key={`${option.value}`}
               onPress={() => onChange(option.value)}
               accessibilityRole="radio"
-              accessibilityState={{ selected }}
+              accessibilityLabel={option.label}
+              accessibilityState={{ checked: selected }}
+              accessibilityHint="Choose this option, then continue through the filter controls"
               style={[styles.choice, selected && styles.choiceActive]}
             >
               <Text style={[styles.choiceLabel, selected && styles.choiceLabelActive]}>{option.label}</Text>
@@ -323,11 +333,17 @@ export function LibraryFilterSheet({
 
       <View style={styles.fieldGroup}>
         <Text style={styles.fieldLabel}>Playlist membership</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.playlistRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.playlistRow}
+          accessibilityRole="radiogroup"
+          accessibilityLabel="Playlist membership filter"
+        >
           <Pressable
             onPress={() => patch({ playlistId: null })}
             accessibilityRole="radio"
-            accessibilityState={{ selected: draft.playlistId == null }}
+            accessibilityState={{ checked: draft.playlistId == null }}
             style={[styles.choice, draft.playlistId == null && styles.choiceActive]}
           >
             <Text style={[styles.choiceLabel, draft.playlistId == null && styles.choiceLabelActive]}>Any playlist</Text>
@@ -339,7 +355,7 @@ export function LibraryFilterSheet({
                 key={playlist.id}
                 onPress={() => patch({ playlistId: playlist.id })}
                 accessibilityRole="radio"
-                accessibilityState={{ selected }}
+                accessibilityState={{ checked: selected }}
                 style={[styles.choice, selected && styles.choiceActive]}
               >
                 <Ionicons name="list" size={13} color={selected ? colors.cyan : colors.textMuted} />

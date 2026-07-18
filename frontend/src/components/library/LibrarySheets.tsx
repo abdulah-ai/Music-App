@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -32,6 +32,7 @@ function displayArtist(media: Media): string {
 
 export function PlaylistsPane({ playlists, onOpen }: { playlists: Playlist[]; onOpen: (id: string) => void }) {
   const createPlaylist = usePlaylistStore((state) => state.create);
+  const movePlaylist = usePlaylistStore((state) => state.move);
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
 
@@ -92,31 +93,56 @@ export function PlaylistsPane({ playlists, onOpen }: { playlists: Playlist[]; on
           />
         </View>
       }
-      renderItem={({ item }) => {
-        const coverMedia = firstPlaylistArtworkItem(item.items) ?? {
+      renderItem={({ item, index }) => {
+        const coverMedia = item.artwork_url ? {
+          id: `playlist-art-${item.id}`,
+          title: item.name,
+          thumbnail_url: item.artwork_url,
+          media_type: 'audio' as const,
+        } : firstPlaylistArtworkItem(item.items) ?? {
           id: `playlist-${item.id}`,
           title: item.name,
           media_type: 'audio' as const,
         };
         return (
-          <Pressable
-            onPress={() => onOpen(item.id)}
-            style={({ pressed }) => [styles.listRow, pressed && styles.listRowPressed]}
-          >
-            <Artwork
-              media={coverMedia}
-              size={48}
-              borderRadius={radii.sm}
-              accessibilityLabel={`${item.name} playlist artwork`}
-            />
-            <View style={styles.listText}>
-              <Text numberOfLines={1} style={styles.cardTitle}>{item.name}</Text>
-              <Text numberOfLines={1} style={styles.cardArtist}>
-                {item.items.length} {item.items.length === 1 ? 'track' : 'tracks'}
-              </Text>
+          <View style={styles.playlistRowShell}>
+            <Pressable
+              onPress={() => onOpen(item.id)}
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${item.name} playlist`}
+              style={({ pressed }) => [styles.playlistOpen, pressed && styles.listRowPressed]}
+            >
+              <Artwork
+                media={coverMedia}
+                size={48}
+                borderRadius={radii.sm}
+                accessibilityLabel={`${item.name} playlist artwork`}
+              />
+              <View style={styles.listText}>
+                <Text numberOfLines={1} style={styles.cardTitle}>{item.name}</Text>
+                <Text numberOfLines={1} style={styles.cardArtist}>
+                  {item.items.length} {item.items.length === 1 ? 'track' : 'tracks'}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            </Pressable>
+            <View style={styles.moveControls} accessibilityLabel={`Reorder ${item.name}`}>
+              <Pressable
+                onPress={() => void movePlaylist(item.id, -1).catch((err) => toast(apiErrorMessage(err, "Couldn't reorder playlists."), 'error'))}
+                disabled={index === 0}
+                accessibilityRole="button"
+                accessibilityLabel={`Move ${item.name} up`}
+                style={[styles.moveButton, index === 0 && styles.controlDisabled]}
+              ><Ionicons name="chevron-up" size={18} color={colors.textSecondary} /></Pressable>
+              <Pressable
+                onPress={() => void movePlaylist(item.id, 1).catch((err) => toast(apiErrorMessage(err, "Couldn't reorder playlists."), 'error'))}
+                disabled={index === playlists.length - 1}
+                accessibilityRole="button"
+                accessibilityLabel={`Move ${item.name} down`}
+                style={[styles.moveButton, index === playlists.length - 1 && styles.controlDisabled]}
+              ><Ionicons name="chevron-down" size={18} color={colors.textSecondary} /></Pressable>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-          </Pressable>
+          </View>
         );
       }}
     />
@@ -325,8 +351,16 @@ export function PlaylistDetailModal({
   const { isDesktop } = useResponsive();
   const playlist = usePlaylistStore((state) => state.playlists.find((item) => item.id === playlistId));
   const removeItem = usePlaylistStore((state) => state.removeItem);
+  const addItem = usePlaylistStore((state) => state.addItem);
+  const updatePlaylist = usePlaylistStore((state) => state.update);
+  const reorderItems = usePlaylistStore((state) => state.reorderItems);
   const removePlaylist = usePlaylistStore((state) => state.remove);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(playlist?.name ?? '');
+  const [artworkUrl, setArtworkUrl] = useState(playlist?.artwork_url ?? '');
+  const [busy, setBusy] = useState(false);
+  const [removed, setRemoved] = useState<{ item: Media; index: number } | null>(null);
 
   if (!playlist) return null;
 
@@ -344,6 +378,54 @@ export function PlaylistDetailModal({
     }
   }
 
+  async function savePlaylist() {
+    const trimmed = name.trim();
+    if (!trimmed || busy) return;
+    setBusy(true);
+    try {
+      await updatePlaylist(playlistId, { name: trimmed, artwork_url: artworkUrl.trim() || null });
+      setEditing(false);
+      toast('Playlist updated', 'success');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't update that playlist."), 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function moveTrack(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    const items = playlist?.items ?? [];
+    if (target < 0 || target >= items.length || busy) return;
+    const ids = items.map((item) => item.id);
+    [ids[index], ids[target]] = [ids[target], ids[index]];
+    setBusy(true);
+    try {
+      await reorderItems(playlistId, ids);
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't reorder those tracks."), 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function undoRemove() {
+    if (!removed || busy) return;
+    setBusy(true);
+    try {
+      const restored = await addItem(playlistId, removed.item.id);
+      const ids = restored.items.filter((item) => item.id !== removed.item.id).map((item) => item.id);
+      ids.splice(Math.min(removed.index, ids.length), 0, removed.item.id);
+      await reorderItems(playlistId, ids);
+      setRemoved(null);
+      toast('Track restored', 'success');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't restore that track."), 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <View style={[styles.modalRoot, isDesktop && styles.modalRootDesktop]}>
@@ -358,17 +440,56 @@ export function PlaylistDetailModal({
         >
           {!isDesktop && <View style={styles.sheetHandle} />}
           <View style={styles.detailHeader}>
+            <Artwork
+              media={playlist.artwork_url ? {
+                id: `playlist-art-${playlist.id}`,
+                title: playlist.name,
+                thumbnail_url: playlist.artwork_url,
+                media_type: 'audio',
+              } : firstPlaylistArtworkItem(playlist.items) ?? {
+                id: `playlist-${playlist.id}`,
+                title: playlist.name,
+                media_type: 'audio',
+              }}
+              size={52}
+              borderRadius={radii.md}
+            />
             <View style={styles.detailHeaderText}>
               <Text numberOfLines={1} style={styles.editTitle}>{playlist.name}</Text>
               <Text style={styles.sheetSub}>
                 {playlist.items.length} {playlist.items.length === 1 ? 'track' : 'tracks'}
               </Text>
             </View>
+            <Pressable
+              onPress={() => setEditing((value) => !value)}
+              accessibilityRole="button"
+              accessibilityLabel={editing ? 'Close playlist editor' : 'Edit playlist name and artwork'}
+              style={styles.detailEdit}
+            >
+              <Ionicons name={editing ? 'close' : 'create-outline'} size={18} color={colors.cyan} />
+            </Pressable>
             <Pressable onPress={handleDelete} hitSlop={8} style={styles.detailDelete}>
               <Ionicons name="trash-outline" size={18} color={colors.danger} />
               {confirmDelete && <Text style={styles.detailDeleteLabel}>Sure?</Text>}
             </Pressable>
           </View>
+
+          {editing ? (
+            <View style={styles.playlistEditor}>
+              <View style={styles.editField}>
+                <Text style={styles.editLabel}>Playlist name</Text>
+                <TextInput value={name} onChangeText={setName} accessibilityLabel="Playlist name" style={styles.editInput} selectionColor={colors.cyan} />
+              </View>
+              <View style={styles.editField}>
+                <Text style={styles.editLabel}>Artwork URL</Text>
+                <TextInput value={artworkUrl} onChangeText={setArtworkUrl} accessibilityLabel="Playlist artwork URL" autoCapitalize="none" style={styles.editInput} selectionColor={colors.cyan} placeholder="https://…" placeholderTextColor={colors.textMuted} />
+              </View>
+              <Pressable onPress={() => void savePlaylist()} disabled={busy || !name.trim()} accessibilityRole="button" style={styles.editorSave}>
+                {busy ? <ActivityIndicator size="small" color={colors.textInverse} /> : <Ionicons name="checkmark" size={17} color={colors.textInverse} />}
+                <Text style={styles.editorSaveLabel}>Save playlist</Text>
+              </Pressable>
+            </View>
+          ) : null}
 
           {playlist.items.length > 0 && (
             <PressableScale onPress={() => onPlayAll(playlist)} scaleTo={0.97}>
@@ -383,6 +504,16 @@ export function PlaylistDetailModal({
             </PressableScale>
           )}
 
+          {removed ? (
+            <View style={styles.undoBar} accessibilityRole="alert" accessibilityLiveRegion="polite">
+              <Text numberOfLines={1} style={styles.undoText}>Removed {displayTitle(removed.item)}</Text>
+              <Pressable onPress={() => void undoRemove()} disabled={busy} accessibilityRole="button" accessibilityLabel="Undo track removal" style={styles.undoButton}>
+                <Ionicons name="arrow-undo" size={16} color={colors.cyan} />
+                <Text style={styles.undoLabel}>Undo</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
           <FlatList
             data={playlist.items}
             keyExtractor={(item) => item.id}
@@ -393,24 +524,36 @@ export function PlaylistDetailModal({
                 Empty — long-press a track in your library to add it here.
               </Text>
             }
-            renderItem={({ item }) => (
+            renderItem={({ item, index }) => (
               <View style={styles.detailRow}>
                 <Artwork media={item} size={40} borderRadius={radii.sm} />
                 <View style={styles.listText}>
                   <Text numberOfLines={1} style={styles.cardTitle}>{displayTitle(item)}</Text>
                   <Text numberOfLines={1} style={styles.cardArtist}>{displayArtist(item)}</Text>
                 </View>
+                <View style={styles.trackMoveControls}>
+                  <Pressable onPress={() => void moveTrack(index, -1)} disabled={busy || index === 0} accessibilityRole="button" accessibilityLabel={`Move ${displayTitle(item)} up`} style={[styles.trackMoveButton, index === 0 && styles.controlDisabled]}>
+                    <Ionicons name="chevron-up" size={17} color={colors.textSecondary} />
+                  </Pressable>
+                  <Pressable onPress={() => void moveTrack(index, 1)} disabled={busy || index === playlist.items.length - 1} accessibilityRole="button" accessibilityLabel={`Move ${displayTitle(item)} down`} style={[styles.trackMoveButton, index === playlist.items.length - 1 && styles.controlDisabled]}>
+                    <Ionicons name="chevron-down" size={17} color={colors.textSecondary} />
+                  </Pressable>
+                </View>
                 <Pressable
                   onPress={async () => {
                     try {
                       await removeItem(playlistId, item.id);
+                      setRemoved({ item, index });
                     } catch (err) {
                       toast(apiErrorMessage(err, "Couldn't remove that track."), 'error');
                     }
                   }}
-                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ${displayTitle(item)} from ${playlist.name}`}
+                  style={styles.trackRemoveButton}
                 >
-                  <Ionicons name="close" size={17} color={colors.textMuted} />
+                  <Ionicons name="remove-circle-outline" size={18} color={colors.danger} />
+                  <Text style={styles.trackRemoveLabel}>Remove</Text>
                 </Pressable>
               </View>
             )}
@@ -458,6 +601,24 @@ export function EditMediaModal({
   const [releaseYear, setReleaseYear] = useState(media.release_year ? String(media.release_year) : '');
   const [isRemix, setIsRemix] = useState(media.is_remix === true);
   const [saving, setSaving] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const dirty = useMemo(() => (
+    title !== (media.title ?? media.recognized_title ?? '')
+    || artist !== (media.artist ?? media.recognized_artist ?? '')
+    || album !== (media.album ?? '')
+    || genre !== (media.genre ?? '')
+    || releaseYear !== (media.release_year ? String(media.release_year) : '')
+    || isRemix !== (media.is_remix === true)
+  ), [album, artist, genre, isRemix, media, releaseYear, title]);
+
+  function requestClose() {
+    if (saving) return;
+    if (!dirty) {
+      onClose();
+      return;
+    }
+    setConfirmDiscard(true);
+  }
 
   async function save() {
     const parsedYear = releaseYear.trim() ? Number(releaseYear) : null;
@@ -483,9 +644,9 @@ export function EditMediaModal({
   }
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible transparent animationType="fade" onRequestClose={requestClose}>
       <View style={[styles.modalRoot, isDesktop && styles.modalRootDesktop]}>
-        <Pressable style={styles.modalBackdrop} onPress={onClose} />
+        <Pressable style={styles.modalBackdrop} onPress={requestClose} accessibilityLabel="Close edit details" />
         <View style={[styles.sheet, isDesktop && styles.sheetDesktop, { paddingBottom: insets.bottom + spacing.lg }]}>
           {!isDesktop && <View style={styles.sheetHandle} />}
           <Text style={styles.editTitle}>Edit details</Text>
@@ -519,7 +680,25 @@ export function EditMediaModal({
             />
             <Text style={styles.editLabel}>This track is a remix</Text>
           </Pressable>
-          <PressableScale onPress={save} disabled={saving} scaleTo={0.97}>
+          {confirmDiscard ? (
+            <View style={styles.discardPrompt} accessibilityRole="alert">
+              <View style={styles.discardCopy}>
+                <Text style={styles.discardTitle}>Discard unsaved changes?</Text>
+                <Text style={styles.sheetSub}>Your edits will be lost.</Text>
+              </View>
+              <Pressable onPress={() => setConfirmDiscard(false)} style={styles.discardButton} accessibilityRole="button">
+                <Text style={styles.discardKeepLabel}>Keep editing</Text>
+              </Pressable>
+              <Pressable onPress={onClose} style={[styles.discardButton, styles.discardDanger]} accessibilityRole="button">
+                <Text style={styles.discardDangerLabel}>Discard</Text>
+              </Pressable>
+            </View>
+          ) : null}
+          <View style={styles.editActions}>
+            <Pressable onPress={requestClose} disabled={saving} style={styles.editCancel} accessibilityRole="button">
+              <Text style={styles.editCancelLabel}>Cancel</Text>
+            </Pressable>
+          <PressableScale onPress={save} disabled={saving || !dirty} scaleTo={0.97} style={styles.editSaveWrap}>
             <LinearGradient
               colors={colors.gradientPrimary}
               start={{ x: 0, y: 0 }}
@@ -529,10 +708,12 @@ export function EditMediaModal({
               {saving ? (
                 <ActivityIndicator size="small" color="#0B1411" />
               ) : (
-                <Text style={styles.editSaveLabel}>Save</Text>
+                <Text style={styles.editSaveLabel}>{dirty ? 'Save' : 'Saved'}</Text>
               )}
             </LinearGradient>
           </PressableScale>
+          </View>
+
         </View>
       </View>
     </Modal>
@@ -554,6 +735,21 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   listRowPressed: { backgroundColor: glass.tintPrimary },
+  playlistRowShell: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.sm },
+  playlistOpen: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.sm,
+    borderRadius: radii.md,
+    backgroundColor: glass.fill,
+  },
+  moveControls: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  moveButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radii.md, backgroundColor: glass.fill },
+  controlDisabled: { opacity: 0.3 },
   listText: { flex: 1 },
   modalRoot: { flex: 1, justifyContent: 'flex-end' },
   modalRootDesktop: { justifyContent: 'center', alignItems: 'center' },
@@ -628,6 +824,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   editSaveLabel: { ...typography.subtitle, fontFamily: 'Sora_600SemiBold', color: '#0B1411' },
+  editActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  editSaveWrap: { flex: 1 },
+  editCancel: { minHeight: 48, justifyContent: 'center', paddingHorizontal: spacing.lg, borderRadius: radii.md, backgroundColor: glass.fill },
+  editCancelLabel: { ...typography.subtitle, fontSize: 13, color: colors.textSecondary },
+  discardPrompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: glass.tintDangerStroke,
+    backgroundColor: glass.tintDanger,
+  },
+  discardCopy: { flex: 1, minWidth: 160 },
+  discardTitle: { ...typography.subtitle, fontSize: 13, color: colors.textPrimary },
+  discardButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md, borderRadius: radii.md },
+  discardKeepLabel: { ...typography.subtitle, fontSize: 12, color: colors.cyan },
+  discardDanger: { backgroundColor: glass.tintDanger },
+  discardDangerLabel: { ...typography.subtitle, fontSize: 12, color: colors.danger },
   createRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -658,6 +876,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   detailHeaderText: { flex: 1 },
+  detailEdit: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.pill,
+    backgroundColor: glass.tintPrimary,
+  },
   detailDelete: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -669,10 +895,21 @@ const styles = StyleSheet.create({
   },
   detailDeleteLabel: { ...typography.caption, fontSize: 12, color: colors.danger },
   detailList: { marginTop: spacing.md },
+  playlistEditor: { padding: spacing.md, marginBottom: spacing.md, borderRadius: radii.lg, backgroundColor: glass.fillDeep },
+  editorSave: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: radii.md, backgroundColor: colors.cyan },
+  editorSaveLabel: { ...typography.subtitle, fontSize: 13, color: colors.textInverse },
+  undoBar: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, paddingLeft: spacing.md, borderRadius: radii.md, backgroundColor: glass.tintPrimary },
+  undoText: { ...typography.caption, flex: 1, color: colors.textSecondary },
+  undoButton: { minWidth: 88, minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: radii.md },
+  undoLabel: { ...typography.subtitle, fontSize: 12, color: colors.cyan },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     paddingVertical: spacing.sm,
   },
+  trackMoveControls: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  trackMoveButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radii.md, backgroundColor: glass.fill },
+  trackRemoveButton: { minWidth: 86, height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: spacing.sm, borderRadius: radii.md, backgroundColor: glass.tintDanger },
+  trackRemoveLabel: { ...typography.caption, fontSize: 11, color: colors.danger },
 });

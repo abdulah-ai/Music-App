@@ -20,6 +20,7 @@ import { MiniPlayerBar } from '../components/player/MiniPlayerBar';
 import { Artwork } from '../components/ui/Artwork';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
+import { LibraryFreshnessBanner } from '../components/library/LibraryFreshnessBanner';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { IconButton } from '../components/ui/IconButton';
 import { ProgressBar } from '../components/ui/ProgressBar';
@@ -261,6 +262,8 @@ export function HomeScreen() {
   const libraryItems = useLibraryStore((state) => state.items);
   const libraryHydrated = useLibraryStore((state) => state.hydrated);
   const libraryLoading = useLibraryStore((state) => state.isLoading);
+  const libraryStale = useLibraryStore((state) => state.isStale);
+  const libraryLastUpdatedAt = useLibraryStore((state) => state.lastUpdatedAt);
   const refreshLibrary = useLibraryStore((state) => state.refresh);
   const upsertMedia = useLibraryStore((state) => state.upsert);
   const playQueue = usePlayerStore((state) => state.playQueue);
@@ -866,6 +869,13 @@ export function HomeScreen() {
               </View>
             </View>
           </Reveal>
+
+          <LibraryFreshnessBanner
+            stale={libraryStale}
+            lastUpdatedAt={libraryLastUpdatedAt}
+            refreshing={libraryLoading}
+            onRetry={() => void refreshLibrary()}
+          />
 
           {visibleWidgets.map((id, index) => {
             const rendered = widgetRenderers[id]();
