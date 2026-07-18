@@ -18,7 +18,7 @@
 - Favor SUBSTANTIAL improvements the user will visibly notice.
 
 ## Status dashboard  (update every round)
-- Phase: **FIX-LOOP**
+- Phase: **DONE** ✅ (60/60 resolved, CI green, APK shipped versionCode 40 from commit `c749471` @ 05:35 UTC)
 - Issues found: 60 / 60  (DISCOVERY complete, TEST_FINDINGS.md written)
 - Issues resolved: 51 / 60  (R1-R6a; R6a #3 #14 #20 #24 #25 #26 #27 #28 #29 #44 — typecheck green)
 - Fix round: 6b (FINAL, in progress)
@@ -63,7 +63,9 @@
   1. downloads-navigation.smoke swipe test — my R6a #27 gutted MainTabs paging, but the smoke test treats paging (incl. Today→Settings right-swipe + left-edge drawer) as INTENDED. → REVERTED MainTabs.tsx to last-green baseline (77706da). #27 left by-design.
   2. recognition-modes.smoke #54 — my R3 #48 reworded the humming-unavailable copy. → restored phrase "becomes available when ACRCloud is connected" (kept the loading/error/config state distinction).
   3+4. theme.smoke #43/#68 — my R6a #29 removed the appearance SegmentedControl (System/Daylight/Night) from DashboardCustomizer. → restored DashboardCustomizer to baseline + re-applied #28 (confirmReset). Appearance also remains in Settings (Codex's #29 addition) → additive, both places.
-- After fixes: local `tsc` GREEN; the 3 affected specs 8/8 GREEN; full-suite run in progress (bdrdoahh9). Next: if full suite green → commit+push, confirm CI green on the new commit, then DONE.
+- After fixes: local `tsc` GREEN; full suite 40/40 GREEN (system Chrome). Committed `c749471`, pushed f265ab7..c749471 → origin/main.
+- CI run for c749471 = id 29632392265 (queued at push). MUST confirm BOTH the `quality` job AND the `apk` job succeed, and the apk-latest release's starhollow.apk/version.json refreshed with a higher versionCode, before declaring DONE.
+- Verify: WebFetch https://api.github.com/repos/abdulah-ai/Music-App/actions/runs/29632392265 (status/conclusion) and .../actions/runs/29632392265/jobs (both jobs success).
 
 ## Round log
 - 02:13 UTC — Polled DISCOVERY task `task-mrpq89s8-pmcgcf`: status=running (PID 14772 alive, 5m elapsed). TEST_FINDINGS.md not yet written. Rescheduled poll in ~600s. No action taken (correct per protocol).
