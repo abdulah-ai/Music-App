@@ -20,12 +20,13 @@
 ## Status dashboard  (update every round)
 - Phase: **FIX-LOOP**
 - Issues found: 60 / 60  (DISCOVERY complete, TEST_FINDINGS.md written)
-- Issues resolved: 8 / 60  (R1: #1 #2 #19 #21 #22 #23 #57 #58 — typecheck green)
-- Fix round: 2 (in progress)
+- Issues resolved: 18 / 60  (R1 + R2 #7 #8 #12 #13 #38 #39 #40 #41 #42 #43 — typecheck green)
+- Fix round: 3 (in progress)
 - Branch: `codex/apk-fast-path` (pushed to `origin/main`)
 - Last APK push: commit `77706da` (R1), ~02:36 UTC
+- Local unpushed commits: `a2db3c3` (R2) — will push at next 30-min window
 - last_apk_push_epoch: 1784342219   (next APK push due at epoch >= 1784344019 ≈ 03:06 UTC)
-- Current Codex task id: task-mrprb6l5-hf1ce0 (FIX round 2 — Player & Queue)
+- Current Codex task id: task-mrps0lsp-44ekj5 (FIX round 3 — Identify/Recognition)
 
 ### Batch plan (adaptive; adjust from remaining-open each round)
 - R1 Account safety & form/overlay a11y: #1 #2 #19 #21 #22 #23 #57 #58
@@ -35,6 +36,7 @@
 - R5 Admin: #15 #16 #17 #18 #59 #60
 - R6 Global/Nav/Home/Lyrics/Replay/misc: #3 #14 #20 #24 #25 #26 #27 #28 #29 #44 #45 #46 #50 #51 #52 #53 #54 #55 #56
 - (Rebalance each round; verify none double-counted before marking done.)
+- NOTE: R1=8, R2=10, R3=6 → 24 issues. Remaining after R3: R4 Library (11), R5 Admin (6), R6 Global/misc (19) = 36. Consider splitting R6 into two rounds.
 
 ## Loop protocol (what Claude does each wakeup)
 1. Poll current Codex task: `node "C:/Users/Abdullah/.claude/plugins/cache/openai-codex/codex/1.0.6/scripts/codex-companion.mjs" status <TASK_ID> --json`.
@@ -50,3 +52,5 @@
 - 02:13 UTC — Polled DISCOVERY task `task-mrpq89s8-pmcgcf`: status=running (PID 14772 alive, 5m elapsed). TEST_FINDINGS.md not yet written. Rescheduled poll in ~600s. No action taken (correct per protocol).
 - 02:24 UTC — DISCOVERY completed (9m 49s). TEST_FINDINGS.md written with 60 issues (#1-#60, no gaps). Phase=FIX-LOOP. Launched FIX round 1 (`task-mrpqv8v1-s74apd`, batch: #1 #2 #19 #21 #22 #23 #57 #58 — account safety & form/overlay a11y). Rescheduled poll ~600s.
 - 02:36 UTC — FIX round 1 completed (9m 54s). All 8 issues marked [x] with RESOLVED R1 notes; new files (account/, auth/, FormError, SignOutConfirmSheet, signOutStore). typecheck GREEN. Committed + pushed `77706da` → origin/main (APK build triggered). Resolved 8/60. last_apk_push_epoch=1784342219. Launched FIX round 2 (`task-mrprb6l5-hf1ce0`, batch: #7 #8 #12 #13 #38 #39 #40 #41 #42 #43 — Player & Queue). Rescheduled poll ~600s.
+- 02:47 UTC — Polled R2: running (verifying phase, 10.5m). Rescheduled ~420s.
+- 02:56 UTC — FIX round 2 completed (12m 36s). All 10 issues marked [x] (RESOLVED R2). Files: MiniPlayerBar, QueueList, WaveformScrubber, PlayerScreen, playerStore, navigation/types. typecheck GREEN. Only ~19min since last push (<30) → committed LOCALLY `a2db3c3` (unpushed), push deferred. Resolved 18/60. Launched FIX round 3 (`task-mrps0lsp-44ekj5`, batch: #9 #10 #11 #47 #48 #49 — Identify/Recognition). Rescheduled poll ~600s.

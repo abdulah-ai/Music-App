@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Easing, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { File } from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import { useIsFocused } from '@react-navigation/native';
@@ -21,6 +22,7 @@ import { RippleField } from '../components/ui/RippleField';
 import { Button } from '../components/ui/Button';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { Artwork } from '../components/ui/Artwork';
+import { CompactGlassSheet } from '../components/ui/CompactGlassSheet';
 import { PressableScale } from '../components/ui/PressableScale';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { SegmentedControl } from '../components/ui/SegmentedControl';
@@ -30,7 +32,8 @@ import { watchJob } from '../services/api/jobSocket';
 import * as recognitionsApi from '../services/api/recognitions';
 import type { Job } from '../services/api/types';
 import { useLibraryStore } from '../store/libraryStore';
-import { useScanHistoryStore } from '../store/scanHistoryStore';
+import { useRecognitionCaptureStore } from '../store/recognitionCaptureStore';
+import { SCAN_HISTORY_LIMIT, type ScanEntry, useScanHistoryStore } from '../store/scanHistoryStore';
 import { toast } from '../store/toastStore';
 import { apiErrorMessage, friendlyJobError, friendlyJobStage } from '../utils/apiError';
 import { colors, glass, gradients, radii, spacing, typography } from '../theme/tokens';
@@ -45,6 +48,28 @@ const WAVE_BARS = 26;
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 type Phase = 'idle' | 'listening' | 'analyzing' | 'result';
+type CapabilityState = 'loading' | 'ready' | 'error';
+type CandidateSource = 'match' | 'manual' | 'history';
+
+function formatDuration(seconds: number | null): string {
+  if (seconds === null || !Number.isFinite(seconds)) return 'Duration unavailable';
+  const rounded = Math.max(0, Math.round(seconds));
+  return `${Math.floor(rounded / 60)}:${String(rounded % 60).padStart(2, '0')}`;
+}
+
+function discardClipFile(uri: string | null) {
+  if (!uri) return;
+  try {
+    if (Platform.OS === 'web') {
+      URL.revokeObjectURL(uri);
+      return;
+    }
+    const file = new File(uri);
+    if (file.exists) file.delete();
+  } catch {
+    // Cache cleanup is best-effort; stopping the microphone is the priority.
+  }
+}
 
 function meteringToAmplitude(metering: number | undefined): number {
   if (metering === undefined || !Number.isFinite(metering)) return 0;
@@ -69,13 +94,35 @@ export function RecognitionScreen() {
   const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tickTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const unsubscribeDownload = useRef<(() => void) | null>(null);
+  const captureActive = useRef(false);
+  const submitActive = useRef(false);
+  const captureGeneration = useRef(0);
+  const candidateRequestGeneration = useRef(0);
+  const mounted = useRef(true);
+  const focusedRef = useRef(isFocused);
+  const cleanupCaptureRef = useRef<(showConfirmation?: boolean) => Promise<void>>(async () => undefined);
   const upsertMedia = useLibraryStore((s) => s.upsert);
   const scanHistory = useScanHistoryStore((s) => s.entries);
   const addScan = useScanHistoryStore((s) => s.add);
   const clearScans = useScanHistoryStore((s) => s.clear);
+  const hydrateScans = useScanHistoryStore((s) => s.hydrate);
+  const captureStatus = useRecognitionCaptureStore((s) => s.status);
+  const setCaptureStatus = useRecognitionCaptureStore((s) => s.setStatus);
   const [manualQuery, setManualQuery] = useState('');
   const [mode, setMode] = useState<recognitionsApi.RecognitionMode>('recording');
   const [capabilities, setCapabilities] = useState<recognitionsApi.RecognitionCapabilities | null>(null);
+  const [capabilityState, setCapabilityState] = useState<CapabilityState>('loading');
+  const [historyVisible, setHistoryVisible] = useState(false);
+  const [candidateVisible, setCandidateVisible] = useState(false);
+  const [candidateSource, setCandidateSource] = useState<CandidateSource>('manual');
+  const [candidateQuery, setCandidateQuery] = useState('');
+  const [candidates, setCandidates] = useState<downloadsApi.DownloadSearchCandidate[]>([]);
+  const [candidateLoading, setCandidateLoading] = useState(false);
+  const [candidateError, setCandidateError] = useState<string | null>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<downloadsApi.DownloadSearchCandidate | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const importSubmitting = useRef(false);
+  focusedRef.current = isFocused;
 
   const pulseA = useRef(new Animated.Value(0)).current;
   const pulseB = useRef(new Animated.Value(0)).current;
@@ -96,30 +143,24 @@ export function RecognitionScreen() {
     return () => loop.stop();
   }, [idleSpin, isFocused, phase, reduceMotion]);
 
-  useEffect(
-    () => () => {
-      if (stopTimer.current) clearTimeout(stopTimer.current);
-      if (tickTimer.current) clearInterval(tickTimer.current);
-      unsubscribeDownload.current?.();
-    },
-    [],
-  );
+  async function loadCapabilities() {
+    setCapabilityState('loading');
+    try {
+      const value = await recognitionsApi.getCapabilities();
+      if (!mounted.current) return;
+      setCapabilities(value);
+      setCapabilityState('ready');
+      if (!value.humming) setMode('recording');
+    } catch {
+      if (!mounted.current) return;
+      setCapabilities(null);
+      setCapabilityState('error');
+    }
+  }
 
   useEffect(() => {
-    let alive = true;
-    recognitionsApi
-      .getCapabilities()
-      .then((value) => {
-        if (!alive) return;
-        setCapabilities(value);
-        if (!value.humming) setMode('recording');
-      })
-      .catch(() => {
-        if (alive) setCapabilities({ recording: true, humming: false, humming_provider: null });
-      });
-    return () => {
-      alive = false;
-    };
+    void loadCapabilities();
+    void hydrateScans();
   }, []);
 
   // Sonar pulses + background drift + the 8s countdown ring. Presentation only.
@@ -183,19 +224,73 @@ export function RecognitionScreen() {
     return undefined;
   }, [phase, reduceMotion, ringAnim]);
 
+  function clearCaptureTimers() {
+    if (tickTimer.current) clearInterval(tickTimer.current);
+    if (stopTimer.current) clearTimeout(stopTimer.current);
+    tickTimer.current = null;
+    stopTimer.current = null;
+  }
+
+  async function cleanupCapture(showConfirmation = false) {
+    const hadCapture = captureActive.current || recorder.isRecording || !!recorder.uri;
+    captureGeneration.current += 1;
+    clearCaptureTimers();
+    if (!hadCapture) return;
+
+    setCaptureStatus('cleaning_up');
+    try {
+      if (captureActive.current || recorder.isRecording) await recorder.stop();
+    } catch {
+      // A recorder can already be stopped by an overlapping timer callback.
+    } finally {
+      captureActive.current = false;
+      discardClipFile(recorder.uri);
+      setCaptureStatus('idle');
+      if (mounted.current) {
+        setPhase('idle');
+        setCountdown(LISTEN_SECONDS);
+        if (showConfirmation) toast('Recording canceled and discarded', 'success');
+      }
+    }
+  }
+  cleanupCaptureRef.current = cleanupCapture;
+
+  useEffect(() => {
+    if (!isFocused) void cleanupCaptureRef.current(false);
+  }, [isFocused]);
+
+  useEffect(
+    () => () => {
+      mounted.current = false;
+      void cleanupCaptureRef.current(false);
+      unsubscribeDownload.current?.();
+    },
+    [],
+  );
+
   async function startListening() {
+    if (captureStatus !== 'idle' || submitActive.current) return;
+    const generation = captureGeneration.current + 1;
+    captureGeneration.current = generation;
     setError(null);
     setMatch(null);
     setDownloadJob(null);
     try {
       const permission = await requestRecordingPermissionsAsync();
+      if (!mounted.current || !focusedRef.current || generation !== captureGeneration.current) return;
       if (!permission.granted) {
         setError('Microphone access is required to identify songs.');
         return;
       }
 
       await recorder.prepareToRecordAsync();
+      if (!mounted.current || !focusedRef.current || generation !== captureGeneration.current) {
+        void cleanupCaptureRef.current(false);
+        return;
+      }
       recorder.record();
+      captureActive.current = true;
+      setCaptureStatus('recording');
       setPhase('listening');
       setCountdown(LISTEN_SECONDS);
 
@@ -205,21 +300,28 @@ export function RecognitionScreen() {
 
       stopTimer.current = setTimeout(stopAndRecognize, LISTEN_SECONDS * 1000);
     } catch (err) {
+      if (!mounted.current || generation !== captureGeneration.current) return;
       setError(apiErrorMessage(err, "Couldn't start listening. Check microphone access and try again."));
       setPhase('idle');
     }
   }
 
   async function stopAndRecognize() {
-    if (tickTimer.current) clearInterval(tickTimer.current);
-    if (stopTimer.current) clearTimeout(stopTimer.current);
+    if (!captureActive.current || submitActive.current) return;
+    submitActive.current = true;
+    const generation = captureGeneration.current;
+    clearCaptureTimers();
     setPhase('analyzing');
+    setCaptureStatus('cleaning_up');
+    let uri: string | null = null;
 
     try {
       await recorder.stop();
-      const uri = recorder.uri;
+      captureActive.current = false;
+      uri = recorder.uri;
       if (!uri) throw new Error('No recording captured');
       const job = await recognitionsApi.recognizeClip(uri, 'clip.m4a', 'audio/m4a', mode);
+      if (!mounted.current || generation !== captureGeneration.current) return;
       setMatch(job);
       setPhase('result');
       addScan({
@@ -229,9 +331,19 @@ export function RecognitionScreen() {
         thumbnailUrl: job.match_thumbnail_url,
       });
     } catch (err) {
+      if (!mounted.current || generation !== captureGeneration.current) return;
       setError(apiErrorMessage(err, "Couldn't reach the recognition service. Check your connection and try again."));
       setPhase('idle');
+    } finally {
+      captureActive.current = false;
+      discardClipFile(uri ?? recorder.uri);
+      if (generation === captureGeneration.current) setCaptureStatus('idle');
+      submitActive.current = false;
     }
+  }
+
+  async function cancelListening() {
+    await cleanupCapture(true);
   }
 
   function reset() {
@@ -239,37 +351,83 @@ export function RecognitionScreen() {
     setMatch(null);
     setDownloadJob(null);
     setError(null);
+    setImportError(null);
+    setSelectedCandidate(null);
   }
 
-  async function manualSearch() {
-    const q = manualQuery.trim();
-    if (!q || downloadJob?.status === 'pending' || downloadJob?.status === 'in_progress') return;
+  async function loadCandidates(query = candidateQuery) {
+    const q = query.trim();
+    if (!q) return;
+    const requestGeneration = candidateRequestGeneration.current + 1;
+    candidateRequestGeneration.current = requestGeneration;
+    setCandidateLoading(true);
+    setCandidateError(null);
+    setCandidates([]);
     try {
-      const job = await downloadsApi.createDownload(`ytsearch1:${q} official audio`, 'audio');
+      const results = await downloadsApi.searchDownloadCandidates(q, 5);
+      if (requestGeneration !== candidateRequestGeneration.current) return;
+      setCandidates(results);
+      if (results.length === 0) setCandidateError('No safe candidates were returned. Try a more specific title and artist.');
+    } catch (err) {
+      if (requestGeneration !== candidateRequestGeneration.current) return;
+      setCandidateError(apiErrorMessage(err, "Couldn't load candidates. Check your connection and retry."));
+    } finally {
+      if (requestGeneration === candidateRequestGeneration.current) setCandidateLoading(false);
+    }
+  }
+
+  function openCandidateSearch(query: string, source: CandidateSource) {
+    const q = query.trim();
+    if (!q) return;
+    setCandidateSource(source);
+    setCandidateQuery(q);
+    setCandidateVisible(true);
+    setSelectedCandidate(null);
+    setImportError(null);
+    setDownloadJob(null);
+    void loadCandidates(q);
+  }
+
+  function manualSearch() {
+    setHistoryVisible(false);
+    openCandidateSearch(manualQuery, 'manual');
+  }
+
+  function findAndDownload() {
+    if (!match?.match_title || !match?.match_artist) return;
+    openCandidateSearch(`${match.match_artist} ${match.match_title} official audio`, 'match');
+  }
+
+  function addHistoryMatch(entry: ScanEntry) {
+    if (!entry.title || !entry.artist) return;
+    setHistoryVisible(false);
+    openCandidateSearch(`${entry.artist} ${entry.title} official audio`, 'history');
+  }
+
+  async function downloadCandidate(candidate: downloadsApi.DownloadSearchCandidate) {
+    if (importSubmitting.current || downloadBusy) return;
+    importSubmitting.current = true;
+    setSelectedCandidate(candidate);
+    setImportError(null);
+    unsubscribeDownload.current?.();
+    try {
+      const job = await downloadsApi.createDownload(candidate.url, 'audio');
       setDownloadJob(job);
       unsubscribeDownload.current = watchJob(job.id, (update) => {
         setDownloadJob(update);
         if (update.status === 'complete' && update.result_media) {
           upsertMedia(update.result_media);
+          setImportError(null);
           toast('Added to your library', 'success');
+        } else if (update.status === 'failed') {
+          setImportError(friendlyJobError(update.error_message));
         }
       });
     } catch (err) {
-      toast(apiErrorMessage(err, "Couldn't start that search."), 'error');
+      setImportError(apiErrorMessage(err, "Couldn't add this candidate. Your match is still here — retry when ready."));
+    } finally {
+      importSubmitting.current = false;
     }
-  }
-
-  async function findAndDownload() {
-    if (!match?.match_title || !match?.match_artist) return;
-    const query = `ytsearch1:${match.match_artist} ${match.match_title} official audio`;
-    const job = await downloadsApi.createDownload(query, 'audio');
-    setDownloadJob(job);
-    unsubscribeDownload.current = watchJob(job.id, (update) => {
-      setDownloadJob(update);
-      if (update.status === 'complete' && update.result_media) {
-        upsertMedia(update.result_media);
-      }
-    });
   }
 
   const orbState = phase === 'listening' ? 'listening' : phase === 'analyzing' ? 'listening' : 'idle';
@@ -337,13 +495,25 @@ export function RecognitionScreen() {
                     value: 'humming',
                     label: 'Hum or sing',
                     icon: 'mic-outline',
-                    disabled: capabilities?.humming !== true,
+                    disabled: capabilityState !== 'ready' || capabilities?.humming !== true,
                   },
                 ]}
               />
-              {capabilities?.humming === false ? (
+              {capabilityState === 'loading' ? (
+                <View style={styles.capabilityStatus} accessibilityLiveRegion="polite">
+                  <ActivityIndicator size="small" color={colors.cyan} />
+                  <Text style={styles.capabilityHint}>Checking recognition services…</Text>
+                </View>
+              ) : capabilityState === 'error' ? (
+                <View style={styles.capabilityError} accessibilityLiveRegion="polite">
+                  <Text style={styles.capabilityHint}>
+                    Recognition service status could not be reached. Nearby listening may still work; humming availability is unknown.
+                  </Text>
+                  <Button label="Retry service check" variant="ghost" onPress={() => void loadCapabilities()} style={styles.compactButton} />
+                </View>
+              ) : capabilities?.humming === false ? (
                 <Text style={styles.capabilityHint}>
-                  Hum or sing becomes available when ACRCloud is connected by the server owner.
+                  Nearby listening is ready. Hum or sing needs ACRCloud configuration from the server owner.
                 </Text>
               ) : null}
             </View>
@@ -404,7 +574,7 @@ export function RecognitionScreen() {
 
           <PressableScale
             onPress={phase === 'idle' ? startListening : phase === 'listening' ? stopAndRecognize : undefined}
-            disabled={phase === 'analyzing' || phase === 'result'}
+            disabled={phase === 'analyzing' || phase === 'result' || captureStatus === 'cleaning_up'}
             accessibilityLabel={phase === 'idle' ? (mode === 'humming' ? 'Start recording a hummed melody' : 'Start listening') : phase === 'listening' ? 'Stop and identify song' : phase === 'analyzing' ? 'Identifying song' : 'Recognition result shown'}
             scaleTo={0.96}
           >
@@ -437,12 +607,15 @@ export function RecognitionScreen() {
               {scanHistory.length > 0 && (
                 <View style={styles.historyBlock}>
                   <View style={styles.historyHeader}>
-                    <Text style={styles.historyTitle}>RECENT SCANS</Text>
-                    <Pressable onPress={clearScans} accessibilityRole="button" accessibilityLabel="Clear recent identifications" hitSlop={8}>
-                      <Text style={styles.historyClear}>Clear</Text>
+                    <View>
+                      <Text style={styles.historyTitle}>RECENT SCANS</Text>
+                      <Text style={styles.historyRetention}>{scanHistory.length} of {SCAN_HISTORY_LIMIT} kept on this device</Text>
+                    </View>
+                    <Pressable onPress={() => setHistoryVisible(true)} accessibilityRole="button" accessibilityLabel="View all recent identifications" hitSlop={8}>
+                      <Text style={styles.historyClear}>View all</Text>
                     </Pressable>
                   </View>
-                  {scanHistory.slice(0, 4).map((entry) => (
+                  {scanHistory.slice(0, 3).map((entry) => (
                     <View key={entry.id} style={styles.historyRow}>
                       <Ionicons
                         name={entry.matched ? 'checkmark-circle' : 'help-circle'}
@@ -469,7 +642,14 @@ export function RecognitionScreen() {
                   return <View key={i} style={[styles.waveBar, { height }]} />;
                 })}
               </View>
-              <Text style={styles.countdownText}>{countdown}s — tap the orb to stop early</Text>
+              <Text style={styles.countdownText}>{countdown}s — tap the orb to identify</Text>
+              <Button
+                label="Cancel and discard"
+                icon="trash-outline"
+                variant="danger"
+                onPress={() => void cancelListening()}
+                style={styles.cancelButton}
+              />
             </>
           )}
 
@@ -518,7 +698,21 @@ export function RecognitionScreen() {
                       </View>
                     )}
                   </GlassPanel>
-                  {!downloadJob && <Button label="Add to library" onPress={findAndDownload} style={styles.wide} />}
+                  {!downloadJob && <Button label="Review sources" icon="albums-outline" onPress={findAndDownload} style={styles.wide} />}
+                  {importError && selectedCandidate ? (
+                    <View style={styles.retryBlock}>
+                      <Text style={styles.error}>{importError}</Text>
+                      <Button
+                        label="Retry selected source"
+                        icon="refresh-outline"
+                        onPress={() => void downloadCandidate(selectedCandidate)}
+                        loading={importSubmitting.current}
+                        disabled={downloadBusy}
+                        style={styles.wide}
+                      />
+                      <Button label="Choose another source" variant="ghost" onPress={findAndDownload} style={styles.wide} />
+                    </View>
+                  ) : null}
                 </>
               ) : (
                 <>
@@ -579,6 +773,147 @@ export function RecognitionScreen() {
           )}
         </View>
       </View>
+      <CompactGlassSheet
+        visible={historyVisible}
+        onClose={() => setHistoryVisible(false)}
+        accessibilityLabel="Identification history"
+        scrollable
+        maxWidth={560}
+        header={
+          <View>
+            <Text style={styles.sheetTitle}>Identification history</Text>
+            <Text style={styles.sheetSubtitle}>The latest {SCAN_HISTORY_LIMIT} scans are kept on this device. Older scans roll off automatically.</Text>
+          </View>
+        }
+      >
+        <View style={styles.historySearchRow}>
+          <TextInput
+            value={manualQuery}
+            onChangeText={setManualQuery}
+            placeholder="Search title or artist"
+            placeholderTextColor={colors.textMuted}
+            selectionColor={colors.cyan}
+            style={styles.manualInput}
+            onSubmitEditing={manualSearch}
+          />
+          <Button label="Search" icon="search-outline" onPress={manualSearch} disabled={!manualQuery.trim()} style={styles.sheetActionButton} />
+        </View>
+        <View style={styles.historySheetList}>
+          {scanHistory.map((entry) => (
+            <GlassPanel key={entry.id} style={styles.historySheetRow}>
+              <View style={styles.historyIdentity}>
+                {entry.matched ? (
+                  <Artwork
+                    media={{ id: entry.id, title: entry.title, artist: entry.artist, thumbnail_url: entry.thumbnailUrl }}
+                    size={52}
+                    borderRadius={radii.sm}
+                  />
+                ) : (
+                  <View style={styles.historyUnknown}><Ionicons name="help" size={22} color={colors.textMuted} /></View>
+                )}
+                <View style={styles.historyDetails}>
+                  <Text numberOfLines={1} style={styles.historyEntryTitle}>{entry.matched ? entry.title : 'No match found'}</Text>
+                  <Text numberOfLines={1} style={styles.historyEntryMeta}>
+                    {entry.matched ? entry.artist : 'Try again closer to the music'} · {new Date(entry.at).toLocaleDateString()}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.historyActions}>
+                {entry.matched ? (
+                  <Pressable onPress={() => addHistoryMatch(entry)} accessibilityRole="button" accessibilityLabel={`Find a source for ${entry.title}`}>
+                    <Text style={styles.historyAction}>Find & add</Text>
+                  </Pressable>
+                ) : null}
+                <Pressable
+                  onPress={() => {
+                    setHistoryVisible(false);
+                    void startListening();
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Scan again"
+                >
+                  <Text style={styles.historyAction}>Rescan</Text>
+                </Pressable>
+              </View>
+            </GlassPanel>
+          ))}
+        </View>
+        <Button label="Clear history" icon="trash-outline" variant="danger" onPress={clearScans} style={styles.wide} />
+      </CompactGlassSheet>
+
+      <CompactGlassSheet
+        visible={candidateVisible}
+        onClose={() => setCandidateVisible(false)}
+        accessibilityLabel="Choose a download source"
+        scrollable
+        maxWidth={620}
+        header={
+          <View>
+            <Text style={styles.sheetTitle}>Choose the right recording</Text>
+            <Text style={styles.sheetSubtitle}>
+              {candidateSource === 'match' ? 'Your identified track is safe while you review.' : 'Nothing downloads until you choose a source.'}
+            </Text>
+          </View>
+        }
+      >
+        <View style={styles.candidateQueryBlock}>
+          <Text style={styles.candidateQueryLabel}>SEARCHING FOR</Text>
+          <Text style={styles.candidateQuery}>{candidateQuery}</Text>
+        </View>
+        {candidateLoading ? (
+          <View style={styles.sheetLoading} accessibilityLiveRegion="polite">
+            <ActivityIndicator color={colors.cyan} />
+            <Text style={styles.sheetSubtitle}>Finding source candidates…</Text>
+          </View>
+        ) : candidateError ? (
+          <View style={styles.retryBlock} accessibilityLiveRegion="polite">
+            <Text style={styles.error}>{candidateError}</Text>
+            <Button label="Retry candidate search" icon="refresh-outline" onPress={() => void loadCandidates()} style={styles.wide} />
+          </View>
+        ) : (
+          <View style={styles.candidateList}>
+            {candidates.map((candidate) => {
+              const isSelected = selectedCandidate?.id === candidate.id;
+              return (
+                <GlassPanel key={candidate.id} style={[styles.candidateCard, isSelected && styles.candidateCardSelected]}>
+                  <View style={styles.candidateIdentity}>
+                    <Artwork
+                      media={{ id: candidate.id, title: candidate.title, artist: candidate.channel, thumbnail_url: candidate.thumbnail_url }}
+                      size={68}
+                      borderRadius={radii.md}
+                    />
+                    <View style={styles.candidateText}>
+                      <Text numberOfLines={2} style={styles.candidateTitle}>{candidate.title}</Text>
+                      <Text numberOfLines={1} style={styles.candidateMeta}>{candidate.channel ?? 'Unknown channel'}</Text>
+                      <Text style={styles.candidateDuration}>{formatDuration(candidate.duration_seconds)}</Text>
+                    </View>
+                  </View>
+                  <Button
+                    label={isSelected && downloadBusy ? 'Adding selected source' : isSelected && downloadJob?.status === 'complete' ? 'Added' : 'Choose this source'}
+                    icon={isSelected && downloadJob?.status === 'complete' ? 'checkmark-circle-outline' : 'add-circle-outline'}
+                    onPress={() => void downloadCandidate(candidate)}
+                    loading={isSelected && downloadBusy}
+                    disabled={downloadBusy || (isSelected && downloadJob?.status === 'complete')}
+                    style={styles.wide}
+                  />
+                </GlassPanel>
+              );
+            })}
+          </View>
+        )}
+        {selectedCandidate && downloadJob && downloadBusy ? (
+          <View style={styles.candidateProgress} accessibilityLiveRegion="polite">
+            <ProgressBar progress={downloadJob.progress_pct / 100} />
+            <Text style={styles.sheetSubtitle}>{friendlyJobStage(downloadJob.stage_label, downloadJob.status)}…</Text>
+          </View>
+        ) : null}
+        {importError && selectedCandidate ? (
+          <View style={styles.retryBlock} accessibilityLiveRegion="polite">
+            <Text style={styles.error}>{importError}</Text>
+            <Button label="Retry selected source" icon="refresh-outline" onPress={() => void downloadCandidate(selectedCandidate)} disabled={downloadBusy} style={styles.wide} />
+          </View>
+        ) : null}
+      </CompactGlassSheet>
       <MiniPlayerBar />
     </View>
   );
@@ -610,6 +945,9 @@ const styles = StyleSheet.create({
   },
   modeBlock: { width: '100%', maxWidth: 440, gap: spacing.xs, marginTop: spacing.sm },
   capabilityHint: { ...typography.caption, color: colors.textMuted, textAlign: 'center' },
+  capabilityStatus: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
+  capabilityError: { alignItems: 'center', gap: spacing.sm },
+  compactButton: { minHeight: 40, paddingVertical: spacing.sm, alignSelf: 'center' },
   eyebrow: { ...typography.eyebrow, color: colors.cyan },
   megaTitle: { ...typography.mega, color: colors.textPrimary, textAlign: 'center' },
   megaSolid: { ...typography.mega, color: colors.textPrimary, textAlign: 'center' },
@@ -675,6 +1013,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cyan,
   },
   countdownText: { ...typography.body, color: colors.textMuted, textAlign: 'center' },
+  cancelButton: { minHeight: 44, alignSelf: 'center', paddingVertical: spacing.sm },
   resultBlock: { width: '100%', gap: spacing.md, alignItems: 'center' },
   resultPanel: { width: '100%' },
   resultContent: {
@@ -700,6 +1039,7 @@ const styles = StyleSheet.create({
   },
   downloadRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   wide: { alignSelf: 'stretch' },
+  retryBlock: { alignSelf: 'stretch', gap: spacing.sm },
 
   manualRow: {
     flexDirection: 'row',
@@ -740,7 +1080,56 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   historyTitle: { ...typography.eyebrow, fontSize: 10, letterSpacing: 2, color: colors.textMuted },
+  historyRetention: { ...typography.caption, fontSize: 11, color: colors.textMuted },
   historyClear: { ...typography.caption, fontSize: 12, color: colors.cyan },
   historyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   historyText: { ...typography.caption, color: colors.textSecondary, flex: 1 },
+  sheetTitle: { ...typography.title, fontSize: 19, lineHeight: 24, color: colors.textPrimary },
+  sheetSubtitle: { ...typography.caption, color: colors.textMuted },
+  historySearchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+  sheetActionButton: { minHeight: 46, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+  historySheetList: { gap: spacing.sm, marginBottom: spacing.md },
+  historySheetRow: { padding: spacing.md, gap: spacing.sm },
+  historyIdentity: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  historyUnknown: {
+    width: 52,
+    height: 52,
+    borderRadius: radii.sm,
+    backgroundColor: glass.fillDeep,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  historyDetails: { flex: 1, gap: 2 },
+  historyEntryTitle: { ...typography.subtitle, fontSize: 14, color: colors.textPrimary },
+  historyEntryMeta: { ...typography.caption, color: colors.textMuted },
+  historyActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: glass.stroke,
+    paddingTop: spacing.sm,
+  },
+  historyAction: { ...typography.caption, color: colors.cyan },
+  candidateQueryBlock: {
+    backgroundColor: glass.fillDeep,
+    borderWidth: 1,
+    borderColor: glass.stroke,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    gap: 2,
+    marginBottom: spacing.md,
+  },
+  candidateQueryLabel: { ...typography.eyebrow, fontSize: 9, color: colors.textMuted },
+  candidateQuery: { ...typography.body, color: colors.textSecondary },
+  sheetLoading: { minHeight: 150, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
+  candidateList: { gap: spacing.md },
+  candidateCard: { padding: spacing.md, gap: spacing.md },
+  candidateCardSelected: { borderColor: glass.tintPrimaryStroke },
+  candidateIdentity: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  candidateText: { flex: 1, gap: 3 },
+  candidateTitle: { ...typography.subtitle, color: colors.textPrimary },
+  candidateMeta: { ...typography.caption, color: colors.textSecondary },
+  candidateDuration: { ...typography.caption, color: colors.cyan },
+  candidateProgress: { gap: spacing.sm, marginTop: spacing.md },
 });

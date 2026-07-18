@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = 'sma.scanHistory';
-const MAX_ENTRIES = 10;
+export const SCAN_HISTORY_LIMIT = 10;
 
 export type ScanEntry = {
   id: string;
@@ -35,7 +35,10 @@ export const useScanHistoryStore = create<ScanHistoryState>((set, get) => ({
   async hydrate() {
     try {
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
-      if (raw) set({ entries: JSON.parse(raw) });
+      if (raw) {
+        const stored = JSON.parse(raw);
+        if (Array.isArray(stored)) set({ entries: stored.slice(0, SCAN_HISTORY_LIMIT) });
+      }
     } catch {
       // start empty
     }
@@ -45,7 +48,7 @@ export const useScanHistoryStore = create<ScanHistoryState>((set, get) => ({
     const entries = [
       { ...entry, id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, at: Date.now() },
       ...get().entries,
-    ].slice(0, MAX_ENTRIES);
+    ].slice(0, SCAN_HISTORY_LIMIT);
     set({ entries });
     void persist(entries);
   },

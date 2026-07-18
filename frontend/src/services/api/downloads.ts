@@ -18,6 +18,15 @@ export type DownloadInspection = {
   entry_count: number | null;
 };
 
+export type DownloadSearchCandidate = {
+  id: string;
+  url: string;
+  title: string;
+  channel: string | null;
+  duration_seconds: number | null;
+  thumbnail_url: string | null;
+};
+
 /**
  * Enqueue every URL independently. The endpoint deliberately returns one job
  * per URL so callers can keep progress and partial failures attached to the
@@ -51,6 +60,19 @@ export async function createDownload(
 
 export async function inspectDownload(url: string): Promise<DownloadInspection> {
   const { data } = await apiClient.post<DownloadInspection>('/downloads/inspect', { url });
+  return data;
+}
+
+/**
+ * R3 recognition candidate-review contract. The API returns flat metadata and
+ * direct watch URLs only; downloading never starts until the user selects one.
+ * Backend deployments must expose POST /downloads/search with this shape.
+ */
+export async function searchDownloadCandidates(
+  query: string,
+  limit = 5,
+): Promise<DownloadSearchCandidate[]> {
+  const { data } = await apiClient.post<DownloadSearchCandidate[]>('/downloads/search', { query, limit });
   return data;
 }
 
