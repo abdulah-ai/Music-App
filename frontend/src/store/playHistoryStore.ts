@@ -33,6 +33,7 @@ type PlayHistoryState = {
   topArtistsInWindow: (days: number, limit?: number) => { artist: string; count: number }[];
   totalMinutesInWindow: (days: number) => number;
   totalPlaysAllTime: () => number;
+  restore: (events: PlayEvent[]) => Promise<void>;
   resetSession: () => Promise<void>;
 };
 
@@ -132,6 +133,15 @@ export const usePlayHistoryStore = create<PlayHistoryState>((set, get) => ({
 
   totalPlaysAllTime() {
     return get().events.length;
+  },
+
+  async restore(events) {
+    const restored = events
+      .filter((event) => event && typeof event.mediaId === 'string' && Number.isFinite(event.at))
+      .sort((a, b) => b.at - a.at)
+      .slice(0, MAX_EVENTS);
+    set({ events: restored, hydrated: true });
+    await persist(restored);
   },
 
   async resetSession() {

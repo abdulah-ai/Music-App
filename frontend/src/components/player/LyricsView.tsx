@@ -5,10 +5,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../ui/Button';
 import { fetchLyrics, type Lyrics } from '../../services/api/lyrics';
 import { usePlayerStore } from '../../store/playerStore';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { colors, spacing, typography } from '../../theme/tokens';
 
 /** How far ahead of the audio clock a line lights up — feels "on the beat". */
 const SYNC_LEAD_SECONDS = 0.25;
+const ANNOUNCEMENT_INTERVAL_SECONDS = 15;
+
+function seekLabel(seconds: number): string {
+  const whole = Math.max(0, Math.round(seconds));
+  return `${Math.floor(whole / 60)} minutes ${whole % 60} seconds`;
+}
 
 /**
  * Karaoke-style synced lyrics for the current track. Lines light up in time
@@ -19,16 +26,20 @@ export function LyricsView() {
   const currentMedia = usePlayerStore((s) => s.currentMedia);
   const currentTime = usePlayerStore((s) => s.currentTime);
   const seek = usePlayerStore((s) => s.seek);
+  const reduceMotion = useReducedMotion();
 
   const [lyrics, setLyrics] = useState<Lyrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [autoFollow, setAutoFollow] = useState(true);
+  const [announcedLine, setAnnouncedLine] = useState('');
   const requestGeneration = useRef(0);
 
   const scrollRef = useRef<ScrollView>(null);
   const lineOffsets = useRef<number[]>([]);
   const viewportHeight = useRef(0);
   const lastScrolledIndex = useRef(-1);
+  const lastAnnouncementTime = useRef(-ANNOUNCEMENT_INTERVAL_SECONDS);
 
   useEffect(() => {
     let alive = true;
@@ -38,6 +49,9 @@ export function LyricsView() {
     setError(null);
     lineOffsets.current = [];
     lastScrolledIndex.current = -1;
+    lastAnnouncementTime.current = -ANNOUNCEMENT_INTERVAL_SECONDS;
+    setAutoFollow(true);
+    setAnnouncedLine('');
     if (!currentMedia) return;
     setLoading(true);
     fetchLyrics(currentMedia)
@@ -85,15 +99,35 @@ export function LyricsView() {
   }, [lyrics, currentTime]);
 
   useEffect(() => {
-    if (activeIndex < 0 || activeIndex === lastScrolledIndex.current) return;
+    if (!autoFollow || activeIndex < 0 || activeIndex === lastScrolledIndex.current) return;
     const offset = lineOffsets.current[activeIndex];
     if (offset === undefined || !viewportHeight.current) return;
     lastScrolledIndex.current = activeIndex;
     scrollRef.current?.scrollTo({
       y: Math.max(0, offset - viewportHeight.current * 0.4),
-      animated: true,
+      animated: !reduceMotion,
     });
-  }, [activeIndex]);
+  }, [activeIndex, autoFollow, reduceMotion]);
+
+  useEffect(() => {
+    if (activeIndex < 0 || !lyrics?.synced?.[activeIndex]) return;
+    if (currentTime - lastAnnouncementTime.current < ANNOUNCEMENT_INTERVAL_SECONDS) return;
+    lastAnnouncementTime.current = currentTime;
+    setAnnouncedLine(lyrics.synced[activeIndex].text);
+  }, [activeIndex, currentTime, lyrics]);
+
+  function resumeFollowing() {
+    lastScrolledIndex.current = -1;
+    setAutoFollow(true);
+  }
+
+  function seekToLine(index: number) {
+    const line = lyrics?.synced?.[index];
+    if (!line) return;
+    seek(line.time);
+    lastAnnouncementTime.current = line.time;
+    setAnnouncedLine(line.text);
+  }
 
   if (!currentMedia) return null;
 
@@ -136,7 +170,19 @@ export function LyricsView() {
           viewportHeight.current = e.nativeEvent.layout.height;
         }}
         contentContainerStyle={styles.syncedContent}
+        onScrollBeginDrag={() => setAutoFollow(false)}
       >
+        <View style={styles.followRow}>
+          <Text style={styles.followStatus}>{autoFollow ? 'Following the music' : 'Auto-follow paused'}</Text>
+          {!autoFollow ? (
+            <Pressable onPress={resumeFollowing} accessibilityRole="button" accessibilityLabel="Resume lyric auto-follow">
+              <Text style={styles.retryText}>Resume</Text>
+            </Pressable>
+          ) : null}
+        </View>
+        <Text accessibilityLiveRegion="polite" accessibilityRole="text" style={styles.srCurrent}>
+          {announcedLine ? `Current lyric: ${announcedLine}` : ''}
+        </Text>
         {error ? (
           <View style={styles.cachedNotice} accessibilityLiveRegion="polite">
             <Ionicons name="warning-outline" size={17} color={colors.warning} />
@@ -150,7 +196,11 @@ export function LyricsView() {
           return (
             <Pressable
               key={`${line.time}-${i}`}
-              onPress={() => seek(line.time)}
+              onPress={() => seekToLine(i)}
+              accessibilityRole="button"
+              accessibilityLabel={`${line.text}. Seek to ${seekLabel(line.time)}`}
+              accessibilityHint="Moves playback to this lyric"
+              accessibilityState={{ selected: isActive }}
               onLayout={(e) => {
                 lineOffsets.current[i] = e.nativeEvent.layout.y;
               }}
@@ -222,4 +272,7 @@ const styles = StyleSheet.create({
   cachedNotice: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, marginBottom: spacing.md, borderRadius: 10, backgroundColor: 'rgba(242,183,93,0.08)' },
   cachedNoticeText: { ...typography.caption, flex: 1, color: colors.textSecondary },
   retryText: { ...typography.caption, fontFamily: 'Sora_600SemiBold', color: colors.cyan },
+  followRow: { minHeight: 32, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  followStatus: { ...typography.caption, fontSize: 11, color: colors.textMuted },
+  srCurrent: { position: 'absolute', width: 1, height: 1, opacity: 0.01, overflow: 'hidden' },
 });

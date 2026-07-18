@@ -18,6 +18,7 @@ type ScanHistoryState = {
   hydrate: () => Promise<void>;
   add: (entry: Omit<ScanEntry, 'id' | 'at'>) => void;
   clear: () => void;
+  restore: (entries: ScanEntry[]) => Promise<void>;
   resetSession: () => Promise<void>;
 };
 
@@ -56,6 +57,15 @@ export const useScanHistoryStore = create<ScanHistoryState>((set, get) => ({
   clear() {
     set({ entries: [] });
     void persist([]);
+  },
+
+  async restore(entries) {
+    const restored = entries
+      .filter((entry) => entry && typeof entry.id === 'string' && Number.isFinite(entry.at))
+      .sort((a, b) => b.at - a.at)
+      .slice(0, SCAN_HISTORY_LIMIT);
+    set({ entries: restored });
+    await persist(restored);
   },
 
   async resetSession() {

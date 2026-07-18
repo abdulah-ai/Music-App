@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useIsFocused, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,7 +12,6 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { PressableScale } from '../components/ui/PressableScale';
 import { ProgressRing } from '../components/ui/ProgressRing';
-import { Reveal } from '../components/ui/Reveal';
 import { ScreenContainer } from '../components/ui/ScreenContainer';
 import { SidebarTrigger } from '../components/ui/SidebarTrigger';
 import { useBottomChromeClearance } from '../hooks/useBottomChromeClearance';
@@ -21,10 +21,15 @@ import * as downloadsApi from '../services/api/downloads';
 import { watchJob } from '../services/api/jobSocket';
 import type { Job } from '../services/api/types';
 import { useLibraryStore } from '../store/libraryStore';
+import { usePlayerStore } from '../store/playerStore';
 import { toast } from '../store/toastStore';
+import { useVideoPlayerStore } from '../store/videoPlayerStore';
 import { colors, glass, motion, radii, spacing, typography } from '../theme/tokens';
 import { apiErrorMessage, friendlyJobError, friendlyJobStage } from '../utils/apiError';
 import { displayTitle } from '../utils/mediaDisplay';
+import { confirmJobCancellation } from '../utils/confirmJobCancellation';
+
+const SHOW_FINISHED_KEY = 'sh.activity.showFinished.v1';
 
 const STATUS_META: Record<Job['status'], { label: string; icon: keyof typeof Ionicons.glyphMap; tone: DataRowTone }> = {
   pending: { label: 'Queued', icon: 'time-outline', tone: 'neutral' },
@@ -120,7 +125,7 @@ function ActivitySkeleton() {
   );
 }
 
-function JobRow({ job, onCancel, onRetry }: { job: Job; onCancel: () => void; onRetry: () => void }) {
+function JobRow({ job, onCancel, onRetry, onOpen }: { job: Job; onCancel: () => void; onRetry: () => void; onOpen: () => void }) {
   const meta = STATUS_META[job.status];
   const running = job.status === 'in_progress' || job.status === 'pending';
   const title = jobTitle(job);
@@ -139,7 +144,7 @@ function JobRow({ job, onCancel, onRetry }: { job: Job; onCancel: () => void; on
     >
       <Ionicons name="close" size={19} color={colors.textSecondary} />
     </PressableScale>
-  ) : job.status === 'failed' && job.source_url ? (
+  ) : (job.status === 'failed' || job.status === 'cancelled') && job.source_url ? (
     <PressableScale
       onPress={onRetry}
       accessibilityLabel={`Retry ${title}`}
@@ -152,7 +157,13 @@ function JobRow({ job, onCancel, onRetry }: { job: Job; onCancel: () => void; on
   ) : null;
 
   return (
-    <DataRow
+    <Pressable
+      onPress={onOpen}
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${title} ${meta.label.toLowerCase()} details`}
+      style={({ pressed }) => pressed && styles.pressed}
+    >
+      <DataRow
       title={title}
       status={{ label: meta.label, tone: meta.tone }}
       icon={meta.icon}
@@ -174,7 +185,8 @@ function JobRow({ job, onCancel, onRetry }: { job: Job; onCancel: () => void; on
       metaNumberOfLines={job.status === 'failed' ? 2 : 1}
       timestamp={timeAgo(job.updated_at)}
       trailingAction={trailingAction}
-    />
+      />
+    </Pressable>
   );
 }
 
@@ -184,7 +196,16 @@ export function JobsScreen({ embedded = false }: { embedded?: boolean }) {
   const bottomChromeClearance = useBottomChromeClearance();
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [showFinished, setShowFinished] = useState(true);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const upsertMedia = useLibraryStore((state) => state.upsert);
+  const playQueue = usePlayerStore((state) => state.playQueue);
+
+  useEffect(() => {
+    void AsyncStorage.getItem(SHOW_FINISHED_KEY).then((saved) => {
+      if (saved !== null) setShowFinished(saved !== 'false');
+    });
+  }, []);
 
   const load = useCallback(async () => {
     setLoadError(null);
@@ -231,6 +252,7 @@ export function JobsScreen({ embedded = false }: { embedded?: boolean }) {
   }, [activeIds, isFocused, updateJob]);
 
   async function handleCancel(job: Job) {
+    if (!(await confirmJobCancellation(jobTitle(job)))) return;
     try {
       updateJob(await downloadsApi.cancelDownload(job.id));
       toast('Import cancelled.', 'info');
@@ -249,9 +271,24 @@ export function JobsScreen({ embedded = false }: { embedded?: boolean }) {
     }
   }
 
-  function clearFinished() {
-    setJobs((current) => current?.filter((job) => job.status === 'pending' || job.status === 'in_progress') ?? current);
-    toast('Finished activity hidden.', 'info');
+  function toggleFinished() {
+    const next = !showFinished;
+    setShowFinished(next);
+    void AsyncStorage.setItem(SHOW_FINISHED_KEY, String(next));
+    toast(next ? 'Finished activity restored.' : 'Finished activity hidden. Use “Show history” to restore it.', 'info');
+  }
+
+  async function openJob(job: Job) {
+    if (job.status === 'complete' && job.result_media) {
+      if (job.result_media.media_type === 'video') {
+        useVideoPlayerStore.getState().openExpanded(job.result_media.id);
+      } else {
+        await playQueue([job.result_media], 0);
+        navigation.navigate('Player');
+      }
+      return;
+    }
+    setSelectedJob(job);
   }
 
   function goToday() {
@@ -259,18 +296,21 @@ export function JobsScreen({ embedded = false }: { embedded?: boolean }) {
   }
 
   const activityEmpty = jobs !== null && !loadError && jobs.length === 0;
+  const visibleJobs = [...active, ...(showFinished ? finished : [])];
 
   return (
     <View style={styles.root}>
       <ScreenContainer maxWidth={760}>
-        <ScrollView
+        <FlatList
+          data={visibleJobs}
+          keyExtractor={(job) => job.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             styles.scroll,
             embedded && { paddingBottom: bottomChromeClearance },
             activityEmpty && styles.scrollEmpty,
           ]}
-        >
+          ListHeaderComponent={<>
           <View style={styles.headerRow}>
             {!embedded ? (
               <PressableScale
@@ -312,6 +352,25 @@ export function JobsScreen({ embedded = false }: { embedded?: boolean }) {
             </GlassPanel>
           ) : null}
 
+          {selectedJob ? (
+            <GlassPanel style={styles.detailPanel}>
+              <View style={styles.detailHeading}>
+                <View style={styles.detailCopy}>
+                  <Text style={styles.detailEyebrow}>{STATUS_META[selectedJob.status].label.toUpperCase()}</Text>
+                  <Text style={styles.detailTitle}>{jobTitle(selectedJob)}</Text>
+                </View>
+                <PressableScale onPress={() => setSelectedJob(null)} accessibilityLabel="Close import details" style={styles.iconButton}>
+                  <Ionicons name="close" size={18} color={colors.textSecondary} />
+                </PressableScale>
+              </View>
+              <Text selectable style={styles.detailSource}>{selectedJob.source_url ?? 'No source link recorded'}</Text>
+              <Text style={styles.detailBody}>{selectedJob.error_message ? friendlyJobError(selectedJob.error_message) : friendlyJobStage(selectedJob.stage_label, STATUS_META[selectedJob.status].label)}</Text>
+              {(selectedJob.status === 'failed' || selectedJob.status === 'cancelled') && selectedJob.source_url ? (
+                <Button label="Restart import" icon="refresh" onPress={() => void handleRetry(selectedJob)} style={styles.detailAction} />
+              ) : null}
+            </GlassPanel>
+          ) : null}
+
           {jobs === null ? (
             <ActivitySkeleton />
           ) : loadError ? (
@@ -331,55 +390,35 @@ export function JobsScreen({ embedded = false }: { embedded?: boolean }) {
                 onAction={goToday}
               />
             </View>
-          ) : (
-            <>
-              {active.length > 0 ? (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>IN PROGRESS</Text>
-                  <View style={styles.list}>
-                    {active.map((job, index) => (
-                      <Reveal key={job.id} delay={Math.min(100, index * 24)} distance={6} style={styles.rowReveal}>
-                        <JobRow
-                          job={job}
-                          onCancel={() => void handleCancel(job)}
-                          onRetry={() => void handleRetry(job)}
-                        />
-                      </Reveal>
-                    ))}
-                  </View>
-                </View>
-              ) : null}
+          ) : null}
 
+          {jobs && jobs.length > 0 ? (
+            <View style={styles.sectionHeading}>
+              <Text style={styles.sectionTitle}>{active.length > 0 ? 'IN PROGRESS' : showFinished ? 'HISTORY' : 'HISTORY HIDDEN'}</Text>
               {finished.length > 0 ? (
-                <View style={styles.section}>
-                  <View style={styles.sectionHeading}>
-                    <Text style={styles.sectionTitle}>HISTORY</Text>
-                    <PressableScale
-                      onPress={clearFinished}
-                      accessibilityLabel="Hide finished activity"
-                      scaleTo={0.96}
-                      hoverScaleTo={1.02}
-                      style={styles.clearButton}
-                    >
-                      <Text style={styles.clearButtonText}>Hide finished</Text>
-                    </PressableScale>
-                  </View>
-                  <View style={styles.list}>
-                    {finished.map((job, index) => (
-                      <Reveal key={job.id} delay={Math.min(140, 36 + index * 18)} distance={6} style={styles.rowReveal}>
-                        <JobRow
-                          job={job}
-                          onCancel={() => void handleCancel(job)}
-                          onRetry={() => void handleRetry(job)}
-                        />
-                      </Reveal>
-                    ))}
-                  </View>
-                </View>
+                <PressableScale onPress={toggleFinished} accessibilityLabel={showFinished ? 'Hide finished activity' : 'Show finished activity'} style={styles.clearButton}>
+                  <Text style={styles.clearButtonText}>{showFinished ? 'Hide finished' : `Show history (${finished.length})`}</Text>
+                </PressableScale>
               ) : null}
-            </>
-          )}
-        </ScrollView>
+            </View>
+          ) : null}
+          </>}
+          renderItem={({ item, index }) => {
+            const beginsHistory = showFinished && finished.length > 0 && index === active.length;
+            return (
+              <View style={styles.rowReveal}>
+                {beginsHistory && active.length > 0 ? <Text style={styles.sectionTitle}>HISTORY</Text> : null}
+                <JobRow
+                  job={item}
+                  onCancel={() => void handleCancel(item)}
+                  onRetry={() => void handleRetry(item)}
+                  onOpen={() => void openJob(item)}
+                />
+              </View>
+            );
+          }}
+          ItemSeparatorComponent={() => <View style={styles.rowSeparator} />}
+        />
       </ScreenContainer>
       {embedded ? <MiniPlayerBar /> : null}
     </View>
@@ -448,6 +487,7 @@ const styles = StyleSheet.create({
   clearButtonText: { ...typography.caption, fontFamily: 'Sora_500Medium', color: colors.cyan },
   list: { gap: spacing.sm },
   rowReveal: { width: '100%' },
+  rowSeparator: { height: spacing.sm },
   progressText: { ...typography.caption, fontSize: 9, fontFamily: 'Sora_600SemiBold', color: colors.cyan },
   jobSourceRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   jobSource: { ...typography.eyebrow, fontSize: 8, lineHeight: 11, letterSpacing: 1.4, color: colors.textMuted },
@@ -461,4 +501,12 @@ const styles = StyleSheet.create({
   },
   retryButton: { backgroundColor: glass.tintPrimary },
   pressed: { opacity: 0.68 },
+  detailPanel: { marginBottom: spacing.md, padding: spacing.md, gap: spacing.sm },
+  detailHeading: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  detailCopy: { flex: 1, minWidth: 0 },
+  detailEyebrow: { ...typography.eyebrow, color: colors.cyan },
+  detailTitle: { ...typography.subtitle, color: colors.textPrimary, marginTop: 2 },
+  detailSource: { ...typography.caption, color: colors.textMuted },
+  detailBody: { ...typography.body, color: colors.textSecondary },
+  detailAction: { alignSelf: 'flex-start', marginTop: spacing.xs },
 });

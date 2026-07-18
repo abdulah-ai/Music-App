@@ -1,22 +1,30 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Artwork } from '../components/ui/Artwork';
+import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { IconButton } from '../components/ui/IconButton';
 import { PressableScale } from '../components/ui/PressableScale';
 import { ScreenContainer } from '../components/ui/ScreenContainer';
 import { SectionHeader } from '../components/ui/SectionHeader';
+import { SegmentedControl } from '../components/ui/SegmentedControl';
 import { useLibraryStore } from '../store/libraryStore';
 import { usePlayerStore } from '../store/playerStore';
 import { usePlayHistoryStore } from '../store/playHistoryStore';
+import { toast } from '../store/toastStore';
 import { colors, radii, spacing, typography } from '../theme/tokens';
 import { displayArtist, displayTitle } from '../utils/mediaDisplay';
 import type { RootStackParamList } from '../navigation/types';
 
-const WINDOW_DAYS = 30;
+const RANGE_OPTIONS = [
+  { value: '7', label: '7 days' },
+  { value: '30', label: '30 days' },
+  { value: '90', label: '90 days' },
+];
 
 /** A private, on-device listening recap. No playback history leaves the phone. */
 export function ReplayScreen() {
@@ -24,23 +32,57 @@ export function ReplayScreen() {
   const libraryItems = useLibraryStore((state) => state.items);
   const playQueue = usePlayerStore((state) => state.playQueue);
   const events = usePlayHistoryStore((state) => state.events);
-  const topEntriesInWindow = usePlayHistoryStore((state) => state.topEntriesInWindow);
-  const topArtistsInWindow = usePlayHistoryStore((state) => state.topArtistsInWindow);
-  const totalMinutesInWindow = usePlayHistoryStore((state) => state.totalMinutesInWindow);
-  void events;
-
-  const topTracks = topEntriesInWindow(WINDOW_DAYS, 10).filter((entry) =>
-    libraryItems.some((media) => media.id === entry.event.mediaId),
-  );
-  const topArtists = topArtistsInWindow(WINDOW_DAYS, 5);
-  const minutes = totalMinutesInWindow(WINDOW_DAYS);
+  const [range, setRange] = useState('30');
+  const windowDays = Number(range);
+  const libraryIds = useMemo(() => new Set(libraryItems.map((media) => media.id)), [libraryItems]);
+  const { topTracks, topArtists, minutes, previousMinutes } = useMemo(() => {
+    const now = Date.now();
+    const span = windowDays * 86400000;
+    const current = events.filter((event) => libraryIds.has(event.mediaId) && event.at >= now - span);
+    const previous = events.filter((event) => libraryIds.has(event.mediaId) && event.at >= now - span * 2 && event.at < now - span);
+    const byTrack = new Map<string, { event: (typeof events)[number]; count: number }>();
+    const byArtist = new Map<string, number>();
+    for (const event of current) {
+      const existing = byTrack.get(event.mediaId);
+      if (existing) existing.count += 1;
+      else byTrack.set(event.mediaId, { event, count: 1 });
+      byArtist.set(event.artist, (byArtist.get(event.artist) ?? 0) + 1);
+    }
+    return {
+      topTracks: [...byTrack.values()].sort((a, b) => b.count - a.count || b.event.at - a.event.at).slice(0, 10),
+      topArtists: [...byArtist.entries()].map(([artist, count]) => ({ artist, count })).sort((a, b) => b.count - a.count).slice(0, 5),
+      minutes: Math.round(current.reduce((sum, event) => sum + (event.durationSeconds || 180), 0) / 60),
+      previousMinutes: Math.round(previous.reduce((sum, event) => sum + (event.durationSeconds || 180), 0) / 60),
+    };
+  }, [events, libraryIds, windowDays]);
   const hours = Math.floor(minutes / 60);
+  const comparison = previousMinutes === 0
+    ? (minutes > 0 ? 'A fresh listening streak' : 'No change from the previous window')
+    : `${Math.abs(Math.round(((minutes - previousMinutes) / previousMinutes) * 100))}% ${minutes >= previousMinutes ? 'more' : 'less'} than the previous ${windowDays} days`;
 
   async function playTrack(mediaId: string) {
     const media = libraryItems.find((item) => item.id === mediaId);
     if (!media) return;
     await playQueue([media], 0);
     navigation.navigate('Player');
+  }
+
+  async function playAll() {
+    const ranked = topTracks
+      .map((entry) => libraryItems.find((item) => item.id === entry.event.mediaId))
+      .filter((media): media is NonNullable<typeof media> => !!media && media.media_type === 'audio');
+    if (ranked.length === 0) return;
+    await playQueue(ranked, 0);
+    navigation.navigate('Player', { panel: 'queue' });
+  }
+
+  async function shareReplay() {
+    const leaders = topTracks.slice(0, 5).map((entry, index) => `${index + 1}. ${entry.event.title} — ${entry.count} plays`).join('\n');
+    try {
+      await Share.share({ message: `My Starhollow Replay · ${windowDays} days\n${minutes} minutes listened\n${comparison}\n\n${leaders}` });
+    } catch {
+      toast("Couldn't open sharing.", 'error');
+    }
   }
 
   return (
@@ -51,12 +93,20 @@ export function ReplayScreen() {
             <IconButton icon="chevron-back" accessibilityLabel="Go back" onPress={() => navigation.goBack()} variant="surface" />
             <SectionHeader
               eyebrow="Your Replay"
-              title={`Last ${WINDOW_DAYS} days`}
+              title={`Last ${windowDays} days`}
               subtitle="Built entirely from what plays on this device. Nothing leaves your library."
               style={styles.heroHeader}
               titleStyle={styles.hero}
             />
           </View>
+
+          <SegmentedControl
+            options={RANGE_OPTIONS}
+            value={range}
+            onChange={setRange}
+            accessibilityLabel="Replay time range"
+            style={styles.rangeControl}
+          />
 
           <View style={styles.statsRow}>
             <GlassPanel style={styles.statTile}>
@@ -72,6 +122,7 @@ export function ReplayScreen() {
               <Text style={styles.statLabel}>artists in rotation</Text>
             </GlassPanel>
           </View>
+          <Text style={styles.comparison}>{comparison}</Text>
 
           {topTracks.length === 0 ? (
             <View style={styles.emptyBody}>
@@ -89,6 +140,10 @@ export function ReplayScreen() {
                 style={styles.sectionHeader}
                 titleStyle={styles.sectionTitle}
               />
+              <View style={styles.actions}>
+                <Button label="Play all" icon="play" onPress={() => void playAll()} style={styles.actionButton} />
+                <Button label="Share recap" icon="share-outline" variant="ghost" onPress={() => void shareReplay()} style={styles.actionButton} />
+              </View>
               <View style={styles.list}>
                 {topTracks.map((entry, index) => {
                   const media = libraryItems.find((item) => item.id === entry.event.mediaId);
@@ -160,14 +215,18 @@ const styles = StyleSheet.create({
   heroHeader: { flex: 1 },
   hero: { ...typography.display, fontSize: 30, lineHeight: 37 },
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.xl },
+  rangeControl: { marginBottom: spacing.lg },
   statTile: { flex: 1, borderRadius: radii.lg, padding: spacing.md, alignItems: 'center', gap: 2 },
   statValue: { ...typography.title, fontSize: 21, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   statLabel: { ...typography.caption, color: colors.textMuted, textAlign: 'center' },
+  comparison: { ...typography.caption, color: colors.textSecondary, textAlign: 'center', marginTop: -spacing.md, marginBottom: spacing.xl },
   emptyBody: { flex: 1, justifyContent: 'center' },
   sectionHeader: { marginBottom: spacing.sm },
   artistSection: { marginTop: spacing.xl },
   sectionTitle: { ...typography.title, fontSize: 18, lineHeight: 24, color: colors.textPrimary },
   list: { gap: spacing.sm },
+  actions: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  actionButton: { flex: 1 },
   trackRow: { width: '100%', borderRadius: radii.lg },
   artistRow: { borderRadius: radii.lg },
   trackContent: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },

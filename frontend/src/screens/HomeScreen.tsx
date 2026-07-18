@@ -48,6 +48,7 @@ import { useVideoPlayerStore } from '../store/videoPlayerStore';
 import { colors, glass, glassBlur, radii, spacing, typography } from '../theme/tokens';
 import { apiErrorMessage, friendlyJobStage } from '../utils/apiError';
 import { displayArtist, displayTitle } from '../utils/mediaDisplay';
+import { confirmJobCancellation } from '../utils/confirmJobCancellation';
 
 type MediaKind = 'audio' | 'video';
 type SubmittedLink = { url: string; jobId: string };
@@ -177,11 +178,13 @@ function SubmittedLinkRow({
   job,
   accent,
   onCancel,
+  onRetry,
 }: {
   url: string;
   job: Job;
   accent: string;
   onCancel: () => void;
+  onRetry: () => void;
 }) {
   const active = job.status === 'pending' || job.status === 'in_progress';
   const complete = job.status === 'complete';
@@ -221,6 +224,16 @@ function SubmittedLinkRow({
           style={({ pressed }) => [styles.batchCancelButton, pressed && styles.pressed]}
         >
           <Ionicons name="close" size={17} color={colors.textSecondary} />
+        </Pressable>
+      ) : failed && job.source_url ? (
+        <Pressable
+          onPress={onRetry}
+          accessibilityRole="button"
+          accessibilityLabel={`Restart ${compactLinkLabel(url)}`}
+          hitSlop={4}
+          style={({ pressed }) => [styles.batchCancelButton, pressed && styles.pressed]}
+        >
+          <Ionicons name="refresh" size={17} color={accent} />
         </Pressable>
       ) : null}
     </View>
@@ -508,11 +521,22 @@ export function HomeScreen() {
   }
 
   async function handleCancel(job: Job) {
+    const name = job.result_media ? displayTitle(job.result_media) : job.match_title ?? compactLinkLabel(job.source_url ?? 'this import');
+    if (!(await confirmJobCancellation(name))) return;
     try {
       updateJob(await downloadsApi.cancelDownload(job.id));
       toast('Import cancelled.', 'info');
     } catch (caught) {
       toast(apiErrorMessage(caught, "Couldn't cancel this import."), 'error');
+    }
+  }
+
+  async function handleRetry(job: Job) {
+    try {
+      updateJob(await downloadsApi.retryDownload(job.id));
+      toast('Import restarted.', 'success');
+    } catch (caught) {
+      toast(apiErrorMessage(caught, "Couldn't restart this import."), 'error');
     }
   }
 
@@ -726,6 +750,7 @@ export function HomeScreen() {
                     job={job}
                     accent={accent}
                     onCancel={() => void handleCancel(job)}
+                    onRetry={() => void handleRetry(job)}
                   />
                 </View>
               ))}

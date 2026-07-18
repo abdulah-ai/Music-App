@@ -12,6 +12,7 @@ type FavoritesState = {
   hydrate: () => Promise<void>;
   toggle: (mediaId: string) => void;
   isFavorite: (mediaId: string) => boolean;
+  restore: (mediaIds: string[]) => Promise<void>;
   resetSession: () => Promise<void>;
 };
 
@@ -68,6 +69,13 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
 
   isFavorite(mediaId) {
     return !!get().ids[mediaId];
+  },
+
+  async restore(mediaIds) {
+    const ids = Object.fromEntries([...new Set(mediaIds)].map((id) => [id, true as const]));
+    set({ ids, hydrated: true });
+    await persist(ids);
+    await Promise.allSettled(Object.keys(ids).map((id) => activityApi.setFavorite(id, true)));
   },
 
   async resetSession() {

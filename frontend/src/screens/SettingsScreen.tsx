@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as Clipboard from 'expo-clipboard';
+import { File, Paths } from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 
 import { BrandMark } from '../components/ui/BrandMark';
 import { AccountSecurityPanel } from '../components/account/AccountSecurityPanel';
@@ -22,6 +23,7 @@ import * as telegramApi from '../services/api/telegram';
 import type { TelegramStatus } from '../services/api/telegram';
 import { watchJob } from '../services/api/jobSocket';
 import * as offlineMedia from '../services/storage/offlineMedia';
+import { BACKUP_INCLUDES, createBackup, parseBackup, restoreBackup } from '../services/storage/libraryBackup';
 import type { OfflineEntry } from '../services/storage/offlineMedia';
 import { useAuthStore } from '../store/authStore';
 import { useDashboardStore } from '../store/dashboardStore';
@@ -31,7 +33,6 @@ import { usePlayerStore } from '../store/playerStore';
 import { toast } from '../store/toastStore';
 import { colors, radii, spacing, typography } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeProvider';
-import { displayArtist, displayTitle } from '../utils/mediaDisplay';
 import { apiErrorMessage } from '../utils/apiError';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -149,12 +150,15 @@ export function SettingsScreen() {
   const setAutoplayContinuation = usePlayerStore((s) => s.setAutoplayContinuation);
 
   const [telegramStatus, setTelegramStatus] = useState<TelegramStatus | null>(null);
+  const [telegramCheckState, setTelegramCheckState] = useState<'checking' | 'ready' | 'unavailable'>('checking');
   const [offlineEntries, setOfflineEntries] = useState<OfflineEntry[]>([]);
   const [clearing, setClearing] = useState(false);
   const [naming, setNaming] = useState(false);
   const [namingProgress, setNamingProgress] = useState<{ named: number; processed: number; total: number } | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [sendingFeedback, setSendingFeedback] = useState(false);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [lastRestore, setLastRestore] = useState<string | null>(null);
 
   async function handleSendFeedback() {
     const message = feedbackMessage.trim();
@@ -212,37 +216,97 @@ export function SettingsScreen() {
   }
 
   async function exportLibrary() {
-    const payload = JSON.stringify(
-      items.map((m) => ({
-        title: displayTitle(m),
-        artist: displayArtist(m),
-        album: m.album,
-        type: m.media_type,
-        source: m.source,
-        source_url: m.source_url,
-        duration_seconds: m.duration_seconds,
-        added: m.created_at,
-      })),
-      null,
-      2,
-    );
-    if (Platform.OS === 'web') {
-      const blob = new Blob([payload], { type: 'application/json' });
-      const href = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = href;
-      anchor.download = 'starhollow-library.json';
-      anchor.click();
-      URL.revokeObjectURL(href);
-      toast('Library exported', 'success');
-    } else {
-      await Clipboard.setStringAsync(payload);
-      toast('Library JSON copied to clipboard', 'success');
+    if (backupBusy) return;
+    setBackupBusy(true);
+    try {
+      const payload = JSON.stringify(await createBackup(), null, 2);
+      const filename = `starhollow-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      if (Platform.OS === 'web') {
+        const blob = new Blob([payload], { type: 'application/json' });
+        const href = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = href;
+        anchor.download = filename;
+        anchor.click();
+        URL.revokeObjectURL(href);
+      } else {
+        const file = new File(Paths.cache, filename);
+        file.create({ overwrite: true });
+        file.write(payload);
+        if (!(await Sharing.isAvailableAsync())) throw new Error('File sharing is unavailable on this device.');
+        await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'Save Starhollow backup' });
+      }
+      toast('Versioned backup ready', 'success');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't create a backup."), 'error');
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
+  async function chooseBackupText(): Promise<string | null> {
+    if (Platform.OS !== 'web') {
+      const picked = await File.pickFileAsync({ mimeTypes: ['application/json'] });
+      return picked.canceled ? null : picked.result.text();
+    }
+    return new Promise((resolve) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/json,.json';
+      input.addEventListener('cancel', () => resolve(null), { once: true });
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (!file) return resolve(null);
+        const reader = new FileReader();
+        reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null);
+        reader.onerror = () => resolve(null);
+        reader.readAsText(file);
+      };
+      input.click();
+    });
+  }
+
+  function confirmRestore(): Promise<boolean> {
+    const message = 'Merge this backup into the signed-in library? Existing media stays in place.';
+    if (Platform.OS === 'web') return Promise.resolve(window.confirm(message));
+    return new Promise((resolve) => Alert.alert('Restore backup?', message, [
+      { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+      { text: 'Restore', onPress: () => resolve(true) },
+    ], { cancelable: true, onDismiss: () => resolve(false) }));
+  }
+
+  async function importLibrary() {
+    if (backupBusy) return;
+    setBackupBusy(true);
+    try {
+      const text = await chooseBackupText();
+      if (!text) return;
+      const backup = parseBackup(text);
+      if (!(await confirmRestore())) return;
+      const result = await restoreBackup(backup);
+      const note = `Restored ${result.metadataUpdated} metadata records, ${result.playlistsRestored} playlists and ${result.localRecordsRestored} saved preferences/history.${result.missingMedia ? ` ${result.missingMedia} missing media files were skipped.` : ''}`;
+      setLastRestore(note);
+      toast('Backup restored', 'success');
+    } catch (err) {
+      toast(apiErrorMessage(err, "Couldn't restore this backup."), 'error');
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
+  async function checkTelegram() {
+    setTelegramCheckState('checking');
+    try {
+      setTelegramStatus(await telegramApi.getStatus());
+      setTelegramCheckState('ready');
+    } catch {
+      setTelegramStatus(null);
+      setTelegramCheckState('unavailable');
     }
   }
 
   useEffect(() => {
-    telegramApi.getStatus().then(setTelegramStatus).catch(() => setTelegramStatus(null));
+    void checkTelegram();
   }, []);
 
   const refreshOffline = () => {
@@ -331,11 +395,14 @@ export function SettingsScreen() {
                 <StatusRow label="Starhollow API" ok={backendOnline} pending={backendOnline === null} />
                 <StatusRow
                   label="Telegram"
-                  ok={telegramStatus ? telegramStatus.authorized : null}
-                  pending={telegramStatus === null}
-                  notConnectedLabel="Not linked yet"
-                  neutralWhenOff
+                  ok={telegramCheckState === 'unavailable' ? false : telegramStatus ? telegramStatus.authorized : null}
+                  pending={telegramCheckState === 'checking'}
+                  notConnectedLabel={telegramCheckState === 'unavailable' ? 'Status unavailable' : 'Not linked yet'}
+                  neutralWhenOff={telegramCheckState === 'ready'}
                 />
+                {telegramCheckState === 'unavailable' ? (
+                  <Button label="Retry Telegram status" icon="refresh-outline" variant="ghost" onPress={() => void checkTelegram()} style={styles.inlineButton} />
+                ) : null}
                 <Button
                   label={telegramStatus?.authorized ? 'Manage Telegram import' : 'Connect Telegram'}
                   variant="secondary"
@@ -452,7 +519,15 @@ export function SettingsScreen() {
                 loading={naming}
                 onPress={nameLibrary}
               />
-              <Button label="Export library as JSON" icon="download-outline" variant="ghost" onPress={exportLibrary} />
+              <View style={styles.backupIntro}>
+                <Text style={styles.fieldLabel}>Portable backup · version 1</Text>
+                <Text style={styles.hint}>Includes {BACKUP_INCLUDES.join(', ')}. Offline audio/video bytes are not embedded.</Text>
+              </View>
+              <View style={styles.backupActions}>
+                <Button label={backupBusy ? 'Working…' : 'Save backup file'} icon="download-outline" variant="ghost" loading={backupBusy} onPress={() => void exportLibrary()} style={styles.backupButton} />
+                <Button label="Restore backup" icon="cloud-upload-outline" variant="secondary" disabled={backupBusy} onPress={() => void importLibrary()} style={styles.backupButton} />
+              </View>
+              {lastRestore ? <Text accessibilityLiveRegion="polite" style={styles.restoreNote}>{lastRestore}</Text> : null}
             </View>
           </GlassPanel>
 
@@ -544,6 +619,10 @@ const styles = StyleSheet.create({
   fieldValue: { ...typography.subtitle, fontSize: 15, color: colors.textPrimary, textAlign: 'right', flexShrink: 1 },
   fieldValueSmall: { alignSelf: 'stretch', textAlign: 'left' },
   hint: { ...typography.caption, color: colors.textSecondary, lineHeight: 18 },
+  backupIntro: { gap: spacing.xs, paddingTop: spacing.xs },
+  backupActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  backupButton: { flexGrow: 1, minWidth: 180 },
+  restoreNote: { ...typography.caption, color: colors.success, lineHeight: 18 },
   aboutRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   signOutButton: { marginTop: spacing.xl },
 });

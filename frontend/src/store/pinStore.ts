@@ -15,6 +15,7 @@ type PinState = {
   hydrate: () => Promise<void>;
   toggle: (mediaId: string) => void;
   isPinned: (mediaId: string) => boolean;
+  restore: (mediaIds: string[]) => Promise<void>;
   resetSession: () => Promise<void>;
 };
 
@@ -49,6 +50,12 @@ export const usePinStore = create<PinState>((set, get) => ({
 
   isPinned(mediaId) {
     return get().ids.includes(mediaId);
+  },
+
+  async restore(mediaIds) {
+    const ids = [...new Set(mediaIds)].slice(0, MAX_PINS);
+    set({ ids, hydrated: true });
+    await persist(ids);
   },
 
   async resetSession() {
