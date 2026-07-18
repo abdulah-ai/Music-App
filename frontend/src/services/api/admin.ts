@@ -64,26 +64,41 @@ export type AdminEvent = {
   created_at: string;
 };
 
-type Page<T> = { items: T[]; total: number };
+export type Page<T> = { items: T[]; total: number };
+export type SortOrder = 'asc' | 'desc';
+
+export type AdminListQuery = {
+  limit?: number;
+  offset?: number;
+  search?: string;
+  sort?: string;
+  order?: SortOrder;
+};
 
 export async function getStats(): Promise<AdminStats> {
   const { data } = await apiClient.get<AdminStats>('/admin/stats');
   return data;
 }
 
-export async function getUsers(limit = 50, offset = 0): Promise<Page<AdminUser>> {
-  const { data } = await apiClient.get<Page<AdminUser>>('/admin/users', { params: { limit, offset } });
+export async function getUsers(query: AdminListQuery & { role?: 'admin' | 'user' } = {}): Promise<Page<AdminUser>> {
+  const { limit = 50, offset = 0, search, sort, order, role } = query;
+  // Search/sort are an endpoint-ready contract extension; paging is already supported by the API.
+  const { data } = await apiClient.get<Page<AdminUser>>('/admin/users', { params: { limit, offset, search, sort, order, role } });
   return data;
 }
 
-export async function getJobs(status?: string, limit = 50, offset = 0): Promise<Page<AdminJob>> {
-  const { data } = await apiClient.get<Page<AdminJob>>('/admin/jobs', { params: { status, limit, offset } });
+export async function getJobs(query: AdminListQuery & { status?: string } = {}): Promise<Page<AdminJob>> {
+  const { status, limit = 50, offset = 0, search, sort, order } = query;
+  // Search/sort are an endpoint-ready contract extension; status and paging are supported today.
+  const { data } = await apiClient.get<Page<AdminJob>>('/admin/jobs', { params: { status, limit, offset, search, sort, order } });
   return data;
 }
 
-export async function getLogs(eventType?: string, limit = 50, offset = 0): Promise<Page<AdminEvent>> {
+export async function getLogs(query: AdminListQuery & { eventType?: string } = {}): Promise<Page<AdminEvent>> {
+  const { eventType, limit = 50, offset = 0, search, sort, order } = query;
+  // Search/sort are an endpoint-ready contract extension; event type and paging are supported today.
   const { data } = await apiClient.get<Page<AdminEvent>>('/admin/logs', {
-    params: { event_type: eventType, limit, offset },
+    params: { event_type: eventType, limit, offset, search, sort, order },
   });
   return data;
 }
@@ -96,9 +111,13 @@ export async function updateUser(
   return data;
 }
 
-export async function getFeedback(status?: 'open' | 'resolved', limit = 50, offset = 0): Promise<Page<AdminFeedback>> {
+export async function getFeedback(
+  query: AdminListQuery & { status?: 'open' | 'resolved' } = {},
+): Promise<Page<AdminFeedback>> {
+  const { status, limit = 50, offset = 0, search, sort, order } = query;
+  // Search/sort are an endpoint-ready contract extension; status and paging are supported today.
   const { data } = await apiClient.get<Page<AdminFeedback>>('/admin/feedback', {
-    params: { status, limit, offset },
+    params: { status, limit, offset, search, sort, order },
   });
   return data;
 }

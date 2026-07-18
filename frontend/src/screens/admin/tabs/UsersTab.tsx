@@ -3,110 +3,222 @@ import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-nativ
 import { Ionicons } from '@expo/vector-icons';
 
 import * as adminApi from '../../../services/api/admin';
+import * as authApi from '../../../services/api/auth';
 import type { AdminUser } from '../../../services/api/admin';
+import { Button } from '../../../components/ui/Button';
+import { CompactGlassSheet } from '../../../components/ui/CompactGlassSheet';
 import { DataRow } from '../../../components/ui/DataRow';
 import { EmptyState } from '../../../components/ui/EmptyState';
+import { TextField } from '../../../components/ui/TextField';
 import { toast } from '../../../store/toastStore';
 import { apiErrorMessage } from '../../../utils/apiError';
 import { colors } from '../../../theme/tokens';
 import { adminStyles } from '../adminStyles';
 import { formatBytes, timeAgo } from '../adminHelpers';
+import { AdminListControls, PagedListFooter } from '../components/AdminListControls';
 
-export function UsersTab({ users, onChanged }: { users: AdminUser[]; onChanged: (user: AdminUser) => void }) {
+export type UsersQuery = { search: string; role: 'all' | 'admin' | 'user'; sort: 'newest' | 'oldest' | 'email' };
+
+type Props = {
+  users: AdminUser[];
+  total: number;
+  query: UsersQuery;
+  loading: boolean;
+  currentAdminEmail: string;
+  onQueryChange: (query: UsersQuery) => void;
+  onLoadMore: () => void;
+  onChanged: (user: AdminUser) => void;
+};
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function UsersTab({ users, total, query, loading, currentAdminEmail, onQueryChange, onLoadMore, onChanged }: Props) {
+  const [searchDraft, setSearchDraft] = useState(query.search);
   const [editingEmailFor, setEditingEmailFor] = useState<string | null>(null);
   const [emailDraft, setEmailDraft] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [roleTarget, setRoleTarget] = useState<AdminUser | null>(null);
+  const [password, setPassword] = useState('');
+  const [roleError, setRoleError] = useState<string | null>(null);
+  const [acknowledgement, setAcknowledgement] = useState<{ id: string; message: string } | null>(null);
 
-  async function toggleRole(user: AdminUser) {
-    setBusyId(user.id);
+  function closeRoleConfirmation() {
+    if (busyId) return;
+    setRoleTarget(null);
+    setPassword('');
+    setRoleError(null);
+  }
+
+  async function confirmRoleChange() {
+    if (!roleTarget || !password) return;
+    setBusyId(roleTarget.id);
+    setRoleError(null);
     try {
-      const updated = await adminApi.updateUser(user.id, { role: user.is_admin ? 'user' : 'admin' });
+      await authApi.login(currentAdminEmail, password);
+      const nextRole = roleTarget.is_admin ? 'user' : 'admin';
+      const updated = await adminApi.updateUser(roleTarget.id, { role: nextRole });
       onChanged(updated);
-    } catch (err: any) {
-      toast(apiErrorMessage(err, "Couldn't update that user"), 'error');
+      const message = nextRole === 'admin' ? `Admin access granted to ${updated.email}` : `Admin access revoked from ${updated.email}`;
+      setAcknowledgement({ id: updated.id, message });
+      toast(`${message}. The change was logged.`, 'success');
+      setRoleTarget(null);
+      setPassword('');
+    } catch (err) {
+      setRoleError(apiErrorMessage(err, "Couldn't verify your password or update that role."));
     } finally {
       setBusyId(null);
     }
   }
 
   async function saveEmail(user: AdminUser) {
-    if (!emailDraft.trim() || emailDraft.trim() === user.email) {
+    const email = emailDraft.trim().toLowerCase();
+    if (!EMAIL_PATTERN.test(email)) {
+      setEmailError('Enter a valid email address.');
+      return;
+    }
+    if (email === user.email.toLowerCase()) {
       setEditingEmailFor(null);
+      setEmailError(null);
       return;
     }
     setBusyId(user.id);
+    setEmailError(null);
     try {
-      const updated = await adminApi.updateUser(user.id, { email: emailDraft.trim() });
+      const updated = await adminApi.updateUser(user.id, { email });
       onChanged(updated);
-      toast('Email updated', 'success');
-    } catch (err: any) {
-      toast(apiErrorMessage(err, "Couldn't update that email"), 'error');
+      setEditingEmailFor(null);
+      toast(`Email updated to ${updated.email}`, 'success');
+    } catch (err) {
+      setEmailError(apiErrorMessage(err, "Couldn't update that email."));
     } finally {
       setBusyId(null);
-      setEditingEmailFor(null);
     }
   }
 
-  if (users.length === 0) {
-    return <EmptyState title="No users yet" subtitle="Registered accounts will show up here." icon="people-outline" />;
-  }
+  const controls = (
+    <AdminListControls
+      search={searchDraft}
+      onSearchChange={setSearchDraft}
+      onSearch={() => onQueryChange({ ...query, search: searchDraft.trim() })}
+      searchPlaceholder="Search name or email"
+      filter={query.role}
+      filters={[{ value: 'all', label: 'All roles' }, { value: 'admin', label: 'Admins' }, { value: 'user', label: 'Users' }]}
+      onFilterChange={(role) => onQueryChange({ ...query, role })}
+      sort={query.sort}
+      sorts={[{ value: 'newest', label: 'Newest' }, { value: 'oldest', label: 'Oldest' }, { value: 'email', label: 'Email A–Z' }]}
+      onSortChange={(sort) => onQueryChange({ ...query, sort })}
+      busy={loading && users.length === 0}
+    />
+  );
+
   return (
-    <View style={adminStyles.list}>
-      {users.map((user) => (
-        <DataRow
-          key={user.id}
-          title={user.display_name}
-          status={{ label: user.is_admin ? 'Admin' : 'User', tone: user.is_admin ? 'active' : 'neutral' }}
-          subtitle={
-            editingEmailFor === user.id ? (
-              <TextInput
-                accessibilityLabel={`Email for ${user.display_name}`}
-                value={emailDraft}
-                onChangeText={setEmailDraft}
-                onBlur={() => saveEmail(user)}
-                onSubmitEditing={() => saveEmail(user)}
-                autoCapitalize="none"
-                autoFocus
-                style={adminStyles.emailInput}
-              />
-            ) : (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Edit email for ${user.display_name}`}
-                onPress={() => {
-                  setEditingEmailFor(user.id);
-                  setEmailDraft(user.email);
-                }}
-                style={adminStyles.emailEditButton}
-              >
-                <Text numberOfLines={1} style={adminStyles.subtitle}>
-                  {user.email} <Ionicons name="pencil-outline" size={11} color={colors.textMuted} />
-                </Text>
-              </Pressable>
-            )
-          }
-          meta={`${user.media_count} media · ${user.job_count} jobs · ${formatBytes(user.storage_bytes)}${user.telegram_linked ? ' · Telegram linked' : ''}`}
-          timestamp={user.last_activity_at ? timeAgo(user.last_activity_at) : 'no activity'}
-          trailingAction={
-            <Pressable
-              onPress={() => toggleRole(user)}
-              disabled={busyId === user.id}
-              accessibilityRole="button"
-              accessibilityLabel={user.is_admin ? `Revoke admin from ${user.display_name}` : `Make ${user.display_name} an admin`}
-              accessibilityState={{ disabled: busyId === user.id }}
-              style={[adminStyles.roleButton, user.is_admin && adminStyles.roleButtonActive]}
-            >
-              {busyId === user.id ? (
-                <ActivityIndicator size="small" color={colors.textSecondary} />
+    <>
+      {controls}
+      {users.length === 0 ? (
+        <EmptyState title="No matching users" subtitle="Try a different account search or role filter." icon="people-outline" />
+      ) : (
+        <View style={adminStyles.list}>
+          {users.map((user) => (
+            <DataRow
+              key={user.id}
+              title={user.display_name}
+              status={{ label: user.is_admin ? 'Admin' : 'User', tone: user.is_admin ? 'active' : 'neutral' }}
+              subtitle={editingEmailFor === user.id ? (
+                <View style={adminStyles.emailEditor}>
+                  <TextInput
+                    accessibilityLabel={`Email for ${user.display_name}`}
+                    value={emailDraft}
+                    onChangeText={(value) => { setEmailDraft(value); setEmailError(null); }}
+                    onSubmitEditing={() => void saveEmail(user)}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                    autoFocus
+                    style={adminStyles.emailInput}
+                  />
+                  {emailError ? <Text accessibilityLiveRegion="polite" style={adminStyles.fieldError}>{emailError}</Text> : null}
+                  <View style={adminStyles.emailActions}>
+                    <Button label="Save" onPress={() => void saveEmail(user)} loading={busyId === user.id} style={adminStyles.inlineButton} />
+                    <Button label="Cancel" variant="ghost" onPress={() => { setEditingEmailFor(null); setEmailError(null); }} disabled={busyId === user.id} style={adminStyles.inlineButton} />
+                  </View>
+                </View>
               ) : (
-                <Text style={[adminStyles.roleButtonLabel, user.is_admin && adminStyles.roleButtonLabelActive]}>
-                  {user.is_admin ? 'Revoke admin' : 'Make admin'}
-                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Edit email for ${user.display_name}`}
+                  onPress={() => { setEditingEmailFor(user.id); setEmailDraft(user.email); setEmailError(null); }}
+                  style={adminStyles.emailEditButton}
+                >
+                  <Text numberOfLines={1} style={adminStyles.subtitle}>{user.email} <Ionicons name="pencil-outline" size={11} color={colors.textMuted} /></Text>
+                </Pressable>
               )}
-            </Pressable>
-          }
-        />
-      ))}
-    </View>
+              meta={(
+                <View>
+                  <Text style={adminStyles.mutedLine}>{user.media_count} media · {user.job_count} jobs · {formatBytes(user.storage_bytes)}{user.telegram_linked ? ' · Telegram linked' : ''}</Text>
+                  {acknowledgement?.id === user.id ? <Text accessibilityLiveRegion="polite" style={adminStyles.acknowledgement}>{acknowledgement.message} · Logged</Text> : null}
+                </View>
+              )}
+              timestamp={user.last_activity_at ? timeAgo(user.last_activity_at) : 'no activity'}
+              trailingAction={(
+                <Pressable
+                  onPress={() => { setRoleTarget(user); setRoleError(null); }}
+                  disabled={busyId === user.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={user.is_admin ? `Review revoking admin from ${user.email}` : `Review granting admin to ${user.email}`}
+                  style={[adminStyles.roleButton, user.is_admin && adminStyles.roleButtonActive]}
+                >
+                  {busyId === user.id ? <ActivityIndicator size="small" color={colors.textSecondary} /> : (
+                    <Text style={[adminStyles.roleButtonLabel, user.is_admin && adminStyles.roleButtonLabelActive]}>{user.is_admin ? 'Revoke admin' : 'Make admin'}</Text>
+                  )}
+                </Pressable>
+              )}
+            />
+          ))}
+          <PagedListFooter shown={users.length} total={total} loading={loading} onLoadMore={onLoadMore} />
+        </View>
+      )}
+
+      <CompactGlassSheet
+        visible={!!roleTarget}
+        onClose={closeRoleConfirmation}
+        accessibilityLabel="Confirm admin role change"
+        closeAccessibilityLabel="Cancel role change"
+        maxWidth={500}
+        header={<Text style={adminStyles.confirmTitle}>{roleTarget?.is_admin ? 'Revoke admin access?' : 'Grant admin access?'}</Text>}
+      >
+        {roleTarget ? (
+          <View style={adminStyles.emailEditor}>
+            <Text style={adminStyles.confirmEmail}>{roleTarget.email}</Text>
+            <Text style={adminStyles.confirmBody}>
+              {roleTarget.is_admin
+                ? 'This account will lose access to users, jobs, feedback, announcements, and operational logs.'
+                : 'This account will be able to manage users, jobs, feedback, announcements, and operational logs.'}
+            </Text>
+            <TextField
+              label="Your current password"
+              value={password}
+              onChangeText={(value) => { setPassword(value); setRoleError(null); }}
+              secureTextEntry
+              credentialType="current-password"
+              error={roleError ?? undefined}
+              hint="Reauthentication is required. This change is recorded in the admin log."
+              onSubmitEditing={() => void confirmRoleChange()}
+            />
+            <View style={adminStyles.confirmActions}>
+              <Button label="Cancel" variant="ghost" onPress={closeRoleConfirmation} disabled={!!busyId} style={adminStyles.confirmButton} />
+              <Button
+                label={roleTarget.is_admin ? 'Confirm revoke' : 'Confirm grant'}
+                variant={roleTarget.is_admin ? 'danger' : 'primary'}
+                onPress={() => void confirmRoleChange()}
+                disabled={!password}
+                loading={busyId === roleTarget.id}
+                style={adminStyles.confirmButton}
+              />
+            </View>
+          </View>
+        ) : null}
+      </CompactGlassSheet>
+    </>
   );
 }
