@@ -141,7 +141,7 @@ export function MiniPlayerBar({ bottomOffset = 0 }: Props) {
   const shuffle = usePlayerStore((s) => s.shuffle);
   const videoMode = useVideoPlayerStore((state) => state.mode);
   const [queueOpen, setQueueOpen] = useState(false);
-  const accentColor = useTrackAccent(currentMedia ? thumbnailUri(currentMedia) : null);
+  const trackAccent = useTrackAccent(currentMedia ? thumbnailUri(currentMedia) : null);
   const reduceMotion = useReducedMotion();
   const entrance = useRef(new Animated.Value(0)).current;
 
@@ -194,8 +194,8 @@ export function MiniPlayerBar({ bottomOffset = 0 }: Props) {
           }}
         />
       )}
-      <View style={[styles.playerWidth, playing && styles.glowWrap, playing && accentColor && { shadowColor: accentColor }]}>
-        <GlassPanel style={styles.panel} overlayColor={glass.fillHeavy}>
+      <View style={[styles.playerWidth, playing && styles.glowWrap, playing && { shadowColor: trackAccent.miniPlayerHighlight }]}>
+        <GlassPanel style={styles.panel} variant="raised" overlayColor={glass.fillHeavy}>
           <View style={styles.content}>
             <Pressable
               onPress={() => navigation.navigate('Player')}
@@ -227,8 +227,8 @@ export function MiniPlayerBar({ bottomOffset = 0 }: Props) {
                   <Ionicons name="play-skip-back" size={16} color={previousAvailable ? colors.textSecondary : colors.textMuted} />
                 </Pressable>
               )}
-              <Pressable onPress={toggle} accessibilityRole="button" accessibilityLabel={playing ? 'Pause' : 'Play'} hitSlop={12} style={[styles.controlButton, accentColor && { backgroundColor: `${accentColor}29` }]}>
-                <Ionicons name={playing ? 'pause' : 'play'} size={18} color={accentColor ?? colors.cyan} />
+              <Pressable onPress={toggle} accessibilityRole="button" accessibilityLabel={playing ? 'Pause' : 'Play'} hitSlop={12} style={[styles.controlButton, { backgroundColor: `${trackAccent.miniPlayerHighlight}29` }]}>
+                <Ionicons name={playing ? 'pause' : 'play'} size={18} color={trackAccent.miniPlayerHighlight} />
               </Pressable>
               {queue.length > 1 && (
                 <Pressable disabled={!nextAvailable} onPress={() => playNext()} accessibilityRole="button" accessibilityLabel="Next track" accessibilityState={{ disabled: !nextAvailable }} hitSlop={10} style={[styles.skipButton, !nextAvailable && styles.controlDisabled]}>
@@ -243,7 +243,7 @@ export function MiniPlayerBar({ bottomOffset = 0 }: Props) {
             </View>
           </View>
           <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${progress * 100}%` }, accentColor && { backgroundColor: accentColor }]} />
+            <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: trackAccent.miniPlayerHighlight }]} />
           </View>
         </GlassPanel>
       </View>

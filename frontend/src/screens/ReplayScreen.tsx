@@ -16,7 +16,7 @@ import { useLibraryStore } from '../store/libraryStore';
 import { usePlayerStore } from '../store/playerStore';
 import { usePlayHistoryStore } from '../store/playHistoryStore';
 import { toast } from '../store/toastStore';
-import { colors, radii, spacing, typography } from '../theme/tokens';
+import { colors, numericTypography, radii, spacing, typography } from '../theme/tokens';
 import { displayArtist, displayTitle } from '../utils/mediaDisplay';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.xl },
   rangeControl: { marginBottom: spacing.lg },
   statTile: { flex: 1, borderRadius: radii.lg, padding: spacing.md, alignItems: 'center', gap: 2 },
-  statValue: { ...typography.title, fontSize: 21, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
+  statValue: { ...numericTypography.total, color: colors.textPrimary },
   statLabel: { ...typography.caption, color: colors.textMuted, textAlign: 'center' },
   comparison: { ...typography.caption, color: colors.textSecondary, textAlign: 'center', marginTop: -spacing.md, marginBottom: spacing.xl },
   emptyBody: { flex: 1, justifyContent: 'center' },
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   artistRow: { borderRadius: radii.lg },
   trackContent: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
   trackCopy: { flex: 1, minWidth: 0 },
-  rank: { ...typography.title, fontSize: 16, color: colors.textMuted, width: 20, fontVariant: ['tabular-nums'] },
+  rank: { ...numericTypography.rank, color: colors.textMuted, width: 20 },
   trackTitle: { ...typography.subtitle, fontSize: 15, color: colors.textPrimary },
   trackArtist: { ...typography.caption, color: colors.textMuted },
   countChip: {
@@ -240,5 +240,5 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     backgroundColor: colors.surfaceElevated,
   },
-  countText: { ...typography.caption, fontSize: 11, color: colors.cyan, fontFamily: 'Sora_600SemiBold' },
+  countText: { ...numericTypography.total, fontSize: 11, lineHeight: 16, letterSpacing: 0.1, color: colors.gold },
 });

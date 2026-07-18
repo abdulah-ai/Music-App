@@ -1,3 +1,5 @@
+import type { TextStyle } from 'react-native';
+
 import { initialThemeScheme, supportsCssVariables } from './themePlatform';
 
 export type ThemeScheme = 'light' | 'dark';
@@ -37,7 +39,11 @@ const darkGlassSeed = {
   fillHeavy: 'rgba(10, 21, 30, 0.68)',
   stroke: 'rgba(148, 186, 210, 0.16)',
   strokeStrong: 'rgba(170, 206, 229, 0.30)',
+  strokeModal: 'rgba(188, 218, 236, 0.38)',
   edge: 'rgba(255, 255, 255, 0.16)',
+  edgeQuiet: 'rgba(255, 255, 255, 0.08)',
+  edgeRaised: 'rgba(255, 255, 255, 0.16)',
+  edgeModal: 'rgba(255, 255, 255, 0.24)',
   tintPrimary: 'rgba(99, 214, 181, 0.18)',
   tintPrimaryStroke: 'rgba(99, 214, 181, 0.44)',
   tintDanger: 'rgba(240, 131, 140, 0.12)',
@@ -46,16 +52,16 @@ const darkGlassSeed = {
 
 const lightPaletteSeed: ColorScale<typeof darkPaletteSeed> = {
   background: '#EAF1EB',
-  void: '#D9E5DC',
-  surface: '#F7FAF7',
-  surfaceBright: '#FFFFFF',
-  surfaceElevated: '#DFEAE2',
-  border: '#BCD0C2',
-  borderStrong: '#8FAC99',
+  void: '#D7E3DA',
+  surface: '#F3F8F4',
+  surfaceBright: '#FAFCFA',
+  surfaceElevated: '#DCE8DF',
+  border: '#B6CABB',
+  borderStrong: '#88A492',
   primary: '#176F59',
   primaryPressed: '#105846',
-  secondary: '#6856A3',
-  gold: '#856515',
+  secondary: '#71678F',
+  gold: '#7B6328',
   textPrimary: '#13251B',
   textSecondary: '#385143',
   textMuted: '#65796D',
@@ -66,18 +72,22 @@ const lightPaletteSeed: ColorScale<typeof darkPaletteSeed> = {
 };
 
 const lightAmbientSeed: ColorScale<typeof darkAmbientSeed> = {
-  ridgeBack: '#B9CEC0',
-  ridgeFront: '#91AE9B',
+  ridgeBack: '#B5CABD',
+  ridgeFront: '#8DA995',
 };
 
 const lightGlassSeed: ColorScale<typeof darkGlassSeed> = {
-  fill: 'rgba(250, 253, 250, 0.68)',
-  fillBright: 'rgba(255, 255, 255, 0.82)',
-  fillDeep: 'rgba(226, 237, 229, 0.72)',
-  fillHeavy: 'rgba(247, 251, 248, 0.90)',
-  stroke: 'rgba(39, 79, 57, 0.16)',
-  strokeStrong: 'rgba(32, 73, 51, 0.28)',
-  edge: 'rgba(255, 255, 255, 0.76)',
+  fill: 'rgba(244, 249, 245, 0.64)',
+  fillBright: 'rgba(250, 252, 250, 0.78)',
+  fillDeep: 'rgba(219, 232, 222, 0.68)',
+  fillHeavy: 'rgba(241, 247, 242, 0.90)',
+  stroke: 'rgba(35, 75, 53, 0.15)',
+  strokeStrong: 'rgba(28, 67, 46, 0.27)',
+  strokeModal: 'rgba(24, 62, 42, 0.34)',
+  edge: 'rgba(255, 255, 255, 0.84)',
+  edgeQuiet: 'rgba(255, 255, 255, 0.54)',
+  edgeRaised: 'rgba(255, 255, 255, 0.84)',
+  edgeModal: 'rgba(255, 255, 255, 0.96)',
   tintPrimary: 'rgba(23, 111, 89, 0.13)',
   tintPrimaryStroke: 'rgba(23, 111, 89, 0.38)',
   tintDanger: 'rgba(182, 61, 76, 0.09)',
@@ -114,6 +124,11 @@ const darkGradients = {
   coverScrim: ['rgba(5,10,11,0)', 'rgba(5,10,11,0.52)', 'rgba(5,10,11,0.94)'] as const,
   rippleSignal: ['rgba(99,214,181,0.10)', 'rgba(99,214,181,0)'] as const,
   rippleWave: ['rgba(169,155,219,0.07)', 'rgba(169,155,219,0)'] as const,
+  screenHorizon: ['#050911', '#08131A', '#0B191F'] as const,
+  heroGlass: ['rgba(32,54,44,0.72)', 'rgba(13,26,36,0.42)'] as const,
+  artworkScrim: ['rgba(5,10,11,0)', 'rgba(5,10,11,0.52)', 'rgba(5,10,11,0.94)'] as const,
+  liveProgress: [darkPaletteSeed.primary, '#8FE3C8'] as const,
+  celebratorySheen: ['rgba(233,205,126,0.12)', 'rgba(99,214,181,0.06)', 'rgba(233,205,126,0)'] as const,
 };
 
 type GradientScale<T extends Record<string, readonly string[]>> = {
@@ -131,6 +146,11 @@ const lightGradients: GradientScale<typeof darkGradients> = {
   coverScrim: ['rgba(5,10,11,0)', 'rgba(5,10,11,0.42)', 'rgba(5,10,11,0.88)'],
   rippleSignal: ['rgba(23,111,89,0.12)', 'rgba(23,111,89,0)'],
   rippleWave: ['rgba(104,86,163,0.08)', 'rgba(104,86,163,0)'],
+  screenHorizon: ['#F2F7F3', '#E7F0E9', '#DDE9E1'],
+  heroGlass: ['rgba(250,252,250,0.86)', 'rgba(220,232,223,0.62)'],
+  artworkScrim: ['rgba(5,10,11,0)', 'rgba(5,10,11,0.42)', 'rgba(5,10,11,0.88)'],
+  liveProgress: ['#176F59', '#2A8C70'],
+  celebratorySheen: ['rgba(123,99,40,0.12)', 'rgba(23,111,89,0.05)', 'rgba(123,99,40,0)'],
 };
 
 function themedGradient<K extends keyof typeof darkGradients>(key: K): typeof darkGradients[K] {
@@ -149,6 +169,11 @@ export const gradients = {
   coverScrim: themedGradient('coverScrim'),
   rippleSignal: themedGradient('rippleSignal'),
   rippleWave: themedGradient('rippleWave'),
+  screenHorizon: themedGradient('screenHorizon'),
+  heroGlass: themedGradient('heroGlass'),
+  artworkScrim: themedGradient('artworkScrim'),
+  liveProgress: themedGradient('liveProgress'),
+  celebratorySheen: themedGradient('celebratorySheen'),
 } as const;
 
 export const layout = {
@@ -162,9 +187,27 @@ export const layout = {
   dockClearance: 102,
   tabBarClearance: 200,
   sidebarWidth: 248,
+  grid: {
+    phone: { columns: 4, gutter: 16, inset: 20 },
+    tablet: { columns: 8, gutter: 24, inset: 32 },
+    desktop: { columns: 12, gutter: 24, inset: 32 },
+    maxWidth: { reading: 720, standard: 1100, wide: 1280 },
+  },
 } as const;
 
 export const typeScale = {
+  display: { fontFamily: 'Sora_700Bold', fontSize: 38, lineHeight: 44, letterSpacing: -1.35 },
+  screenTitle: { fontFamily: 'Sora_700Bold', fontSize: 32, lineHeight: 39, letterSpacing: -1 },
+  sectionTitle: { fontFamily: 'Sora_600SemiBold', fontSize: 23, lineHeight: 30, letterSpacing: -0.45 },
+  cardTitle: { fontFamily: 'Sora_600SemiBold', fontSize: 16, lineHeight: 22, letterSpacing: -0.2 },
+  body: { fontFamily: 'Sora_400Regular', fontSize: 15, lineHeight: 22, letterSpacing: -0.1 },
+  label: { fontFamily: 'Sora_600SemiBold', fontSize: 13, lineHeight: 18, letterSpacing: 0 },
+  metadata: { fontFamily: 'Sora_400Regular', fontSize: 12, lineHeight: 18, letterSpacing: 0.1 },
+  numeric: {
+    fontFamily: 'Sora_600SemiBold', fontSize: 13, lineHeight: 18, letterSpacing: 0.1,
+    fontVariant: ['tabular-nums'] as TextStyle['fontVariant'],
+  },
+  // Legacy role aliases remain while screens migrate incrementally.
   mega: { fontFamily: 'Sora_700Bold', fontSize: 38, lineHeight: 44, letterSpacing: -1.35 },
   hero: { fontFamily: 'Sora_700Bold', fontSize: 32, lineHeight: 39, letterSpacing: -1 },
   heading: { fontFamily: 'Sora_600SemiBold', fontSize: 23, lineHeight: 30, letterSpacing: -0.45 },
@@ -174,10 +217,27 @@ export const typeScale = {
   },
 } as const;
 
+const shadowColors = {
+  dark: { low: '#000000', card: '#000000', floating: '#020807', modal: '#020706' },
+  light: { low: '#557060', card: '#496553', floating: '#3C5846', modal: '#304B3A' },
+} as const;
+
 export const shadows = {
+  low: {
+    shadowColor: themedColor('shadow', 'low', shadowColors.dark.low, shadowColors.light.low), shadowOpacity: 0.12, shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 }, elevation: 2,
+  },
   card: {
-    shadowColor: themedColor('shadow', 'card', '#000000', '#315441'), shadowOpacity: 0.22, shadowRadius: 12,
+    shadowColor: themedColor('shadow', 'card', shadowColors.dark.card, shadowColors.light.card), shadowOpacity: 0.2, shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 }, elevation: 4,
+  },
+  floating: {
+    shadowColor: themedColor('shadow', 'floating', shadowColors.dark.floating, shadowColors.light.floating), shadowOpacity: 0.24, shadowRadius: 22,
+    shadowOffset: { width: 0, height: 12 }, elevation: 9,
+  },
+  modal: {
+    shadowColor: themedColor('shadow', 'modal', shadowColors.dark.modal, shadowColors.light.modal), shadowOpacity: 0.32, shadowRadius: 34,
+    shadowOffset: { width: 0, height: 18 }, elevation: 16,
   },
   glowPrimary: {
     shadowColor: palette.primary, shadowOpacity: 0.16, shadowRadius: 12,
@@ -225,7 +285,7 @@ export function applyWebTheme(scheme: ThemeScheme): void {
   for (const [name, stops] of Object.entries(selected.gradients)) {
     stops.forEach((value, index) => root.style.setProperty(`--sh-gradient-${name}-${index}`, value));
   }
-  root.style.setProperty('--sh-shadow-card', scheme === 'dark' ? '#000000' : '#315441');
+  for (const [key, value] of Object.entries(shadowColors[scheme])) root.style.setProperty(`--sh-shadow-${key}`, value);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', selected.palette.background);
 }
 

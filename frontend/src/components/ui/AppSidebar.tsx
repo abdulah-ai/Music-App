@@ -231,7 +231,7 @@ export function AppSidebar({
         </View>
       </View>
 
-      <GlassPanel style={styles.navigationPanel} overlayColor={glass.fillDeep}>
+      <GlassPanel style={styles.navigationPanel} variant="quiet" overlayColor={glass.fillDeep}>
         <Text style={styles.sectionLabel}>LISTEN</Text>
         <View style={styles.navList}>{PRIMARY_NAV_ITEMS.map(renderDestination)}</View>
 

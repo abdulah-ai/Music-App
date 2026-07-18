@@ -24,7 +24,7 @@ import { useLibraryStore } from '../store/libraryStore';
 import { usePlayerStore } from '../store/playerStore';
 import { toast } from '../store/toastStore';
 import { useVideoPlayerStore } from '../store/videoPlayerStore';
-import { colors, glass, motion, radii, spacing, typography } from '../theme/tokens';
+import { colors, glass, motion, numericTypography, radii, spacing, typography } from '../theme/tokens';
 import { apiErrorMessage, friendlyJobError, friendlyJobStage } from '../utils/apiError';
 import { displayTitle } from '../utils/mediaDisplay';
 import { confirmJobCancellation } from '../utils/confirmJobCancellation';
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
   list: { gap: spacing.sm },
   rowReveal: { width: '100%' },
   rowSeparator: { height: spacing.sm },
-  progressText: { ...typography.caption, fontSize: 9, fontFamily: 'Sora_600SemiBold', color: colors.cyan },
+  progressText: { ...numericTypography.percent, fontSize: 9, lineHeight: 13, color: colors.cyan },
   jobSourceRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   jobSource: { ...typography.eyebrow, fontSize: 8, lineHeight: 11, letterSpacing: 1.4, color: colors.textMuted },
   iconButton: {

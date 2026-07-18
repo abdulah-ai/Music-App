@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { colors, glass, glassBlur, radii, spacing, typography } from '../../theme/tokens';
+import { colors, glass, glassBlur, iconography, radii, shadows, spacing, typography } from '../../theme/tokens';
 
 type Props = {
   label: string;
@@ -63,7 +63,7 @@ export function Button({
         ) : icon ? (
           <Ionicons
             name={icon}
-            size={18}
+            size={iconography.size.md}
             color={isDisabled ? colors.textMuted : isPrimary ? colors.cyan : isDanger ? colors.danger : colors.textPrimary}
           />
         ) : null}
@@ -85,7 +85,7 @@ export function Button({
 const styles = StyleSheet.create({
   base: {
     minHeight: 52,
-    borderRadius: radii.md,
+    borderRadius: radii.control,
     paddingVertical: 13,
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
@@ -98,11 +98,7 @@ const styles = StyleSheet.create({
   primary: {
     backgroundColor: glass.tintPrimary,
     borderColor: glass.tintPrimaryStroke,
-    shadowColor: colors.cyan,
-    shadowOpacity: 0.2,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    ...shadows.low,
   },
   secondary: {
     backgroundColor: glass.fillBright,
@@ -139,7 +135,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
+    gap: iconography.labelGap.standard,
   },
   label: { ...typography.subtitle, fontSize: 15, color: colors.textPrimary, textAlign: 'center' },
   primaryLabel: { color: PRIMARY_LABEL },

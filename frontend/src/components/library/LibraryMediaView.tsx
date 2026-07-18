@@ -169,7 +169,7 @@ export const GridCard = memo(function GridCard({
           contentFit={media.media_type === 'video' ? 'contain' : 'cover'}
           style={StyleSheet.absoluteFill}
         />
-        <LinearGradient colors={gradients.coverScrim} style={styles.scrim} />
+        <LinearGradient colors={gradients.artworkScrim} style={styles.scrim} />
         {selectMode && selected && <View pointerEvents="none" style={styles.selectionTint} />}
 
         {!selectMode && (

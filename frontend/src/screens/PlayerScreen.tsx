@@ -37,7 +37,7 @@ import { usePinStore } from '../store/pinStore';
 import { canPlayNext, canPlayPrevious, usePlayerStore } from '../store/playerStore';
 import { useLibraryStore } from '../store/libraryStore';
 import { displayArtist, displayTitle, thumbnailUri } from '../utils/mediaDisplay';
-import { colors, glass, radii, spacing, typography } from '../theme/tokens';
+import { colors, glass, numericTypography, radii, spacing, typography } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/types';
 import type { Media } from '../services/api/types';
 
@@ -262,7 +262,7 @@ export function PlayerScreen() {
   const togglePin = usePinStore((state) => state.toggle);
 
   const coverUri = currentMedia ? thumbnailUri(currentMedia) : null;
-  const accent = useTrackAccent(coverUri) ?? colors.cyan;
+  const trackAccent = useTrackAccent(coverUri);
   const smallPhone = !isDesktop && width < 390;
   const compactControls = !isDesktop && width < 440;
   const artworkSize = Math.min(
@@ -399,7 +399,7 @@ export function PlayerScreen() {
         {
           width: artworkSize,
           height: artworkSize,
-          shadowColor: accent,
+          shadowColor: trackAccent.artworkAura,
           opacity: artworkEntrance,
           transform: [{ scale: artworkEntrance.interpolate({ inputRange: [0, 1], outputRange: [0.965, 1] }) }],
         },
@@ -416,7 +416,7 @@ export function PlayerScreen() {
             styles.auraRing,
             styles.auraRingOuter,
             {
-              borderColor: `${accent}38`,
+              borderColor: `${trackAccent.artworkAura}38`,
               opacity: listeningPulse.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.68] }),
               transform: [{ scale: listeningPulse.interpolate({ inputRange: [0, 1], outputRange: [0.97, 1.035] }) }],
             },
@@ -462,7 +462,7 @@ export function PlayerScreen() {
         accessibilityHint="Opens an uncropped full-screen artwork viewer."
         style={({ pressed }) => [styles.artworkInspectTarget, pressed && styles.artworkInspectPressed]}
       >
-        <Artwork media={currentMedia} size="100%" priority borderRadius={radii.lg} />
+        <Artwork media={currentMedia} size="100%" priority borderRadius={radii.cover} />
         <View pointerEvents="none" style={styles.artworkInspectBadge}>
           <Ionicons name="expand" size={16} color={colors.textPrimary} />
           <Text style={styles.artworkInspectLabel}>Inspect</Text>
@@ -496,7 +496,7 @@ export function PlayerScreen() {
           hitSlop={10}
           style={styles.favoriteButton}
         >
-          <Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={24} color={isFavorite ? colors.coral : colors.textSecondary} />
+          <Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={24} color={isFavorite ? colors.gold : colors.textSecondary} />
         </Pressable>
       </View>
 
@@ -505,7 +505,7 @@ export function PlayerScreen() {
           currentTime={currentTime}
           duration={duration}
           onSeek={seek}
-          activeColor={accent}
+          activeColor={trackAccent.waveform}
         />
         <View style={styles.timeRow}>
           <Text style={styles.time}>{formatTime(currentTime)}</Text>
@@ -530,7 +530,7 @@ export function PlayerScreen() {
           onPress={toggle}
           accessibilityLabel={playing ? 'Pause' : 'Play'}
           scaleTo={0.94}
-          style={[styles.playButton, { backgroundColor: accent }]}
+          style={[styles.playButton, { backgroundColor: trackAccent.playControl }]}
         >
           {isBuffering ? (
             <ActivityIndicator color={colors.bg} />
@@ -575,8 +575,8 @@ export function PlayerScreen() {
           accessibilityLabel="Enter Sanctuary Mode"
           style={[styles.secondaryAction, styles.sanctuaryAction, compactControls && styles.secondaryActionCompact]}
         >
-          <Ionicons name="moon" size={17} color={accent} />
-          <Text style={[styles.secondaryLabel, { color: accent }]}>Sanctuary</Text>
+          <Ionicons name="moon" size={17} color={colors.cyan} />
+          <Text style={[styles.secondaryLabel, { color: colors.cyan }]}>Sanctuary</Text>
         </Pressable>
         <Pressable onPress={openMore} accessibilityRole="button" accessibilityLabel="More player options" style={[styles.secondaryAction, compactControls && styles.secondaryActionCompact]}>
           <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
@@ -607,9 +607,9 @@ export function PlayerScreen() {
             step={0.05}
             accessibilityLabel="Playback volume"
             accessibilityValue={{ min: 0, max: 100, now: Math.round((muted ? 0 : volume) * 100), text: muted ? 'Muted' : `${Math.round(volume * 100)} percent` }}
-            minimumTrackTintColor={accent}
+            minimumTrackTintColor={colors.cyan}
             maximumTrackTintColor={colors.surfaceBright}
-            thumbTintColor={accent}
+            thumbTintColor={colors.cyan}
           />
         </View>
       ) : null}
@@ -626,7 +626,7 @@ export function PlayerScreen() {
           <Ionicons name="chevron-down" size={22} color={colors.textPrimary} />
         </Pressable>
         <View style={styles.playingState}>
-          <View style={[styles.stateDot, { backgroundColor: crossfading ? colors.violet : accent }]} />
+          <View style={[styles.stateDot, { backgroundColor: crossfading ? colors.violet : colors.cyan }]} />
           <Text style={styles.playingStateLabel}>{crossfading ? 'AUTOMIX' : isBuffering ? 'BUFFERING' : 'NOW PLAYING'}</Text>
         </View>
         <Pressable onPress={openMore} accessibilityRole="button" accessibilityLabel="More player options" style={styles.topButton}>
@@ -653,13 +653,13 @@ export function PlayerScreen() {
         </ScrollView>
       )}
 
-      <SanctuaryMode visible={sanctuary} onClose={() => setSanctuary(false)} accent={accent} />
+      <SanctuaryMode visible={sanctuary} onClose={() => setSanctuary(false)} accent={colors.cyan} />
       <ArtworkViewer
         visible={artworkOpen}
         onClose={closeArtwork}
         media={currentMedia}
         uri={coverUri}
-        accent={accent}
+        accent={colors.cyan}
         width={width}
         height={height}
       />
@@ -715,7 +715,7 @@ export function PlayerScreen() {
               <View style={styles.optionText}><Text style={styles.optionTitle}>{isPinned ? 'Pinned to Today' : 'Pin to Today'}</Text><Text style={styles.optionSubtitle}>Keep this track close</Text></View>
             </Pressable>
             <Pressable onPress={() => toggleFavorite(currentMedia.id)} style={styles.optionRow} accessibilityRole="button" accessibilityState={{ selected: isFavorite }}>
-              <View style={styles.optionIcon}><Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={19} color={isFavorite ? colors.coral : colors.textSecondary} /></View>
+              <View style={styles.optionIcon}><Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={19} color={isFavorite ? colors.gold : colors.textSecondary} /></View>
               <View style={styles.optionText}><Text style={styles.optionTitle}>{isFavorite ? 'Remove favorite' : 'Add to favorites'}</Text><Text style={styles.optionSubtitle}>Update your collection</Text></View>
             </Pressable>
           </>
@@ -765,7 +765,7 @@ const styles = StyleSheet.create({
   desktopLayout: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xxl, paddingHorizontal: spacing.xxl },
   desktopArtworkColumn: { flex: 1, alignItems: 'flex-end' },
   artworkShadow: { borderRadius: radii.lg, shadowOpacity: 0.3, shadowRadius: 38, shadowOffset: { width: 0, height: 20 }, elevation: 16 },
-  artworkInspectTarget: { width: '100%', height: '100%', borderRadius: radii.lg, overflow: 'hidden' },
+  artworkInspectTarget: { width: '100%', height: '100%', borderRadius: radii.cover, overflow: 'hidden' },
   artworkInspectPressed: { opacity: 0.88 },
   artworkInspectBadge: { position: 'absolute', right: spacing.sm, bottom: spacing.sm, minHeight: 36, paddingHorizontal: spacing.sm + 2, borderRadius: radii.pill, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: glass.fillHeavy, borderWidth: 1, borderColor: colors.surfaceBorderStrong },
   artworkInspectLabel: { ...typography.caption, fontSize: 10, color: colors.textPrimary },
@@ -785,7 +785,7 @@ const styles = StyleSheet.create({
   favoriteButton: { width: 44, height: 44, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
   scrubberBlock: { marginTop: spacing.xs },
   timeRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 },
-  time: { ...typography.caption, fontSize: 11, color: colors.textMuted, fontVariant: ['tabular-nums'] },
+  time: { ...numericTypography.time, color: colors.textMuted },
   transportRow: { minHeight: 82, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   modeButton: { width: 44, height: 44, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
   modeButtonActive: { backgroundColor: glass.tintPrimary },

@@ -46,7 +46,7 @@ export function Artwork({
   style,
   priority = false,
   accessibilityLabel,
-  borderRadius = radii.sm,
+  borderRadius = radii.cover,
   contentFit = 'cover',
 }: Props) {
   const reduceMotion = useReducedMotion();

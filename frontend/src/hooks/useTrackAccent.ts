@@ -1,27 +1,47 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { getDominantColor } from '../utils/dominantColor';
 import { ensureTrackAccentContrast } from '../utils/accentContrast';
 import { useTheme } from '../theme/ThemeProvider';
 
-/** The current track's cover-art accent color, or null while it's loading /
- * unavailable (native, no thumbnail, or a host that blocks pixel reads) —
- * callers should fall back to their default palette on null. */
-export function useTrackAccent(thumbnailUrl: string | null | undefined): string | null {
-  const [accent, setAccent] = useState<string | null>(null);
+export type TrackAccentTokens = {
+  /** The four intentionally bounded places where artwork color may appear. */
+  artworkAura: string;
+  waveform: string;
+  playControl: string;
+  miniPlayerHighlight: string;
+  source: 'artwork' | 'forest-fallback';
+};
+
+/**
+ * A contrast-corrected, placement-bound track accent. Returning named uses
+ * prevents sampled artwork color from leaking into the forest-led shell.
+ */
+export function useTrackAccent(thumbnailUrl: string | null | undefined): TrackAccentTokens {
+  const [sampledColor, setSampledColor] = useState<string | null>(null);
   const { theme } = useTheme();
   const contrastSurface = theme.palette.surfaceElevated;
+  const fallback = theme.palette.primary;
 
   useEffect(() => {
     let alive = true;
-    setAccent(null);
+    setSampledColor(null);
     getDominantColor(thumbnailUrl).then((color) => {
-      if (alive) setAccent(color ? ensureTrackAccentContrast(color, contrastSurface) : null);
+      if (alive) setSampledColor(color);
     });
     return () => {
       alive = false;
     };
-  }, [contrastSurface, thumbnailUrl]);
+  }, [thumbnailUrl]);
 
-  return accent;
+  return useMemo(() => {
+    const color = ensureTrackAccentContrast(sampledColor ?? fallback, contrastSurface);
+    return {
+      artworkAura: color,
+      waveform: color,
+      playControl: color,
+      miniPlayerHighlight: color,
+      source: sampledColor ? 'artwork' : 'forest-fallback',
+    };
+  }, [contrastSurface, fallback, sampledColor]);
 }

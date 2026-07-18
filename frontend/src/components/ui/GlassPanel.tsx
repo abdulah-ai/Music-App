@@ -1,7 +1,9 @@
 import { PropsWithChildren } from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
-import { glass, glassBlur, radii, shadows } from '../../theme/tokens';
+import { glassRecipes, radii } from '../../theme/tokens';
+
+export type GlassTier = keyof typeof glassRecipes;
 
 type Props = PropsWithChildren<{
   style?: StyleProp<ViewStyle>;
@@ -9,6 +11,7 @@ type Props = PropsWithChildren<{
   intensity?: number;
   overlayColor?: string;
   edgeColor?: string;
+  variant?: GlassTier;
 }>;
 
 /**
@@ -20,12 +23,22 @@ export function GlassPanel({
   children,
   style,
   intensity: _intensity,
-  overlayColor = glass.fill,
-  edgeColor = glass.edge,
+  overlayColor,
+  edgeColor,
+  variant = 'raised',
 }: Props) {
+  const recipe = glassRecipes[variant];
   return (
-    <View style={[styles.panel, { backgroundColor: overlayColor }, glassBlur, style]}>
-      <View pointerEvents="none" style={[styles.edge, { backgroundColor: edgeColor }]} />
+    <View
+      style={[
+        styles.panel,
+        recipe.shadow,
+        recipe.backdrop,
+        { backgroundColor: overlayColor ?? recipe.fill, borderColor: recipe.stroke },
+        style,
+      ]}
+    >
+      <View pointerEvents="none" style={[styles.edge, { backgroundColor: edgeColor ?? recipe.topEdge }]} />
       {children}
     </View>
   );
@@ -34,11 +47,9 @@ export function GlassPanel({
 const styles = StyleSheet.create({
   panel: {
     position: 'relative',
-    borderRadius: radii.lg,
+    borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: glass.stroke,
     overflow: 'hidden',
-    ...shadows.card,
   },
   edge: {
     position: 'absolute',

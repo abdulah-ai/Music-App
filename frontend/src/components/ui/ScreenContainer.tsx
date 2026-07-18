@@ -4,19 +4,23 @@ import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useResponsive } from '../../hooks/useResponsive';
-import { spacing } from '../../theme/tokens';
+import { contentGrid, space } from '../../theme/tokens';
 import { RippleField } from './RippleField';
 
 type Props = PropsWithChildren<{
   /** Cap for the centered content column on desktop. */
   maxWidth?: number;
+  /** Shared reading-width presets for aligned phone, tablet, and desktop chapters. */
+  width?: keyof typeof contentGrid.maxWidth;
 }>;
 
 /** Safe-area aware screen canvas with a static ambient layer and centered content. */
-export function ScreenContainer({ children, maxWidth = 1100 }: Props) {
+export function ScreenContainer({ children, maxWidth, width = 'standard' }: Props) {
   const insets = useSafeAreaInsets();
-  const { isDesktop } = useResponsive();
+  const { isDesktop, isTablet } = useResponsive();
   const isFocused = useIsFocused();
+  const grid = isDesktop ? contentGrid.desktop : isTablet ? contentGrid.tablet : contentGrid.phone;
+  const resolvedMaxWidth = maxWidth ?? contentGrid.maxWidth[width];
 
   return (
     <View style={styles.root}>
@@ -24,10 +28,10 @@ export function ScreenContainer({ children, maxWidth = 1100 }: Props) {
       <View
         style={[
           styles.content,
-          isDesktop && { maxWidth, paddingHorizontal: spacing.xl },
+          { maxWidth: resolvedMaxWidth, paddingHorizontal: grid.inset },
           {
-            paddingTop: insets.top + (isDesktop ? spacing.xl : spacing.md),
-            paddingBottom: insets.bottom + spacing.md,
+            paddingTop: insets.top + (isDesktop ? space.section.default : space.inset.control),
+            paddingBottom: insets.bottom + space.inset.control,
           },
         ]}
       >
@@ -46,6 +50,5 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     alignSelf: 'center',
-    paddingHorizontal: spacing.lg,
   },
 });

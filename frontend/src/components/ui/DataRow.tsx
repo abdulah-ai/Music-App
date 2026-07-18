@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { StyleProp, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { colors, radii, spacing, typography } from '../../theme/tokens';
+import { colors, iconography, numericTypography, radii, spacing, typography } from '../../theme/tokens';
 import { GlassPanel } from './GlassPanel';
 
 export type DataRowTone = 'neutral' | 'active' | 'success' | 'attention';
@@ -59,7 +59,7 @@ export function DataRow({
           <View style={styles.leading}>{leading}</View>
         ) : icon ? (
           <View style={[styles.iconWell, { borderColor: toneColor }]}>
-            <Ionicons name={icon} size={19} color={toneColor} />
+            <Ionicons name={icon} size={iconography.size.md} color={toneColor} />
           </View>
         ) : null}
 
@@ -97,12 +97,12 @@ const styles = StyleSheet.create({
   },
   leading: { flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
   iconWell: {
-    width: 44,
-    height: 44,
+    width: iconography.well.standard,
+    height: iconography.well.standard,
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radii.md,
+    borderRadius: radii.control,
     borderWidth: 1,
     backgroundColor: colors.surfaceElevated,
   },
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
   },
   statusLabel: { ...typography.caption, fontFamily: 'Sora_600SemiBold', fontSize: 10, lineHeight: 14 },
-  timestamp: { ...typography.caption, flex: 1, fontSize: 10, lineHeight: 14, color: colors.textMuted },
+  timestamp: { ...numericTypography.time, flex: 1, fontSize: 10, lineHeight: 14, color: colors.textMuted },
   subtitle: { ...typography.caption, color: colors.textSecondary },
   meta: { ...typography.caption, fontSize: 11, lineHeight: 16, color: colors.textMuted },
   metaAttention: { color: colors.danger },

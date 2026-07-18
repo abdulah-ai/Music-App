@@ -41,9 +41,9 @@ const styles = StyleSheet.create({
   root: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: spacing.md },
   copy: { flex: 1, gap: spacing.xs },
   eyebrow: { ...typography.eyebrow, color: colors.cyan },
-  title: { ...typography.title, color: colors.textPrimary },
+  title: { ...typography.sectionTitle, color: colors.textPrimary },
   subtitle: { ...typography.body, fontSize: 13, color: colors.textMuted, maxWidth: 560 },
   action: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.sm },
   actionPressed: { opacity: 0.64 },
-  actionLabel: { fontFamily: 'Sora_600SemiBold', fontSize: 13, color: colors.cyan },
+  actionLabel: { ...typography.label, color: colors.cyan },
 });

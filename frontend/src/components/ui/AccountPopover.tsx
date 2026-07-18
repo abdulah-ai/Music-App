@@ -83,7 +83,7 @@ export function AccountPopover() {
         ]}
         accessibilityViewIsModal
       >
-        <GlassPanel style={styles.card} overlayColor={glass.fillHeavy}>
+        <GlassPanel style={styles.card} variant="modal" overlayColor={glass.fillHeavy}>
           <View style={styles.header}>
             <Text numberOfLines={1} style={styles.name}>
               {user?.display_name ?? 'Listener'}

@@ -27,7 +27,7 @@ import type { Job } from '../services/api/types';
 import { useLibraryStore } from '../store/libraryStore';
 import { toast } from '../store/toastStore';
 import { apiErrorMessage, friendlyJobError, friendlyJobStage } from '../utils/apiError';
-import { colors, radii, spacing, typography } from '../theme/tokens';
+import { colors, numericTypography, radii, spacing, typography } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Telegram'>;
@@ -629,5 +629,5 @@ const styles = StyleSheet.create({
   },
   showMoreLabel: { ...typography.caption, fontFamily: 'Sora_500Medium', color: colors.cyan },
   jobRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  jobPct: { ...typography.caption, fontSize: 11, color: colors.cyan, fontFamily: 'Sora_600SemiBold' },
+  jobPct: { ...numericTypography.percent, color: colors.cyan },
 });

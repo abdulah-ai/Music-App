@@ -1,6 +1,6 @@
 import { Platform, type ViewStyle } from 'react-native';
 
-import { glass, gradients, layout, palette, typeScale } from './theme';
+import { glass, gradients, layout, palette, shadows, typeScale } from './theme';
 
 /**
  * Backdrop blur for glass panes. Real CSS backdrop-filter on web — which is
@@ -17,7 +17,37 @@ export const glassBlur: ViewStyle =
       } as unknown as ViewStyle)
     : {};
 
+function webBackdrop(blur: number, saturation: number): ViewStyle {
+  if (Platform.OS !== 'web') return {};
+  const value = `blur(${blur}px) saturate(${saturation}%)`;
+  return { backdropFilter: value, WebkitBackdropFilter: value } as unknown as ViewStyle;
+}
+
+export const glassBackdrops = {
+  quiet: webBackdrop(10, 125),
+  raised: webBackdrop(16, 145),
+  modal: webBackdrop(24, 155),
+} as const;
+
+/** The only three depth recipes for frosted surfaces. */
+export const glassRecipes = {
+  quiet: { fill: glass.fillDeep, stroke: glass.stroke, topEdge: glass.edgeQuiet, backdrop: glassBackdrops.quiet, shadow: shadows.low },
+  raised: { fill: glass.fill, stroke: glass.strokeStrong, topEdge: glass.edgeRaised, backdrop: glassBackdrops.raised, shadow: shadows.card },
+  modal: { fill: glass.fillHeavy, stroke: glass.strokeModal, topEdge: glass.edgeModal, backdrop: glassBackdrops.modal, shadow: shadows.modal },
+} as const;
+
 export { glass };
+
+/** Color is meaning: mint acts, gold treasures, violet atmospherically supports, coral fails. */
+export const accents = {
+  action: palette.primary,
+  live: palette.primary,
+  treasured: palette.gold,
+  celebratory: palette.gold,
+  atmosphere: palette.secondary,
+  destructive: palette.danger,
+  failed: palette.danger,
+} as const;
 
 /** Compatibility surface used throughout the app. New work should still use
  * these semantic names so palette changes remain centralized. */
@@ -34,18 +64,18 @@ export const colors = {
   textMuted: palette.textMuted,
   textInverse: palette.textInverse,
 
-  violet: palette.secondary,
-  cyan: palette.primary,
-  gold: palette.gold,
-  pink: '#DBA3BC',
-  coral: palette.danger,
+  violet: accents.atmosphere,
+  cyan: accents.action,
+  gold: accents.treasured,
+  pink: accents.treasured,
+  coral: accents.destructive,
   success: palette.success,
   warning: palette.warning,
   danger: palette.danger,
 
-  gradientPrimary: gradients.accent,
-  gradientHero: gradients.heroCard,
-  gradientIdleScreen: gradients.screenIdle,
+  gradientPrimary: gradients.liveProgress,
+  gradientHero: gradients.heroGlass,
+  gradientIdleScreen: gradients.screenHorizon,
   gradientListeningScreen: gradients.screenListening,
   gradientWarm: [palette.gold, palette.primary] as const,
   gradientOrb: [palette.primary, '#8FE3C8', palette.gold] as const,
@@ -62,6 +92,14 @@ export const spacing = {
   xxxl: 64,
 } as const;
 
+/** Semantic cadence built on the 4 / 8 / 16 rhythm. */
+export const space = {
+  inset: { compact: spacing.sm, control: spacing.md, panel: spacing.lg, hero: spacing.xl },
+  stack: { tight: spacing.xs, compact: spacing.sm, default: spacing.md, relaxed: spacing.lg },
+  section: { compact: spacing.lg, default: spacing.xl, chapter: spacing.xxl, feature: spacing.xxxl },
+  cluster: { tight: spacing.xs, default: spacing.sm, relaxed: spacing.md },
+} as const;
+
 export const radii = {
   xs: 6,
   sm: layout.radiusCover,
@@ -69,31 +107,44 @@ export const radii = {
   lg: layout.radius,
   xl: 24,
   pill: 999,
+  cover: layout.radiusCover,
+  control: layout.radiusControl,
+  card: layout.radius,
+  hero: 24,
+  sheet: 28,
 } as const;
 
 export const typography = {
-  mega: typeScale.mega,
-  display: typeScale.hero,
-  title: typeScale.heading,
+  display: typeScale.display,
+  screenTitle: typeScale.screenTitle,
+  sectionTitle: typeScale.sectionTitle,
+  cardTitle: typeScale.cardTitle,
+  body: typeScale.body,
+  label: typeScale.label,
+  metadata: typeScale.metadata,
+  numeric: typeScale.numeric,
+  mega: typeScale.display,
+  title: typeScale.sectionTitle,
   eyebrow: typeScale.eyebrow,
-  subtitle: {
-    fontFamily: 'Sora_600SemiBold',
-    fontSize: 16,
-    lineHeight: 22,
-    letterSpacing: -0.2,
-  },
-  body: {
-    fontFamily: 'Sora_400Regular',
-    fontSize: 15,
-    lineHeight: 22,
-    letterSpacing: -0.1,
-  },
-  caption: {
-    fontFamily: 'Sora_400Regular',
-    fontSize: 12,
-    lineHeight: 18,
-  },
+  subtitle: typeScale.cardTitle,
+  caption: typeScale.metadata,
 } as const;
+
+export const numericTypography = {
+  time: { ...typeScale.numeric, fontSize: 11, lineHeight: 16 },
+  percent: { ...typeScale.numeric, fontSize: 11, lineHeight: 16 },
+  rank: { ...typeScale.numeric, fontSize: 16, lineHeight: 22 },
+  total: { ...typeScale.numeric, fontSize: 21, lineHeight: 28, letterSpacing: -0.25 },
+} as const;
+
+export const iconography = {
+  size: { sm: 16, md: 20, lg: 24 },
+  well: { compact: 36, standard: 44, hero: 56 },
+  labelGap: { compact: spacing.xs, standard: spacing.sm },
+  treatment: { inactive: 'outline', active: 'filled' },
+} as const;
+
+export const contentGrid = layout.grid;
 
 export { gradients, layout, shadows, motion } from './theme';
 export { Sora_400Regular } from '@expo-google-fonts/sora/400Regular';

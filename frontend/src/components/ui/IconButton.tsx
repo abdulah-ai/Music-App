@@ -1,7 +1,7 @@
 import { Pressable, PressableProps, StyleProp, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { colors, glass, glassBlur } from '../../theme/tokens';
+import { colors, glass, glassBlur, iconography } from '../../theme/tokens';
 
 type Props = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -26,8 +26,8 @@ export function IconButton({
   variant = 'ghost',
   selected = false,
   disabled = false,
-  size = 44,
-  iconSize = 21,
+  size = iconography.well.standard,
+  iconSize = iconography.size.md,
   hitSlop,
   style,
   testID,
@@ -47,7 +47,11 @@ export function IconButton({
       style={({ pressed }) => [
         styles.base,
         glassBlur,
-        { width: Math.max(44, size), height: Math.max(44, size), borderRadius: Math.max(44, size) / 2 },
+        {
+          width: Math.max(iconography.well.standard, size),
+          height: Math.max(iconography.well.standard, size),
+          borderRadius: Math.max(iconography.well.standard, size) / 2,
+        },
         variant === 'surface' && styles.surface,
         variant === 'primary' && styles.primary,
         variant === 'danger' && styles.danger,

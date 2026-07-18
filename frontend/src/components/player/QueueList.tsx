@@ -20,7 +20,7 @@ import { toast } from '../../store/toastStore';
 import type { Media } from '../../services/api/types';
 import { apiErrorMessage } from '../../utils/apiError';
 import { displayArtist, displayTitle } from '../../utils/mediaDisplay';
-import { colors, glass, radii, spacing, typography } from '../../theme/tokens';
+import { colors, glass, numericTypography, radii, spacing, typography } from '../../theme/tokens';
 
 function formatDuration(seconds: number | null): string {
   if (!seconds) return '--:--';
@@ -257,12 +257,12 @@ const styles = StyleSheet.create({
   rowPressed: { backgroundColor: glass.fillBright },
   identityAction: { flex: 1, minWidth: 0, minHeight: 62, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radii.md - 4 },
   index: { width: 20, alignItems: 'center', justifyContent: 'center' },
-  indexText: { ...typography.caption, fontSize: 11, textAlign: 'center', color: colors.textMuted, fontVariant: ['tabular-nums'] },
+  indexText: { ...numericTypography.rank, fontSize: 11, lineHeight: 16, textAlign: 'center', color: colors.textMuted },
   text: { flex: 1, minWidth: 0 },
   title: { ...typography.subtitle, fontSize: 14, lineHeight: 18, color: colors.textSecondary },
   titleCurrent: { color: colors.textPrimary },
   artist: { ...typography.caption, fontSize: 11, color: colors.textMuted },
-  duration: { ...typography.caption, fontSize: 11, color: colors.textMuted, fontVariant: ['tabular-nums'] },
+  duration: { ...numericTypography.time, color: colors.textMuted },
   rowActions: { flexDirection: 'row', alignItems: 'center', paddingRight: spacing.xs },
   iconAction: { width: 40, height: 44, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
   disabled: { opacity: 0.32 },

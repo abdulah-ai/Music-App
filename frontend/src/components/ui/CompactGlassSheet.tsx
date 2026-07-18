@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useResponsive } from '../../hooks/useResponsive';
-import { glass, motion, radii, spacing } from '../../theme/tokens';
+import { motion, radii, spacing } from '../../theme/tokens';
 import { GlassPanel } from './GlassPanel';
 import { IconButton } from './IconButton';
 
@@ -221,11 +221,7 @@ export function CompactGlassSheet({
             animatedPanelStyle,
           ]}
         >
-          <GlassPanel
-            style={styles.panel}
-            overlayColor={glass.fillHeavy}
-            edgeColor={glass.edge}
-          >
+          <GlassPanel style={styles.panel} variant="modal">
             <View
               ref={panelRef}
               testID={testID}
@@ -268,7 +264,7 @@ const styles = StyleSheet.create({
   // panel in a higher stacking context so its controls remain clickable on
   // React Native Web (and therefore in the Capacitor app).
   animatedPanel: { position: 'relative', flexShrink: 1, zIndex: 1 },
-  panel: { width: '100%', maxHeight: '100%', borderRadius: radii.xl },
+  panel: { width: '100%', maxHeight: '100%', borderRadius: radii.sheet },
   content: { flexShrink: 1, padding: spacing.md },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   headerContent: { flex: 1 },
