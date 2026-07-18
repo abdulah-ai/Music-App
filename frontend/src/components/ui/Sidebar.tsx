@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useUiStore } from '../../store/uiStore';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { glass, spacing } from '../../theme/tokens';
+import { glass, motion, spacing } from '../../theme/tokens';
 import { AppSidebar } from './AppSidebar';
 
 const PANEL_MAX = 320;
@@ -27,24 +27,29 @@ export function Sidebar() {
   const [rendered, setRendered] = useState(false);
 
   useEffect(() => {
+    slide.stopAnimation();
     if (sidebarOpen) {
       setRendered(true);
-      Animated.timing(slide, {
+      const animation = Animated.timing(slide, {
         toValue: 1,
-        duration: reduceMotion ? 0 : 260,
-        easing: Easing.out(Easing.cubic),
+        duration: reduceMotion ? 0 : motion.duration.slow,
+        easing: Easing.bezier(...motion.easing.decelerate),
         useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(slide, {
-        toValue: 0,
-        duration: reduceMotion ? 0 : 200,
-        easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (finished) setRendered(false);
       });
+      animation.start();
+      return () => animation.stop();
     }
+
+    const animation = Animated.timing(slide, {
+      toValue: 0,
+      duration: reduceMotion ? 0 : motion.duration.base,
+      easing: Easing.bezier(...motion.easing.accelerate),
+      useNativeDriver: true,
+    });
+    animation.start(({ finished }) => {
+      if (finished) setRendered(false);
+    });
+    return () => animation.stop();
   }, [reduceMotion, sidebarOpen, slide]);
 
   if (!rendered) return null;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -51,16 +51,19 @@ function DockItem({
   const focus = useRef(new Animated.Value(focused ? 1 : 0)).current;
 
   useEffect(() => {
+    focus.stopAnimation();
     if (reduceMotion) {
       focus.setValue(focused ? 1 : 0);
       return;
     }
-    Animated.spring(focus, {
+    const animation = Animated.spring(focus, {
       toValue: focused ? 1 : 0,
       useNativeDriver: true,
       speed: 26,
       bounciness: 4,
-    }).start();
+    });
+    animation.start();
+    return () => animation.stop();
   }, [focus, focused, reduceMotion]);
 
   return (
@@ -110,11 +113,17 @@ function CompactDock({ state, navigation }: BottomTabBarProps) {
   const reduceMotion = useReducedMotion();
 
   useEffect(() => {
-    Animated.timing(visibility, {
+    visibility.stopAnimation();
+    const animation = Animated.timing(visibility, {
       toValue: dockCollapsed ? 0 : 1,
       duration: reduceMotion ? 0 : motion.duration.base,
+      easing: dockCollapsed
+        ? Easing.bezier(...motion.easing.accelerate)
+        : Easing.bezier(...motion.easing.decelerate),
       useNativeDriver: true,
-    }).start();
+    });
+    animation.start();
+    return () => animation.stop();
   }, [dockCollapsed, reduceMotion, visibility]);
 
   function pressRoute(index: number) {

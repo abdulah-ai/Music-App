@@ -25,16 +25,23 @@ type Props = {
 };
 
 /** A small glowing bar visualizer driven by the player's real amplitude signal — not a canned loop. */
-function AmplitudeBars({ playing, amplitude }: { playing: boolean; amplitude: number }) {
+function AmplitudeBars({ playing, amplitude, reduceMotion }: { playing: boolean; amplitude: number; reduceMotion: boolean }) {
   const smoothed = useRef(new Animated.Value(0.15)).current;
 
   useEffect(() => {
-    Animated.timing(smoothed, {
-      toValue: playing ? Math.max(0.15, Math.min(1, amplitude * 2.2)) : 0.1,
+    const target = playing ? Math.max(0.15, Math.min(1, amplitude * 2.2)) : 0.1;
+    if (reduceMotion) {
+      smoothed.setValue(playing ? 0.35 : 0.1);
+      return;
+    }
+    const animation = Animated.timing(smoothed, {
+      toValue: target,
       duration: 90,
       useNativeDriver: false,
-    }).start();
-  }, [amplitude, playing, smoothed]);
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [amplitude, playing, reduceMotion, smoothed]);
 
   if (!playing) return null;
 
@@ -182,7 +189,7 @@ export function MiniPlayerBar({ bottomOffset = 0 }: Props) {
                   {displayArtist(currentMedia) ?? 'Unknown artist'}
                 </Text>
               </View>
-              <AmplitudeBars playing={playing} amplitude={amplitude} />
+              <AmplitudeBars playing={playing} amplitude={amplitude} reduceMotion={reduceMotion} />
               {isDesktop && queue.length > 1 && (
                 <Pressable onPress={() => playPrev()} accessibilityLabel="Previous track" hitSlop={10} style={styles.skipButton}>
                   <Ionicons name="play-skip-back" size={16} color={colors.textSecondary} />

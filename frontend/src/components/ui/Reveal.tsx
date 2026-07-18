@@ -1,6 +1,7 @@
-import { PropsWithChildren, useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Platform, StyleProp, ViewStyle } from 'react-native';
+import { PropsWithChildren, useEffect, useRef } from 'react';
+import { Animated, Easing, StyleProp, ViewStyle } from 'react-native';
 
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { motion } from '../../theme/tokens';
 
 type Props = PropsWithChildren<{
@@ -11,30 +12,13 @@ type Props = PropsWithChildren<{
   resetKey?: string | number | boolean;
 }>;
 
-function initialReducedMotion() {
-  return Platform.OS === 'web' && typeof window !== 'undefined'
-    ? window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-    : false;
-}
-
 /** A single, restrained entrance that becomes immediate with reduced motion. */
 export function Reveal({ children, delay = 0, style, distance = 10, resetKey }: Props) {
-  const [reducedMotion, setReducedMotion] = useState(initialReducedMotion);
+  const reducedMotion = useReducedMotion();
   const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    let alive = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
-      if (alive) setReducedMotion(enabled);
-    });
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReducedMotion);
-    return () => {
-      alive = false;
-      subscription.remove();
-    };
-  }, []);
-
-  useEffect(() => {
+    progress.stopAnimation();
     if (reducedMotion) {
       progress.setValue(1);
       return;
@@ -45,6 +29,7 @@ export function Reveal({ children, delay = 0, style, distance = 10, resetKey }: 
       toValue: 1,
       delay,
       duration: motion.duration.slow,
+      easing: Easing.bezier(...motion.easing.decelerate),
       useNativeDriver: true,
     });
     animation.start();

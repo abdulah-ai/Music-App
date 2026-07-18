@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useIsFocused, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,17 +9,20 @@ import { Button } from '../components/ui/Button';
 import { DataRow, type DataRowTone } from '../components/ui/DataRow';
 import { EmptyState } from '../components/ui/EmptyState';
 import { GlassPanel } from '../components/ui/GlassPanel';
+import { PressableScale } from '../components/ui/PressableScale';
 import { ProgressRing } from '../components/ui/ProgressRing';
+import { Reveal } from '../components/ui/Reveal';
 import { ScreenContainer } from '../components/ui/ScreenContainer';
 import { SidebarTrigger } from '../components/ui/SidebarTrigger';
 import { useBottomChromeClearance } from '../hooks/useBottomChromeClearance';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import type { RootStackParamList } from '../navigation/types';
 import * as downloadsApi from '../services/api/downloads';
 import { watchJob } from '../services/api/jobSocket';
 import type { Job } from '../services/api/types';
 import { useLibraryStore } from '../store/libraryStore';
 import { toast } from '../store/toastStore';
-import { colors, glass, radii, spacing, typography } from '../theme/tokens';
+import { colors, glass, motion, radii, spacing, typography } from '../theme/tokens';
 import { apiErrorMessage, friendlyJobError, friendlyJobStage } from '../utils/apiError';
 import { displayTitle } from '../utils/mediaDisplay';
 
@@ -67,6 +70,56 @@ function jobTitle(job: Job): string {
   return job.match_title ?? sourceName(job.source_url);
 }
 
+function ActivitySkeleton() {
+  const reduceMotion = useReducedMotion();
+  const pulse = useRef(new Animated.Value(0.46)).current;
+
+  useEffect(() => {
+    pulse.stopAnimation();
+    if (reduceMotion) {
+      pulse.setValue(0.68);
+      return () => pulse.stopAnimation();
+    }
+
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 0.82,
+          duration: motion.duration.slow * 2,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0.46,
+          duration: motion.duration.slow * 2,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse, reduceMotion]);
+
+  return (
+    <View style={styles.loadingState} accessibilityRole="progressbar" accessibilityLabel="Loading activity">
+      <Animated.View style={[styles.loadingList, { opacity: pulse }]}>
+        {[0, 1, 2].map((index) => (
+          <GlassPanel key={index} style={styles.skeletonRow}>
+            <View style={styles.skeletonIcon} />
+            <View style={styles.skeletonCopy}>
+              <View style={[styles.skeletonLine, styles.skeletonTitle]} />
+              <View style={[styles.skeletonLine, styles.skeletonMeta]} />
+            </View>
+            <View style={styles.skeletonStatus} />
+          </GlassPanel>
+        ))}
+      </Animated.View>
+      <Text style={styles.loadingText}>Gathering your recent activity…</Text>
+    </View>
+  );
+}
+
 function JobRow({ job, onCancel, onRetry }: { job: Job; onCancel: () => void; onRetry: () => void }) {
   const meta = STATUS_META[job.status];
   const running = job.status === 'in_progress' || job.status === 'pending';
@@ -77,23 +130,25 @@ function JobRow({ job, onCancel, onRetry }: { job: Job; onCancel: () => void; on
     : friendlyJobStage(job.stage_label, meta.label);
 
   const trailingAction = running ? (
-    <Pressable
+    <PressableScale
       onPress={onCancel}
-      accessibilityRole="button"
       accessibilityLabel={`Cancel ${title}`}
-      style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+      scaleTo={0.9}
+      hoverScaleTo={1.04}
+      style={styles.iconButton}
     >
       <Ionicons name="close" size={19} color={colors.textSecondary} />
-    </Pressable>
+    </PressableScale>
   ) : job.status === 'failed' && job.source_url ? (
-    <Pressable
+    <PressableScale
       onPress={onRetry}
-      accessibilityRole="button"
       accessibilityLabel={`Retry ${title}`}
-      style={({ pressed }) => [styles.iconButton, styles.retryButton, pressed && styles.pressed]}
+      scaleTo={0.9}
+      hoverScaleTo={1.04}
+      style={[styles.iconButton, styles.retryButton]}
     >
       <Ionicons name="refresh" size={19} color={colors.cyan} />
-    </Pressable>
+    </PressableScale>
   ) : null;
 
   return (
@@ -218,14 +273,15 @@ export function JobsScreen({ embedded = false }: { embedded?: boolean }) {
         >
           <View style={styles.headerRow}>
             {!embedded ? (
-              <Pressable
+              <PressableScale
                 onPress={() => navigation.goBack()}
-                accessibilityRole="button"
                 accessibilityLabel="Go back"
-                style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
+                scaleTo={0.92}
+                hoverScaleTo={1.03}
+                style={styles.headerButton}
               >
                 <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
-              </Pressable>
+              </PressableScale>
             ) : null}
             <View style={styles.headerCopy}>
               <Text style={styles.eyebrow}>YOUR IMPORTS</Text>
@@ -257,10 +313,7 @@ export function JobsScreen({ embedded = false }: { embedded?: boolean }) {
           ) : null}
 
           {jobs === null ? (
-            <View style={styles.loadingState} accessibilityLabel="Loading activity">
-              <ActivityIndicator color={colors.cyan} />
-              <Text style={styles.loadingText}>Loading activity…</Text>
-            </View>
+            <ActivitySkeleton />
           ) : loadError ? (
             <GlassPanel style={styles.errorPanel}>
               <View style={styles.errorIcon}><Ionicons name="cloud-offline-outline" size={24} color={colors.danger} /></View>
@@ -284,13 +337,14 @@ export function JobsScreen({ embedded = false }: { embedded?: boolean }) {
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>IN PROGRESS</Text>
                   <View style={styles.list}>
-                    {active.map((job) => (
-                      <JobRow
-                        key={job.id}
-                        job={job}
-                        onCancel={() => void handleCancel(job)}
-                        onRetry={() => void handleRetry(job)}
-                      />
+                    {active.map((job, index) => (
+                      <Reveal key={job.id} delay={Math.min(100, index * 24)} distance={6} style={styles.rowReveal}>
+                        <JobRow
+                          job={job}
+                          onCancel={() => void handleCancel(job)}
+                          onRetry={() => void handleRetry(job)}
+                        />
+                      </Reveal>
                     ))}
                   </View>
                 </View>
@@ -300,23 +354,25 @@ export function JobsScreen({ embedded = false }: { embedded?: boolean }) {
                 <View style={styles.section}>
                   <View style={styles.sectionHeading}>
                     <Text style={styles.sectionTitle}>HISTORY</Text>
-                    <Pressable
+                    <PressableScale
                       onPress={clearFinished}
-                      accessibilityRole="button"
                       accessibilityLabel="Hide finished activity"
-                      style={({ pressed }) => [styles.clearButton, pressed && styles.pressed]}
+                      scaleTo={0.96}
+                      hoverScaleTo={1.02}
+                      style={styles.clearButton}
                     >
                       <Text style={styles.clearButtonText}>Hide finished</Text>
-                    </Pressable>
+                    </PressableScale>
                   </View>
                   <View style={styles.list}>
-                    {finished.map((job) => (
-                      <JobRow
-                        key={job.id}
-                        job={job}
-                        onCancel={() => void handleCancel(job)}
-                        onRetry={() => void handleRetry(job)}
-                      />
+                    {finished.map((job, index) => (
+                      <Reveal key={job.id} delay={Math.min(140, 36 + index * 18)} distance={6} style={styles.rowReveal}>
+                        <JobRow
+                          job={job}
+                          onCancel={() => void handleCancel(job)}
+                          onRetry={() => void handleRetry(job)}
+                        />
+                      </Reveal>
                     ))}
                   </View>
                 </View>
@@ -361,7 +417,15 @@ const styles = StyleSheet.create({
   summaryValueAttention: { color: colors.danger },
   summaryLabel: { ...typography.caption, fontSize: 11, color: colors.textMuted },
   summaryDivider: { width: 1, height: 30, backgroundColor: glass.stroke },
-  loadingState: { minHeight: 240, alignItems: 'center', justifyContent: 'center', gap: spacing.md },
+  loadingState: { minHeight: 240, width: '100%', justifyContent: 'center', gap: spacing.md },
+  loadingList: { width: '100%', gap: spacing.sm },
+  skeletonRow: { minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
+  skeletonIcon: { width: 48, height: 48, borderRadius: radii.pill, backgroundColor: glass.fillBright },
+  skeletonCopy: { flex: 1, gap: spacing.sm },
+  skeletonLine: { height: 9, borderRadius: radii.pill, backgroundColor: glass.fillBright },
+  skeletonTitle: { width: '68%' },
+  skeletonMeta: { width: '42%', height: 7 },
+  skeletonStatus: { width: 64, height: 24, borderRadius: radii.pill, backgroundColor: glass.fillBright },
   loadingText: { ...typography.caption, color: colors.textMuted },
   errorPanel: { alignItems: 'center', padding: spacing.xl, gap: spacing.sm },
   errorIcon: {
@@ -383,6 +447,7 @@ const styles = StyleSheet.create({
   clearButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.sm },
   clearButtonText: { ...typography.caption, fontFamily: 'Sora_500Medium', color: colors.cyan },
   list: { gap: spacing.sm },
+  rowReveal: { width: '100%' },
   progressText: { ...typography.caption, fontSize: 9, fontFamily: 'Sora_600SemiBold', color: colors.cyan },
   jobSourceRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   jobSource: { ...typography.eyebrow, fontSize: 8, lineHeight: 11, letterSpacing: 1.4, color: colors.textMuted },

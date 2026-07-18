@@ -48,7 +48,10 @@ function DragSurface({
   const lift = useState(() => new Animated.Value(0))[0];
   const reduceMotion = useReducedMotion();
 
+  useEffect(() => () => lift.stopAnimation(), [lift]);
+
   function settle() {
+    lift.stopAnimation();
     if (reduceMotion) {
       lift.setValue(0);
       return;
@@ -59,6 +62,7 @@ function DragSurface({
   function handleStateChange(event: PanGestureHandlerStateChangeEvent) {
     const { state, oldState, absoluteX, absoluteY } = event.nativeEvent;
     if (state === State.ACTIVE && oldState !== State.ACTIVE) {
+      lift.stopAnimation();
       if (reduceMotion) lift.setValue(1);
       else Animated.spring(lift, { toValue: 1, speed: 22, bounciness: 4, useNativeDriver: true }).start();
       onDragStart?.(absoluteX, absoluteY);
@@ -320,8 +324,13 @@ export function SkeletonGrid({
   view: 'grid' | 'list';
 }) {
   const pulse = useState(() => new Animated.Value(0.4))[0];
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
+    if (reduceMotion) {
+      pulse.setValue(0.58);
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 0.9, duration: 700, useNativeDriver: true }),
@@ -330,7 +339,7 @@ export function SkeletonGrid({
     );
     loop.start();
     return () => loop.stop();
-  }, [pulse]);
+  }, [pulse, reduceMotion]);
 
   const count = view === 'grid' ? columns * 3 : 6;
   return (

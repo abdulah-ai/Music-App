@@ -1,7 +1,9 @@
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
-import { DevSettings, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { DevSettings, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { BrandMark } from './BrandMark';
+import { PressableScale } from './PressableScale';
+import { Reveal } from './Reveal';
 import { colors } from '../../theme/tokens';
 
 type Props = { children: ReactNode };
@@ -38,18 +40,21 @@ export class AppErrorBoundary extends Component<Props, State> {
     return (
       <View style={styles.root} accessibilityRole="alert">
         <View style={styles.glow} />
-        <View style={styles.mark}><BrandMark size={58} /></View>
-        <Text style={styles.eyebrow}>STARHOLLOW</Text>
-        <Text style={styles.title}>Something went wrong</Text>
-        <Text style={styles.body}>The app hit an unexpected snag. Your library and downloads are safe.</Text>
-        <Pressable
-          onPress={this.reload}
-          accessibilityRole="button"
-          accessibilityLabel="Reload Starhollow"
-          style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-        >
-          <Text style={styles.buttonText}>Tap to reload</Text>
-        </Pressable>
+        <Reveal style={styles.content} distance={8}>
+          <View style={styles.mark}><BrandMark size={58} /></View>
+          <Text style={styles.eyebrow}>STARHOLLOW</Text>
+          <Text style={styles.title}>Something went wrong</Text>
+          <Text style={styles.body}>The app hit an unexpected snag. Your library and downloads are safe.</Text>
+          <PressableScale
+            onPress={this.reload}
+            accessibilityLabel="Reload Starhollow"
+            scaleTo={0.98}
+            hoverScaleTo={1.01}
+            style={styles.button}
+          >
+            <Text style={styles.buttonText}>Tap to reload</Text>
+          </PressableScale>
+        </Reveal>
       </View>
     );
   }
@@ -72,6 +77,7 @@ const styles = StyleSheet.create({
     borderRadius: 130,
     backgroundColor: 'rgba(255, 86, 86, 0.08)',
   },
+  content: { width: '100%', alignItems: 'center' },
   mark: { marginBottom: 22 },
   eyebrow: { color: colors.textMuted, fontSize: 11, letterSpacing: 4, marginBottom: 14 },
   title: { color: colors.textPrimary, fontSize: 25, fontWeight: '700', textAlign: 'center' },
@@ -90,6 +96,5 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 8,
   },
-  buttonPressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
   buttonText: { color: colors.textInverse, fontSize: 14, fontWeight: '700' },
 });

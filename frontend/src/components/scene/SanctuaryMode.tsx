@@ -70,13 +70,34 @@ function Star({ index, width, height, twinkle }: { index: number; width: number;
   );
 }
 
-function VisualizerBar({ index, playing, accent }: { index: number; playing: boolean; accent: string }) {
+function VisualizerBar({
+  index,
+  playing,
+  reduceMotion,
+  accent,
+}: {
+  index: number;
+  playing: boolean;
+  reduceMotion: boolean;
+  accent: string;
+}) {
   const level = useRef(new Animated.Value(0.25 + seeded(index, 9) * 0.3)).current;
 
   useEffect(() => {
+    level.stopAnimation();
+    if (reduceMotion) {
+      level.setValue(0.14);
+      return () => level.stopAnimation();
+    }
     if (!playing) {
-      Animated.timing(level, { toValue: 0.14, duration: 420, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
-      return;
+      const animation = Animated.timing(level, {
+        toValue: 0.14,
+        duration: 420,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      });
+      animation.start();
+      return () => animation.stop();
     }
     let alive = true;
     function pulse() {
@@ -93,7 +114,7 @@ function VisualizerBar({ index, playing, accent }: { index: number; playing: boo
       alive = false;
       level.stopAnimation();
     };
-  }, [level, playing]);
+  }, [level, playing, reduceMotion]);
 
   return (
     <View style={styles.barTrack}>
@@ -169,12 +190,15 @@ export function SanctuaryMode({ visible, onClose, accent = night.primary }: Prop
 
   // Controls auto-hide while playing; any tap wakes them.
   useEffect(() => {
-    Animated.timing(controlsOpacity, {
+    controlsOpacity.stopAnimation();
+    const animation = Animated.timing(controlsOpacity, {
       toValue: controlsVisible ? 1 : 0,
       duration: reduceMotion ? 0 : motion.duration.slow,
       easing: Easing.out(Easing.quad),
       useNativeDriver: true,
-    }).start();
+    });
+    animation.start();
+    return () => animation.stop();
   }, [controlsOpacity, controlsVisible, reduceMotion]);
 
   useEffect(() => {
@@ -245,7 +269,13 @@ export function SanctuaryMode({ visible, onClose, accent = night.primary }: Prop
             {/* Ambient visualizer */}
             <View style={styles.visualizerRow} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
               {Array.from({ length: BAR_COUNT }, (_, index) => (
-                <VisualizerBar key={index} index={index} playing={visible && playing && !reduceMotion} accent={accent} />
+                <VisualizerBar
+                  key={index}
+                  index={index}
+                  playing={visible && playing}
+                  reduceMotion={reduceMotion}
+                  accent={accent}
+                />
               ))}
             </View>
 

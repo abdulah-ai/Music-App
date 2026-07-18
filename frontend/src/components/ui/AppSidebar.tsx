@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { navigationRef } from '../../navigation/navigationRef';
 import type { MainTabParamList } from '../../navigation/types';
@@ -55,30 +56,6 @@ const ADMIN_NAV_ITEM: NavDestination = {
 
 function destinationKey(destination: NavDestination): string {
   return destination.kind === 'tab' ? `${destination.tab}:${destination.label}` : destination.route;
-}
-
-function initialReducedMotion() {
-  return Platform.OS === 'web' && typeof window !== 'undefined'
-    ? window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-    : false;
-}
-
-function useReducedMotion() {
-  const [reducedMotion, setReducedMotion] = useState(initialReducedMotion);
-
-  useEffect(() => {
-    let alive = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
-      if (alive) setReducedMotion(enabled);
-    });
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReducedMotion);
-    return () => {
-      alive = false;
-      subscription.remove();
-    };
-  }, []);
-
-  return reducedMotion;
 }
 
 function SidebarNavRow({

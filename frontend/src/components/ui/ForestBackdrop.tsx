@@ -106,7 +106,7 @@ export function ForestBackdrop({ variant = 'app' }: Props) {
           contentPosition="center"
           cachePolicy="memory-disk"
           priority="high"
-          transition={sanctuary ? 180 : 0}
+          transition={reducedMotion ? 0 : sanctuary ? 180 : 0}
         />
       </Animated.View>
       <Animated.View

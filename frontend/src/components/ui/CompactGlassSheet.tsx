@@ -1,6 +1,5 @@
 import { PropsWithChildren, ReactNode, useEffect, useRef, useState } from 'react';
 import {
-  AccessibilityInfo,
   Animated,
   Easing,
   Modal,
@@ -14,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useResponsive } from '../../hooks/useResponsive';
 import { glass, motion, radii, spacing } from '../../theme/tokens';
 import { GlassPanel } from './GlassPanel';
@@ -60,19 +60,9 @@ export function CompactGlassSheet({
   const { width, height } = useWindowDimensions();
   const { isDesktop } = useResponsive();
   const [rendered, setRendered] = useState(visible);
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const reduceMotion = useReducedMotion();
   const [panelHeight, setPanelHeight] = useState(0);
   const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
-
-  useEffect(() => {
-    let mounted = true;
-    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => mounted && setReduceMotion(enabled));
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
-    return () => {
-      mounted = false;
-      subscription.remove();
-    };
-  }, []);
 
   useEffect(() => {
     progress.stopAnimation();
@@ -83,28 +73,30 @@ export function CompactGlassSheet({
         return;
       }
       progress.setValue(0);
-      Animated.timing(progress, {
+      const animation = Animated.timing(progress, {
         toValue: 1,
         duration: motion.duration.base,
         easing: Easing.bezier(...motion.easing.decelerate),
         useNativeDriver: true,
-      }).start();
-      return;
+      });
+      animation.start();
+      return () => animation.stop();
     }
 
-    if (!rendered) return;
     if (reduceMotion) {
       progress.setValue(0);
       setRendered(false);
       return;
     }
-    Animated.timing(progress, {
+    const animation = Animated.timing(progress, {
       toValue: 0,
       duration: motion.duration.fast,
       easing: Easing.bezier(...motion.easing.accelerate),
       useNativeDriver: true,
-    }).start(({ finished }) => finished && setRendered(false));
-  }, [progress, reduceMotion, rendered, visible]);
+    });
+    animation.start(({ finished }) => finished && setRendered(false));
+    return () => animation.stop();
+  }, [progress, reduceMotion, visible]);
 
   if (!rendered) return null;
 

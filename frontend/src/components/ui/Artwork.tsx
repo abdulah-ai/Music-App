@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
 import { API_BASE_URL } from '../../config';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { colors, glass, radii } from '../../theme/tokens';
 import { coverGlyphColor, coverGradient, displayArtist, displayTitle } from '../../utils/mediaDisplay';
 
@@ -48,6 +49,7 @@ export function Artwork({
   borderRadius = radii.sm,
   contentFit = 'cover',
 }: Props) {
+  const reduceMotion = useReducedMotion();
   const key = String(media?.id ?? resolveUri(media) ?? 'untitled');
   const uri = resolveUri(media);
   const title = displayTitle({
@@ -98,7 +100,7 @@ export function Artwork({
           priority={priority ? 'high' : 'normal'}
           loading={priority ? 'eager' : 'lazy'}
           recyclingKey={key}
-          transition={priority ? 120 : 160}
+          transition={reduceMotion ? 0 : priority ? 120 : 160}
           accessible
           accessibilityLabel={label}
           alt={label}

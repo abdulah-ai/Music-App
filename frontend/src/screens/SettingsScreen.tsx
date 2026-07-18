@@ -282,60 +282,66 @@ export function SettingsScreen() {
             </View>
           </Reveal>
 
-          <SectionHeader title="Connection" style={styles.sectionHeader} titleStyle={styles.sectionHeading} />
-          <GlassPanel style={styles.panel}>
-            <View style={[styles.panelBody, smallPhone && styles.panelBodySmall]}>
-              <StatusRow label="Network" ok={networkOnline} />
-              <StatusRow label="Starhollow API" ok={backendOnline} pending={backendOnline === null} />
-              <StatusRow
-                label="Telegram"
-                ok={telegramStatus ? telegramStatus.authorized : null}
-                pending={telegramStatus === null}
-                notConnectedLabel="Not linked yet"
-                neutralWhenOff
-              />
-              <Button
-                label={telegramStatus?.authorized ? 'Manage Telegram import' : 'Connect Telegram'}
-                variant="secondary"
-                onPress={() => navigation.navigate('Telegram')}
-                style={styles.inlineButton}
-              />
-            </View>
-          </GlassPanel>
-
-          <SectionHeader title="Account" style={styles.sectionHeader} titleStyle={styles.sectionHeading} />
-          <GlassPanel style={styles.panel}>
-            <View style={[styles.panelBody, smallPhone && styles.panelBodySmall]}>
-              <View style={[styles.fieldRow, smallPhone && styles.fieldRowSmall]}>
-                <Text style={styles.fieldLabel}>Name</Text>
-                <Text style={[styles.fieldValue, smallPhone && styles.fieldValueSmall]}>{user?.display_name ?? '—'}</Text>
+          <Reveal delay={40} distance={8}>
+            <SectionHeader title="Connection" style={styles.sectionHeader} titleStyle={styles.sectionHeading} />
+            <GlassPanel style={styles.panel}>
+              <View style={[styles.panelBody, smallPhone && styles.panelBodySmall]}>
+                <StatusRow label="Network" ok={networkOnline} />
+                <StatusRow label="Starhollow API" ok={backendOnline} pending={backendOnline === null} />
+                <StatusRow
+                  label="Telegram"
+                  ok={telegramStatus ? telegramStatus.authorized : null}
+                  pending={telegramStatus === null}
+                  notConnectedLabel="Not linked yet"
+                  neutralWhenOff
+                />
+                <Button
+                  label={telegramStatus?.authorized ? 'Manage Telegram import' : 'Connect Telegram'}
+                  variant="secondary"
+                  onPress={() => navigation.navigate('Telegram')}
+                  style={styles.inlineButton}
+                />
               </View>
-              <View style={[styles.fieldRow, smallPhone && styles.fieldRowSmall]}>
-                <Text style={styles.fieldLabel}>Email</Text>
-                <Text style={[styles.fieldValue, smallPhone && styles.fieldValueSmall]}>{user?.email ?? '—'}</Text>
-              </View>
-            </View>
-          </GlassPanel>
+            </GlassPanel>
+          </Reveal>
 
-          <SectionHeader title="Playback" style={styles.sectionHeader} titleStyle={styles.sectionHeading} />
-          <GlassPanel style={styles.panel}>
-            <View style={[styles.panelBody, smallPhone && styles.panelBodySmall]}>
-              <SettingSwitch
-                label="Smooth transitions"
-                hint="Blend the end of one track into the start of the next instead of a hard cut."
-                value={crossfadeEnabled}
-                onChange={setCrossfadeEnabled}
-                compact={smallPhone}
-              />
-              <SettingSwitch
-                label="Keep the music going"
-                hint="When your queue runs out, keep playing from your library instead of stopping."
-                value={autoplayContinuation}
-                onChange={setAutoplayContinuation}
-                compact={smallPhone}
-              />
-            </View>
-          </GlassPanel>
+          <Reveal delay={80} distance={8}>
+            <SectionHeader title="Account" style={styles.sectionHeader} titleStyle={styles.sectionHeading} />
+            <GlassPanel style={styles.panel}>
+              <View style={[styles.panelBody, smallPhone && styles.panelBodySmall]}>
+                <View style={[styles.fieldRow, smallPhone && styles.fieldRowSmall]}>
+                  <Text style={styles.fieldLabel}>Name</Text>
+                  <Text style={[styles.fieldValue, smallPhone && styles.fieldValueSmall]}>{user?.display_name ?? '—'}</Text>
+                </View>
+                <View style={[styles.fieldRow, smallPhone && styles.fieldRowSmall]}>
+                  <Text style={styles.fieldLabel}>Email</Text>
+                  <Text style={[styles.fieldValue, smallPhone && styles.fieldValueSmall]}>{user?.email ?? '—'}</Text>
+                </View>
+              </View>
+            </GlassPanel>
+          </Reveal>
+
+          <Reveal delay={120} distance={8}>
+            <SectionHeader title="Playback" style={styles.sectionHeader} titleStyle={styles.sectionHeading} />
+            <GlassPanel style={styles.panel}>
+              <View style={[styles.panelBody, smallPhone && styles.panelBodySmall]}>
+                <SettingSwitch
+                  label="Smooth transitions"
+                  hint="Blend the end of one track into the start of the next instead of a hard cut."
+                  value={crossfadeEnabled}
+                  onChange={setCrossfadeEnabled}
+                  compact={smallPhone}
+                />
+                <SettingSwitch
+                  label="Keep the music going"
+                  hint="When your queue runs out, keep playing from your library instead of stopping."
+                  value={autoplayContinuation}
+                  onChange={setAutoplayContinuation}
+                  compact={smallPhone}
+                />
+              </View>
+            </GlassPanel>
+          </Reveal>
 
           <SectionHeader title="Library & storage" style={styles.sectionHeader} titleStyle={styles.sectionHeading} />
           <GlassPanel style={styles.panel}>

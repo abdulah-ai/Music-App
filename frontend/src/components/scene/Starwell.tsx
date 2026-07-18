@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, StyleSheet, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
+
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 export type StarwellState = 'idle' | 'listening' | 'playing';
 
@@ -29,17 +31,7 @@ const STATE_GLOW: Record<StarwellState, string> = {
 export function Starwell({ state, amplitude = 0, size = 220, accentColor }: StarwellProps) {
   const breathe = useRef(new Animated.Value(0)).current;
   const orbit = useRef(new Animated.Value(0)).current;
-  const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    void AccessibilityInfo.isReduceMotionEnabled().then((reduced) => mounted && setReduceMotion(reduced));
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
-    return () => {
-      mounted = false;
-      subscription.remove();
-    };
-  }, []);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     breathe.stopAnimation();
@@ -71,7 +63,9 @@ export function Starwell({ state, amplitude = 0, size = 220, accentColor }: Star
   }, [breathe, orbit, reduceMotion, state]);
 
   const glow = accentColor ?? STATE_GLOW[state];
-  const energy = Math.min(1, Math.max(0, amplitude));
+  const energy = reduceMotion
+    ? state === 'listening' ? 0.35 : 0.15
+    : Math.min(1, Math.max(0, amplitude));
   const starSize = size * 0.44;
 
   const ringScale = (from: number, to: number) =>

@@ -230,6 +230,10 @@ per identity.
 
    **Status: fixed in codex/ui-audit-completion**
 
+   **Reduced-motion polish: verified in the current visual-motion pass** - the
+   Library loading skeleton now becomes a calm static placeholder instead of
+   running its opacity loop when the system requests reduced motion.
+
 5. **General "friendliness" gaps:**
    - The yellow status dot on a card has no visible label/tooltip explaining
      what it means.
@@ -380,6 +384,11 @@ start.**
    sub-items yet; needs a design direction agreed before implementation.
 
    **Status: fixed in codex/ui-audit-open-items**
+
+   **Reduced-motion polish: verified in the current visual-motion pass** - cover
+   cross-fades, image transitions, mini-player entrance motion, and live
+   amplitude smoothing now share the system reduced-motion preference and
+   clean up interrupted animations.
 
 2. **Transport play/pause button — confirmed root cause, third occurrence of
    the accent-contrast bug.** `PlayerScreen.tsx:236` sets the big center
@@ -567,9 +576,18 @@ since the same root causes keep resurfacing:
   (modals, tab bar, toasts) actually pulls from it vs. inlining ad hoc
   timings. Worth a quick pass once the dashboard modal animation (2.5) is
   built, so the same values get reused rather than a third set of numbers.
+
+  **Status: resolved by verification in the current visual-motion pass** -
+  shared sheets, navigation chrome, sidebars, account surfaces, player/video
+  chrome, and toasts use the established motion treatments; long ambient and
+  live-amplitude timings remain intentionally content-specific.
 - **Reduced-motion coverage.** `SanctuaryMode` and `Starwell` already check
   `AccessibilityInfo.isReduceMotionEnabled()`. Any new animation added for
   Issues 1 and 2.5 should follow that same guard for consistency.
+
+  **Status: fixed in the current visual-motion pass** - the shared
+  `useReducedMotion` preference now drives the high-impact animated surfaces
+  consistently across web and native, including live preference changes.
 - **Raw scraped titles keep resurfacing** (Issue 5.3, and the very first
   screenshot's "Continue listening" card). Now confirmed on **three**
   independent surfaces (Home card, Library cards, and Issue 10's broken
@@ -618,6 +636,11 @@ scene) — now a third screen. Worth treating these three as one connected
 design pass on the app's key "moments" rather than three unrelated asks.
 
 **Status: fixed in codex/ui-audit-open-items**
+
+**Reduced-motion polish: verified in the current visual-motion pass** - the
+Identify screen now stops its idle orbit when unfocused, disables decorative
+sonar/background/countdown motion when reduced motion is enabled, and cleans
+up every loop while preserving the text countdown and recognition controls.
 
 ---
 
@@ -858,3 +881,62 @@ across `codex/ui-audit-completion`, `codex/ui-audit-open-items`, and
 is a live hummed-melody request, because no ACRCloud project credentials are
 present in the repository or local environment; the adapter, capability gate,
 API routing, and mocked provider contract are complete and tested.
+
+### Round 4 incremental polish
+
+- **Shared entrance easing and interruption handling.**
+  **Status: resolved in the current polish pass** - shared reveals now use the
+  theme's decelerating curve and stop interrupted transitions before replaying.
+- **Rapid press feedback stability.**
+  **Status: resolved in the current polish pass** - shared press-scale controls
+  cancel an in-flight spring before responding to the next press or hover.
+- **Empty-state presentation.**
+  **Status: resolved in the current polish pass** - shared empty states now
+  enter with the reduced-motion-aware reveal and a restrained forest-mint glow.
+- **Navigation chrome timing and lifecycle.**
+  **Status: resolved in the current polish pass** - dock focus/collapse and the
+  mobile drawer now use the shared entrance/exit curves, stop interrupted
+  transitions, and settle immediately when reduced motion is requested.
+
+### Round 6 incremental polish
+
+- **Activity list arrival and loading continuity.**
+  **Status: resolved in the current polish pass** - Activity history rows now
+  enter with short capped staggers, while the bare loading spinner is replaced
+  by a reduced-motion-aware frosted row skeleton that cleans up its pulse loop.
+- **Activity action feedback.**
+  **Status: resolved in the current polish pass** - back, hide, cancel, and
+  retry controls now share the app's restrained press and hover response.
+
+### Round 7 incremental polish
+
+- **Settings section arrival.**
+  **Status: resolved in the current polish pass** - the header, connection,
+  account, and playback groups now arrive in a short, reduced-motion-aware
+  cascade using the shared entrance curve, without changing their layout.
+- **Remembered-account feedback.**
+  **Status: resolved in the current polish pass** - saved login identities now
+  enter with capped staggers, use restrained press and hover feedback, and show
+  an accessible selected state when their email is chosen.
+
+### Round 8 incremental polish
+
+- **Last-resort error-state motion.**
+  **Status: resolved in the current polish pass** - the app crash fallback now
+  enters with the shared reduced-motion-aware easing and its reload action uses
+  the shared interruptible press and hover response instead of raw transforms.
+
+### Round 9 final quality pass
+
+- **Sanctuary reduced motion and animation cleanup.**
+  **Status: resolved in the current polish pass** - visualizer bars now settle
+  immediately when reduced motion is enabled, and both their finite animations
+  and the control fade are stopped when interrupted or unmounted.
+- **Library drag animation lifecycle.**
+  **Status: resolved in the current polish pass** - drag lift and visibility
+  animations now stop before replacement transitions and during unmount, so a
+  gesture cannot leave native animation work or a late completion behind.
+- **Shared image transition reduced motion.**
+  **Status: resolved in the current polish pass** - cached cover art and the
+  Sanctuary forest image now disable their cross-dissolves under the existing
+  reduced-motion preference, matching the player backdrop and video poster.

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AccessibilityInfo,
   Animated,
+  Easing,
   FlatList,
   Pressable,
   StyleSheet,
@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { Artwork } from '../ui/Artwork';
 import { GlassPanel } from '../ui/GlassPanel';
 import { GradientText } from '../ui/GradientText';
@@ -60,7 +61,7 @@ export function GlobalVideoStage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const reduceMotion = useReducedMotion();
   const controlsOpacity = useRef(new Animated.Value(1)).current;
   const controlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -87,9 +88,11 @@ export function GlobalVideoStage() {
 
   const hideControls = useCallback(() => {
     if (mode !== 'expanded') return;
+    controlsOpacity.stopAnimation();
     Animated.timing(controlsOpacity, {
       toValue: 0,
       duration: reduceMotion ? 0 : motion.duration.base,
+      easing: Easing.bezier(...motion.easing.accelerate),
       useNativeDriver: true,
     }).start(({ finished }) => {
       if (finished) setControlsVisible(false);
@@ -103,6 +106,7 @@ export function GlobalVideoStage() {
     Animated.timing(controlsOpacity, {
       toValue: 1,
       duration: reduceMotion ? 0 : motion.duration.fast,
+      easing: Easing.bezier(...motion.easing.decelerate),
       useNativeDriver: true,
     }).start();
     if (mode === 'expanded') {
@@ -111,22 +115,13 @@ export function GlobalVideoStage() {
   }, [clearControlsTimer, controlsOpacity, hideControls, mode, reduceMotion]);
 
   useEffect(() => {
-    let mounted = true;
-    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
-      if (mounted) setReduceMotion(enabled);
-    });
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
-    return () => {
-      mounted = false;
-      subscription.remove();
-    };
-  }, []);
-
-  useEffect(() => {
     if (mode === 'expanded') showControls();
     else clearControlsTimer();
-    return clearControlsTimer;
-  }, [clearControlsTimer, media?.id, mode, showControls]);
+    return () => {
+      clearControlsTimer();
+      controlsOpacity.stopAnimation();
+    };
+  }, [clearControlsTimer, controlsOpacity, media?.id, mode, showControls]);
 
   // One straight shot from "video chosen" to "player loading": the access
   // token comes from tokenStorage's in-memory cache (a microtask, not an
@@ -371,7 +366,7 @@ export function GlobalVideoStage() {
                   priority="high"
                   loading="eager"
                   recyclingKey={`video-poster-${media.id}`}
-                  transition={160}
+                  transition={reduceMotion ? 0 : 160}
                   accessible
                   accessibilityLabel={`${displayTitle(media)} video poster`}
                   alt={`${displayTitle(media)} video poster`}

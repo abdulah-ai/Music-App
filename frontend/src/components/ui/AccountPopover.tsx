@@ -1,20 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useEscapeToClose } from '../../hooks/useEscapeToClose';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { RAIL_WIDTH, useResponsive } from '../../hooks/useResponsive';
 import { navigationRef } from '../../navigation/navigationRef';
 import { useAuthStore } from '../../store/authStore';
 import { useUiStore } from '../../store/uiStore';
 import { colors, glass, motion, radii, spacing, typography } from '../../theme/tokens';
 import { GlassPanel } from './GlassPanel';
-
-function initialReducedMotion() {
-  return Platform.OS === 'web' && typeof window !== 'undefined'
-    ? window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-    : false;
-}
 
 export function AccountPopover() {
   const open = useUiStore((state) => state.accountMenuOpen);
@@ -26,22 +21,10 @@ export function AccountPopover() {
   const forgetAccount = useAuthStore((state) => state.forgetAccount);
   const { isDesktop } = useResponsive();
   const [rendered, setRendered] = useState(open);
-  const [reducedMotion, setReducedMotion] = useState(initialReducedMotion);
+  const reducedMotion = useReducedMotion();
   const progress = useRef(new Animated.Value(open ? 1 : 0)).current;
 
   useEscapeToClose(open, close);
-
-  useEffect(() => {
-    let alive = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
-      if (alive) setReducedMotion(enabled);
-    });
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReducedMotion);
-    return () => {
-      alive = false;
-      subscription.remove();
-    };
-  }, []);
 
   useEffect(() => {
     if (open) setRendered(true);

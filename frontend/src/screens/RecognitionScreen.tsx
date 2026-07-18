@@ -15,6 +15,7 @@ import {
 import { Starwell } from '../components/scene/Starwell';
 import { MiniPlayerBar } from '../components/player/MiniPlayerBar';
 import { useBottomChromeClearance } from '../hooks/useBottomChromeClearance';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useResponsive } from '../hooks/useResponsive';
 import { RippleField } from '../components/ui/RippleField';
 import { Button } from '../components/ui/Button';
@@ -54,6 +55,7 @@ export function RecognitionScreen() {
   const insets = useSafeAreaInsets();
   const { isDesktop } = useResponsive();
   const bottomChromeClearance = useBottomChromeClearance();
+  const reduceMotion = useReducedMotion();
   // This tab stays mounted when the user switches to Home/Library — without
   // this, its RippleField + Starwell instance keeps animating invisibly.
   const isFocused = useIsFocused();
@@ -83,12 +85,16 @@ export function RecognitionScreen() {
 
   // A slow dashed orbit around the button while idle — invites the tap.
   useEffect(() => {
+    if (!isFocused || reduceMotion || phase !== 'idle') {
+      idleSpin.setValue(0);
+      return;
+    }
     const loop = Animated.loop(
       Animated.timing(idleSpin, { toValue: 1, duration: 26000, easing: Easing.linear, useNativeDriver: true }),
     );
     loop.start();
     return () => loop.stop();
-  }, [idleSpin]);
+  }, [idleSpin, isFocused, phase, reduceMotion]);
 
   useEffect(
     () => () => {
@@ -118,7 +124,12 @@ export function RecognitionScreen() {
 
   // Sonar pulses + background drift + the 8s countdown ring. Presentation only.
   useEffect(() => {
-    if (phase !== 'listening' && phase !== 'analyzing') return;
+    if (!isFocused || reduceMotion || (phase !== 'listening' && phase !== 'analyzing')) {
+      pulseA.setValue(0);
+      pulseB.setValue(0);
+      bgShift.setValue(0);
+      return;
+    }
 
     const makePulse = (value: Animated.Value, delay: number) =>
       Animated.loop(
@@ -152,24 +163,25 @@ export function RecognitionScreen() {
       drift.stop();
       pulseA.setValue(0);
       pulseB.setValue(0);
-      Animated.timing(bgShift, { toValue: 0, duration: 600, useNativeDriver: true }).start();
+      bgShift.setValue(0);
     };
-  }, [phase, pulseA, pulseB, bgShift]);
+  }, [bgShift, isFocused, phase, pulseA, pulseB, reduceMotion]);
 
   useEffect(() => {
-    if (phase === 'listening') {
+    if (phase === 'listening' && !reduceMotion) {
       ringAnim.setValue(0);
-      Animated.timing(ringAnim, {
+      const animation = Animated.timing(ringAnim, {
         toValue: 1,
         duration: LISTEN_SECONDS * 1000,
         easing: Easing.linear,
         useNativeDriver: false,
-      }).start();
-      return () => ringAnim.stopAnimation();
+      });
+      animation.start();
+      return () => animation.stop();
     }
     ringAnim.setValue(0);
     return undefined;
-  }, [phase, ringAnim]);
+  }, [phase, reduceMotion, ringAnim]);
 
   async function startListening() {
     setError(null);
@@ -275,7 +287,7 @@ export function RecognitionScreen() {
 
   // Live waveform: re-renders arrive every 100ms from the recorder state poll,
   // so plain Views dance with the real mic level — no extra timers needed.
-  const wavePhase = Date.now() / 150;
+  const wavePhase = reduceMotion ? 0 : Date.now() / 150;
   return (
     <View style={styles.root}>
       {isFocused && <RippleField />}
@@ -452,7 +464,8 @@ export function RecognitionScreen() {
               <View style={styles.waveRow}>
                 {Array.from({ length: WAVE_BARS }, (_, i) => {
                   const swing = Math.abs(Math.sin(i * 1.37 + wavePhase));
-                  const height = 5 + (0.12 + amplitude * 0.88) * swing * 34;
+                  const energy = reduceMotion ? 0.22 : 0.12 + amplitude * 0.88;
+                  const height = 5 + energy * swing * 34;
                   return <View key={i} style={[styles.waveBar, { height }]} />;
                 })}
               </View>

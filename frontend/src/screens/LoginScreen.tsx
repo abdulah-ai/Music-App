@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Pressable, Text, StyleSheet, View } from 'react-native';
+import { Text, StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { AuthLayout } from '../components/ui/AuthLayout';
 import { Button } from '../components/ui/Button';
+import { PressableScale } from '../components/ui/PressableScale';
+import { Reveal } from '../components/ui/Reveal';
 import { TextField } from '../components/ui/TextField';
 import { useAuthStore } from '../store/authStore';
 import { apiErrorMessage } from '../utils/apiError';
@@ -46,26 +48,32 @@ export function LoginScreen({ navigation }: Props) {
         <View style={styles.rememberedBlock}>
           <Text style={styles.rememberedLabel}>ACCOUNTS ON THIS DEVICE</Text>
           <View style={styles.rememberedRow}>
-            {rememberedAccounts.map((account) => (
-              <Pressable
-                key={account.user.id}
-                onPress={() => {
-                  setEmail(account.user.email);
-                  setPassword('');
-                  setError(null);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`Sign in as ${account.user.display_name}`}
-                style={({ pressed }) => [styles.rememberedAccount, pressed && styles.rememberedPressed]}
-              >
-                <Text style={styles.rememberedInitial}>
-                  {account.user.display_name.trim().charAt(0).toUpperCase() || '?'}
-                </Text>
-                <View style={styles.rememberedCopy}>
-                  <Text numberOfLines={1} style={styles.rememberedName}>{account.user.display_name}</Text>
-                  <Text numberOfLines={1} style={styles.rememberedEmail}>{account.user.email}</Text>
-                </View>
-              </Pressable>
+            {rememberedAccounts.map((account, index) => (
+              <Reveal key={account.user.id} delay={Math.min(index, 3) * 40} distance={6}>
+                <PressableScale
+                  onPress={() => {
+                    setEmail(account.user.email);
+                    setPassword('');
+                    setError(null);
+                  }}
+                  accessibilityLabel={`Sign in as ${account.user.display_name}`}
+                  accessibilityState={{ selected: email.trim().toLowerCase() === account.user.email.toLowerCase() }}
+                  scaleTo={0.985}
+                  hoverScaleTo={1.005}
+                  style={[
+                    styles.rememberedAccount,
+                    email.trim().toLowerCase() === account.user.email.toLowerCase() && styles.rememberedSelected,
+                  ]}
+                >
+                  <Text style={styles.rememberedInitial}>
+                    {account.user.display_name.trim().charAt(0).toUpperCase() || '?'}
+                  </Text>
+                  <View style={styles.rememberedCopy}>
+                    <Text numberOfLines={1} style={styles.rememberedName}>{account.user.display_name}</Text>
+                    <Text numberOfLines={1} style={styles.rememberedEmail}>{account.user.email}</Text>
+                  </View>
+                </PressableScale>
+              </Reveal>
             ))}
           </View>
         </View>
@@ -101,6 +109,7 @@ const styles = StyleSheet.create({
   rememberedLabel: { ...typography.eyebrow, fontSize: 9, color: colors.textMuted },
   rememberedRow: { gap: 6 },
   rememberedAccount: {
+    width: '100%',
     minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
@@ -111,7 +120,10 @@ const styles = StyleSheet.create({
     borderColor: colors.surfaceBorder,
     backgroundColor: colors.surface,
   },
-  rememberedPressed: { opacity: 0.74 },
+  rememberedSelected: {
+    borderColor: colors.cyan,
+    backgroundColor: colors.surfaceElevated,
+  },
   rememberedInitial: { ...typography.subtitle, width: 26, textAlign: 'center', color: colors.cyan },
   rememberedCopy: { flex: 1, minWidth: 0 },
   rememberedName: { ...typography.body, fontSize: 13, color: colors.textPrimary },

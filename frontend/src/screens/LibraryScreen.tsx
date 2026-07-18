@@ -189,6 +189,8 @@ export function LibraryScreen() {
   const [hoveredDropKey, setHoveredDropKey] = useState<string | null>(null);
   const dragPosition = useRef(new Animated.ValueXY()).current;
   const dragVisibility = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => () => dragVisibility.stopAnimation(), [dragVisibility]);
   const playlistDropStripRef = useRef<PlaylistDropStripHandle>(null);
   const hoveredDropKeyRef = useRef<string | null>(null);
   const filterRequestIdRef = useRef(0);
@@ -596,6 +598,7 @@ export function LibraryScreen() {
     if (!selectedIds[mediaId]) return;
     setDraggingMediaId(mediaId);
     dragPosition.setValue({ x: absoluteX - 34, y: absoluteY - 34 });
+    dragVisibility.stopAnimation();
     if (reduceMotion) dragVisibility.setValue(1);
     else {
       dragVisibility.setValue(0);
@@ -612,8 +615,9 @@ export function LibraryScreen() {
   function endPlaylistDrag(absoluteX: number, absoluteY: number, cancelled: boolean) {
     const target = cancelled ? null : playlistDropStripRef.current?.hitTest(absoluteX, absoluteY) ?? null;
     setDropHover(null);
-    Animated.timing(dragVisibility, { toValue: 0, duration: reduceMotion ? 0 : 140, useNativeDriver: true }).start(() => {
-      setDraggingMediaId(null);
+    dragVisibility.stopAnimation();
+    Animated.timing(dragVisibility, { toValue: 0, duration: reduceMotion ? 0 : 140, useNativeDriver: true }).start(({ finished }) => {
+      if (finished) setDraggingMediaId(null);
     });
     if (target) void handlePlaylistTarget(target);
   }

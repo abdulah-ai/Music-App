@@ -1,6 +1,5 @@
-import { PropsWithChildren, useEffect, useRef, useState } from 'react';
+import { PropsWithChildren, useEffect, useRef } from 'react';
 import {
-  AccessibilityInfo,
   AccessibilityState,
   Animated,
   Platform,
@@ -10,6 +9,8 @@ import {
   StyleSheet,
   ViewStyle,
 } from 'react-native';
+
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 type Props = PropsWithChildren<{
   onPress?: PressableProps['onPress'];
@@ -42,15 +43,18 @@ export function PressableScale({
 }: Props) {
   const scale = useRef(new Animated.Value(1)).current;
   const hovered = useRef(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then(setReducedMotion);
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReducedMotion);
-    return () => subscription.remove();
-  }, []);
+    if (reducedMotion) {
+      scale.stopAnimation();
+      scale.setValue(1);
+    }
+    return () => scale.stopAnimation();
+  }, [reducedMotion, scale]);
 
   const to = (value: number) => {
+    scale.stopAnimation();
     if (reducedMotion) {
       scale.setValue(1);
       return;

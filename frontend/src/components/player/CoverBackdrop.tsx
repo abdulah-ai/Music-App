@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { palette } from '../../theme/theme';
 
 type Props = {
@@ -28,12 +29,22 @@ type Props = {
  */
 export function CoverBackdrop({ uri, opacity = 1, blurRadius = 50, scrimOpacity = 0.62 }: Props) {
   const fade = useRef(new Animated.Value(0)).current;
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
+    if (!uri) {
+      fade.setValue(0);
+      return;
+    }
+    if (reduceMotion) {
+      fade.setValue(1);
+      return;
+    }
     fade.setValue(0);
-    if (!uri) return;
-    Animated.timing(fade, { toValue: 1, duration: 700, useNativeDriver: true }).start();
-  }, [uri, fade]);
+    const animation = Animated.timing(fade, { toValue: 1, duration: 700, useNativeDriver: true });
+    animation.start();
+    return () => animation.stop();
+  }, [fade, reduceMotion, uri]);
 
   if (!uri) return null;
 
@@ -52,7 +63,7 @@ export function CoverBackdrop({ uri, opacity = 1, blurRadius = 50, scrimOpacity 
         priority="high"
         loading="eager"
         recyclingKey={uri}
-        transition={180}
+        transition={reduceMotion ? 0 : 180}
         accessible={false}
         alt=""
         style={styles.art}

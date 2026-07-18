@@ -3,6 +3,7 @@ import { Animated, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useToastStore, type Toast } from '../../store/toastStore';
 import { colors, glass, radii, shadows, spacing, typography } from '../../theme/tokens';
 
@@ -14,10 +15,17 @@ const TONE_META = {
 
 function ToastCard({ toast }: { toast: Toast }) {
   const anim = useRef(new Animated.Value(0)).current;
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
-    Animated.spring(anim, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 8 }).start();
-  }, [anim]);
+    if (reduceMotion) {
+      anim.setValue(1);
+      return;
+    }
+    const animation = Animated.spring(anim, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 8 });
+    animation.start();
+    return () => animation.stop();
+  }, [anim, reduceMotion]);
 
   const meta = TONE_META[toast.tone];
 
