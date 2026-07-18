@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 
 import { AuthLayout } from '../components/ui/AuthLayout';
 import { Button } from '../components/ui/Button';
@@ -8,6 +10,7 @@ import { FormError } from '../components/ui/FormError';
 import { REGISTRATION_INVITE_REQUIRED } from '../config';
 import { useAuthStore } from '../store/authStore';
 import { apiErrorMessage } from '../utils/apiError';
+import { colors, glass, radii, spacing, typography } from '../theme/tokens';
 import type { AuthStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
@@ -56,6 +59,24 @@ export function RegisterScreen({ navigation }: Props) {
             : 'Use 8+ characters. A unique generated password or long passphrase is recommended.';
   const confirmError = confirmPassword.length > 0 && !passwordsMatch ? 'Passwords do not match — check for a typo.' : undefined;
 
+  const passwordStatus = confirmError
+    ? { icon: 'close-circle' as const, tone: colors.danger, border: glass.tintDangerStroke, message: confirmError }
+    : commonPassword
+      ? { icon: 'alert-circle' as const, tone: colors.warning, border: colors.warning, message: passwordHint }
+      : password.length > 0 && passwordLongEnough && variedPassword
+        ? {
+            icon: 'shield-checkmark' as const,
+            tone: colors.success,
+            border: colors.success,
+            message: confirmPassword ? 'Password ready · both entries match.' : 'Good foundation · confirm it once below.',
+          }
+        : {
+            icon: 'information-circle' as const,
+            tone: password.length > 0 ? colors.warning : colors.textMuted,
+            border: password.length > 0 ? colors.warning : glass.strokeStrong,
+            message: passwordHint,
+          };
+
   async function handleRegister() {
     if (!canSubmit || loading) return;
     setError(null);
@@ -75,48 +96,76 @@ export function RegisterScreen({ navigation }: Props) {
       title="Make it yours"
       subtitle="Save, identify, and organize music in one private collection."
     >
-      <TextField label="Name" value={displayName} onChangeText={setDisplayName} placeholder="Your name" credentialType="name" />
-      <TextField
-        label="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        placeholder="you@example.com"
-        error={emailError}
-        hint={suggestedDomain ? `Did you mean ${email.trim().split('@')[0]}@${suggestedDomain}?` : undefined}
-        credentialType="username"
-      />
-      <TextField
-        label="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        placeholder="At least 8 characters"
-        hint={passwordHint}
-        credentialType="new-password"
-      />
-      <TextField
-        label="Confirm password"
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        secureTextEntry
-        credentialType="new-password"
-        placeholder="Type it again"
-        error={confirmError}
-        onSubmitEditing={handleRegister}
-      />
-      {REGISTRATION_INVITE_REQUIRED ? (
-        <TextField
-          label="Invite code"
-          value={inviteCode}
-          onChangeText={setInviteCode}
-          autoCapitalize="none"
-          placeholder="Required for this deployment"
-          onSubmitEditing={handleRegister}
-          credentialType="one-time-code"
-        />
-      ) : null}
+      <View style={styles.chapter}>
+        <View style={styles.chapterHeading}>
+          <View style={styles.chapterNumber}><Text style={styles.chapterNumberText}>01</Text></View>
+          <View style={styles.chapterCopy}>
+            <Text style={styles.chapterEyebrow}>YOUR IDENTITY</Text>
+            <Text style={styles.chapterTitle}>Who this hollow belongs to</Text>
+          </View>
+        </View>
+        <View style={styles.chapterFields}>
+          <TextField label="Name" value={displayName} onChangeText={setDisplayName} placeholder="Your name" credentialType="name" />
+          <TextField
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            placeholder="you@example.com"
+            error={emailError}
+            hint={suggestedDomain ? `Did you mean ${email.trim().split('@')[0]}@${suggestedDomain}?` : undefined}
+            credentialType="username"
+          />
+          {REGISTRATION_INVITE_REQUIRED ? (
+            <TextField
+              label="Invite code"
+              value={inviteCode}
+              onChangeText={setInviteCode}
+              autoCapitalize="none"
+              placeholder="Required for this deployment"
+              onSubmitEditing={handleRegister}
+              credentialType="one-time-code"
+            />
+          ) : null}
+        </View>
+      </View>
+
+      <View style={[styles.chapter, styles.chapterSecure]}>
+        <View style={styles.chapterHeading}>
+          <View style={styles.chapterNumber}><Text style={styles.chapterNumberText}>02</Text></View>
+          <View style={styles.chapterCopy}>
+            <Text style={styles.chapterEyebrow}>PRIVATE ACCESS</Text>
+            <Text style={styles.chapterTitle}>Choose your quiet key</Text>
+          </View>
+        </View>
+        <View style={styles.chapterFields}>
+          <TextField
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            placeholder="At least 8 characters"
+            credentialType="new-password"
+          />
+          <TextField
+            label="Confirm password"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry
+            credentialType="new-password"
+            placeholder="Type it again"
+            error={confirmError}
+            onSubmitEditing={handleRegister}
+          />
+          <View accessibilityLiveRegion="polite" style={[styles.passwordRail, { borderColor: passwordStatus.border }]}>
+            <View style={[styles.passwordRailIcon, { borderColor: passwordStatus.border }]}>
+              <Ionicons name={passwordStatus.icon} size={16} color={passwordStatus.tone} />
+            </View>
+            <Text style={[styles.passwordRailText, { color: passwordStatus.tone }]}>{passwordStatus.message}</Text>
+          </View>
+        </View>
+      </View>
       <FormError message={error} />
       <Button
         label={!displayName.trim() ? 'Enter your name' : !emailLooksValid ? 'Enter a valid email' : !passwordLongEnough ? 'Use at least 8 characters' : !confirmPassword ? 'Confirm your password' : !passwordsMatch ? 'Passwords must match' : REGISTRATION_INVITE_REQUIRED && !inviteCode.trim() ? 'Enter your invite code' : 'Create account'}
@@ -128,3 +177,50 @@ export function RegisterScreen({ navigation }: Props) {
     </AuthLayout>
   );
 }
+
+const styles = StyleSheet.create({
+  chapter: { gap: spacing.md },
+  chapterSecure: {
+    marginTop: spacing.xs,
+    paddingTop: spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: glass.strokeStrong,
+  },
+  chapterHeading: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  chapterNumber: {
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.pill,
+    backgroundColor: glass.tintPrimary,
+    borderWidth: 1,
+    borderColor: glass.tintPrimaryStroke,
+  },
+  chapterNumberText: { ...typography.numeric, fontSize: 10, color: colors.cyan },
+  chapterCopy: { flex: 1 },
+  chapterEyebrow: { ...typography.eyebrow, fontSize: 8, lineHeight: 11, color: colors.textMuted },
+  chapterTitle: { ...typography.label, color: colors.textPrimary },
+  chapterFields: { gap: spacing.md },
+  passwordRail: {
+    minHeight: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    backgroundColor: glass.fillDeep,
+  },
+  passwordRailIcon: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    backgroundColor: glass.fillBright,
+  },
+  passwordRailText: { ...typography.caption, flex: 1, fontSize: 11, lineHeight: 16 },
+});

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Text, StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
 import { AuthLayout } from '../components/ui/AuthLayout';
 import { PasswordRecoverySheet } from '../components/auth/PasswordRecoverySheet';
@@ -11,7 +13,7 @@ import { TextField } from '../components/ui/TextField';
 import { FormError } from '../components/ui/FormError';
 import { useAuthStore } from '../store/authStore';
 import { apiErrorMessage } from '../utils/apiError';
-import { colors, typography } from '../theme/tokens';
+import { colors, glass, radii, spacing, typography } from '../theme/tokens';
 import type { AuthStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
@@ -25,6 +27,9 @@ export function LoginScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const selectedRemembered = rememberedAccounts.find(
+    (account) => email.trim().toLowerCase() === account.user.email.toLowerCase(),
+  );
 
   useEffect(() => {
     if (pendingAccountEmail) setEmail(pendingAccountEmail);
@@ -51,34 +56,48 @@ export function LoginScreen({ navigation }: Props) {
         <View style={styles.rememberedBlock}>
           <Text style={styles.rememberedLabel}>ACCOUNTS ON THIS DEVICE</Text>
           <View style={styles.rememberedRow}>
-            {rememberedAccounts.map((account, index) => (
-              <Reveal key={account.user.id} delay={Math.min(index, 3) * 40} distance={6}>
-                <PressableScale
-                  onPress={() => {
-                    setEmail(account.user.email);
-                    setPassword('');
-                    setError(null);
-                  }}
-                  accessibilityLabel={`Sign in as ${account.user.display_name}`}
-                  accessibilityState={{ selected: email.trim().toLowerCase() === account.user.email.toLowerCase() }}
-                  scaleTo={0.985}
-                  hoverScaleTo={1.005}
-                  style={[
-                    styles.rememberedAccount,
-                    email.trim().toLowerCase() === account.user.email.toLowerCase() && styles.rememberedSelected,
-                  ]}
-                >
-                  <Text style={styles.rememberedInitial}>
-                    {account.user.display_name.trim().charAt(0).toUpperCase() || '?'}
-                  </Text>
-                  <View style={styles.rememberedCopy}>
-                    <Text numberOfLines={1} style={styles.rememberedName}>{account.user.display_name}</Text>
-                    <Text numberOfLines={1} style={styles.rememberedEmail}>{account.user.email}</Text>
-                  </View>
-                </PressableScale>
-              </Reveal>
-            ))}
+            {rememberedAccounts.map((account, index) => {
+              const selected = email.trim().toLowerCase() === account.user.email.toLowerCase();
+              return (
+                <Reveal key={account.user.id} delay={Math.min(index, 3) * 40} distance={6}>
+                  <PressableScale
+                    onPress={() => {
+                      setEmail(account.user.email);
+                      setPassword('');
+                      setError(null);
+                    }}
+                    accessibilityLabel={`Sign in as ${account.user.display_name}`}
+                    accessibilityState={{ selected }}
+                    scaleTo={0.985}
+                    hoverScaleTo={1.005}
+                    style={[styles.rememberedAccount, selected && styles.rememberedSelected]}
+                  >
+                    <LinearGradient colors={[colors.cyan, colors.violet]} style={styles.rememberedPortrait}>
+                      <View style={styles.rememberedPortraitInner}>
+                        <Text style={styles.rememberedInitial}>
+                          {account.user.display_name.trim().charAt(0).toUpperCase() || '?'}
+                        </Text>
+                      </View>
+                    </LinearGradient>
+                    <View style={styles.rememberedCopy}>
+                      <Text numberOfLines={1} style={styles.rememberedName}>{account.user.display_name}</Text>
+                      <Text numberOfLines={1} style={styles.rememberedEmail}>{account.user.email}</Text>
+                    </View>
+                    <View style={[styles.rememberedState, selected && styles.rememberedStateSelected]}>
+                      <Ionicons name={selected ? 'checkmark' : 'arrow-forward'} size={13} color={selected ? colors.textInverse : colors.textMuted} />
+                    </View>
+                  </PressableScale>
+                </Reveal>
+              );
+            })}
           </View>
+          {selectedRemembered ? (
+            <View style={styles.rememberedFlow}>
+              <View style={styles.rememberedFlowLine} />
+              <Ionicons name="lock-closed-outline" size={12} color={colors.cyan} />
+              <Text style={styles.rememberedFlowText}>Identity selected · enter this account’s password below</Text>
+            </View>
+          ) : null}
         </View>
       ) : null}
       <TextField
@@ -111,27 +130,52 @@ export function LoginScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   switching: { ...typography.caption, color: colors.textSecondary, textAlign: 'center' },
-  rememberedBlock: { gap: 6 },
-  rememberedLabel: { ...typography.eyebrow, fontSize: 9, color: colors.textMuted },
-  rememberedRow: { gap: 6 },
+  rememberedBlock: { gap: spacing.sm },
+  rememberedLabel: { ...typography.eyebrow, fontSize: 9, color: colors.textMuted, letterSpacing: 1.8 },
+  rememberedRow: { gap: spacing.sm },
   rememberedAccount: {
     width: '100%',
-    minHeight: 44,
+    minHeight: 58,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 10,
-    borderRadius: 12,
+    gap: spacing.sm,
+    paddingVertical: 7,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.surfaceBorder,
-    backgroundColor: colors.surface,
+    borderColor: glass.stroke,
+    backgroundColor: glass.fillDeep,
+    overflow: 'hidden',
   },
   rememberedSelected: {
-    borderColor: colors.cyan,
-    backgroundColor: colors.surfaceElevated,
+    borderColor: glass.tintPrimaryStroke,
+    backgroundColor: glass.tintPrimary,
+    borderLeftWidth: 3,
   },
-  rememberedInitial: { ...typography.subtitle, width: 26, textAlign: 'center', color: colors.cyan },
+  rememberedPortrait: { width: 40, height: 40, padding: 1, borderRadius: radii.pill },
+  rememberedPortraitInner: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.pill,
+    backgroundColor: colors.bgElevated,
+  },
+  rememberedInitial: { ...typography.subtitle, textAlign: 'center', color: colors.textPrimary },
   rememberedCopy: { flex: 1, minWidth: 0 },
   rememberedName: { ...typography.body, fontSize: 13, color: colors.textPrimary },
   rememberedEmail: { ...typography.caption, fontSize: 11, color: colors.textMuted },
+  rememberedState: {
+    width: 26,
+    height: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: glass.stroke,
+    backgroundColor: glass.fillDeep,
+  },
+  rememberedStateSelected: { borderColor: colors.cyan, backgroundColor: colors.cyan },
+  rememberedFlow: { minHeight: 20, flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: spacing.md },
+  rememberedFlowLine: { width: 1, height: 16, backgroundColor: colors.cyan },
+  rememberedFlowText: { ...typography.caption, flex: 1, fontSize: 10, color: colors.textMuted },
 });

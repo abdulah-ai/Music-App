@@ -16,7 +16,6 @@ type Feature = { icon: keyof typeof Ionicons.glyphMap; label: string };
 const FEATURES: Feature[] = [
   { icon: 'cloud-download-outline', label: 'Save audio & video from any link' },
   { icon: 'mic-outline', label: 'Name any song playing around you' },
-  { icon: 'paper-plane-outline', label: 'Import straight from Telegram' },
   { icon: 'shield-checkmark-outline', label: 'A private collection that stays yours' },
 ];
 
@@ -47,12 +46,17 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: Props) {
           keyboardShouldPersistTaps="handled"
         >
           <Reveal resetKey={isFocused}>
-            <View style={styles.mobileOrb}>
-              {isFocused && <Starwell state="idle" size={150} />}
+            <View style={styles.mobileMasthead}>
+              <View pointerEvents="none" style={styles.mobileHorizon} />
+              <View style={styles.mobileOrb}>
+                {isFocused && <Starwell state="idle" size={112} />}
+              </View>
+              <View style={styles.mobilePromise}>
+                <Text style={styles.eyebrow}>{eyebrow}</Text>
+                <GradientText style={styles.mobileTitle}>{title}</GradientText>
+                <Text style={styles.subtitle}>{subtitle}</Text>
+              </View>
             </View>
-            <Text style={styles.eyebrow}>{eyebrow}</Text>
-            <GradientText style={styles.mobileTitle}>{title}</GradientText>
-            <Text style={styles.subtitle}>{subtitle}</Text>
           </Reveal>
           <Reveal delay={100} resetKey={isFocused}>
             <GlassPanel>
@@ -63,6 +67,11 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: Props) {
               "what is this app" pitch the desktop hero shows. */}
           <Reveal delay={200} resetKey={isFocused}>
             <View style={styles.mobileFeatureList}>
+              <View style={styles.mobileFeatureHeading}>
+                <View style={styles.mobileFeatureRule} />
+                <Text style={styles.mobileFeatureEyebrow}>YOUR PRIVATE HOLLOW</Text>
+                <View style={styles.mobileFeatureRule} />
+              </View>
               {FEATURES.map((feature) => (
                 <View key={feature.icon} style={styles.mobileFeatureRow}>
                   <Ionicons name={feature.icon} size={15} color={colors.cyan} />
@@ -88,15 +97,22 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: Props) {
       >
         <View style={styles.split}>
           <Reveal style={styles.heroCol} resetKey={isFocused}>
-            <View style={styles.heroOrbRow}>
-              {isFocused && <Starwell state="idle" size={roomy ? 180 : 140} />}
+            <View style={styles.posterHeader}>
+              <View style={styles.heroOrbRow}>
+                {isFocused && <Starwell state="idle" size={roomy ? 196 : 152} />}
+              </View>
+              <View style={styles.posterIndex}>
+                <Text style={styles.posterIndexTop}>PRIVATE MUSIC ARCHIVE</Text>
+                <Text style={styles.posterIndexNumber}>01</Text>
+              </View>
             </View>
             <Text style={[styles.eyebrow, styles.heroEyebrow]}>{eyebrow}</Text>
             <GradientText style={styles.heroTitle}>{title}</GradientText>
             <Text style={[styles.subtitle, styles.heroSubtitle]}>{subtitle}</Text>
             <View style={styles.featureList}>
-              {FEATURES.map((feature) => (
+              {FEATURES.map((feature, index) => (
                 <View key={feature.icon} style={styles.featureRow}>
+                  <Text style={styles.featureIndex}>0{index + 1}</Text>
                   <View style={styles.featureIcon}>
                     <Ionicons name={feature.icon} size={16} color={colors.cyan} />
                   </View>
@@ -107,7 +123,7 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: Props) {
           </Reveal>
 
           <Reveal delay={120} style={styles.formCol} resetKey={isFocused}>
-            <GlassPanel intensity={80} overlayColor="rgba(9,17,14,0.62)">
+            <GlassPanel intensity={80} overlayColor="rgba(9,17,25,0.68)" edgeColor="rgba(99,214,181,0.34)">
               <View style={[styles.form, styles.formDesktop]}>{children}</View>
             </GlassPanel>
           </Reveal>
@@ -124,17 +140,42 @@ const styles = StyleSheet.create({
   mobileScroll: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
   },
-  mobileOrb: { alignItems: 'center', marginBottom: spacing.md },
-  mobileTitle: { ...typography.mega, textAlign: 'center' },
+  mobileMasthead: {
+    position: 'relative',
+    minHeight: 238,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+    marginHorizontal: -spacing.sm,
+    paddingHorizontal: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  mobileHorizon: {
+    position: 'absolute',
+    left: '10%',
+    right: '10%',
+    top: 58,
+    height: 96,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(99,214,181,0.045)',
+    borderWidth: 1,
+    borderColor: 'rgba(169,155,219,0.08)',
+    transform: [{ scaleX: 1.45 }],
+  },
+  mobileOrb: { position: 'absolute', top: -4, left: 0, right: 0, alignItems: 'center' },
+  mobilePromise: { alignItems: 'center' },
+  mobileTitle: { ...typography.mega, fontSize: 34, lineHeight: 40, textAlign: 'center' },
   mobileFeatureList: {
     marginTop: spacing.lg,
-    alignSelf: 'center',
-    gap: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    gap: spacing.md,
   },
-  mobileFeatureRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  mobileFeatureHeading: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
+  mobileFeatureRule: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.surfaceBorder },
+  mobileFeatureEyebrow: { ...typography.eyebrow, fontSize: 8, color: colors.textMuted },
+  mobileFeatureRow: { minHeight: 28, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   mobileFeatureLabel: { ...typography.caption, color: colors.textSecondary },
 
   // ----- Shared -----
@@ -159,27 +200,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 72,
+    gap: 84,
     width: '100%',
-    maxWidth: 1080,
+    maxWidth: 1120,
     alignSelf: 'center',
   },
-  heroCol: { flex: 1, maxWidth: 520 },
-  heroOrbRow: { alignItems: 'flex-start', marginBottom: spacing.md, marginLeft: -spacing.md },
+  heroCol: { flex: 1, maxWidth: 590 },
+  posterHeader: { minHeight: 184, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  heroOrbRow: { alignItems: 'flex-start', marginLeft: -spacing.lg },
+  posterIndex: { alignItems: 'flex-end', gap: spacing.xs, paddingTop: spacing.md },
+  posterIndexTop: { ...typography.eyebrow, fontSize: 8, color: colors.textMuted },
+  posterIndexNumber: { ...typography.numeric, fontSize: 28, lineHeight: 32, color: colors.surfaceBorderStrong },
   heroTitle: {
     ...typography.mega,
-    fontSize: 54,
-    lineHeight: 60,
+    fontSize: 62,
+    lineHeight: 66,
+    letterSpacing: -2.4,
     textAlign: 'left',
+    maxWidth: 560,
   },
   heroSubtitle: {
     textAlign: 'left',
     fontSize: 16,
     lineHeight: 24,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.xxl,
+    maxWidth: 460,
   },
-  featureList: { gap: spacing.md },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  featureList: { borderTopWidth: 1, borderTopColor: colors.surfaceBorder, paddingTop: spacing.sm },
+  featureRow: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.surfaceBorder,
+  },
+  featureIndex: { ...typography.numeric, width: 24, fontSize: 10, color: colors.textMuted },
   featureIcon: {
     width: 32,
     height: 32,
@@ -191,7 +247,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   featureLabel: { ...typography.body, color: colors.textSecondary },
-  formCol: { width: 400 },
+  formCol: { width: 390 },
   formDesktop: { padding: spacing.xl, gap: spacing.md },
   heroEyebrow: { textAlign: 'left' },
 });

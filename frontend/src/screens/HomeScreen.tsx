@@ -14,12 +14,12 @@ import { useFocusEffect, useIsFocused, useNavigation } from '@react-navigation/n
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { DashboardCustomizer } from '../components/dashboard/DashboardCustomizer';
 import { MiniPlayerBar } from '../components/player/MiniPlayerBar';
 import { Artwork } from '../components/ui/Artwork';
 import { Button } from '../components/ui/Button';
-import { EmptyState } from '../components/ui/EmptyState';
 import { LibraryFreshnessBanner } from '../components/library/LibraryFreshnessBanner';
 import { GlassPanel } from '../components/ui/GlassPanel';
 import { IconButton } from '../components/ui/IconButton';
@@ -45,7 +45,7 @@ import { usePlayerStore } from '../store/playerStore';
 import { usePlayHistoryStore } from '../store/playHistoryStore';
 import { toast } from '../store/toastStore';
 import { useVideoPlayerStore } from '../store/videoPlayerStore';
-import { colors, glass, glassBlur, radii, spacing, typography } from '../theme/tokens';
+import { colors, glass, glassBlur, numericTypography, radii, shadows, spacing, typography } from '../theme/tokens';
 import { apiErrorMessage, friendlyJobStage } from '../utils/apiError';
 import { displayArtist, displayTitle } from '../utils/mediaDisplay';
 import { confirmJobCancellation } from '../utils/confirmJobCancellation';
@@ -142,6 +142,20 @@ function compactLinkLabel(url: string): string {
   }
 }
 
+function sourceGlyph(url?: string | null): keyof typeof Ionicons.glyphMap {
+  if (!url) return 'link-outline';
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    if (host.includes('youtube') || host.includes('youtu.be')) return 'logo-youtube';
+    if (host.includes('soundcloud')) return 'logo-soundcloud';
+    if (host.includes('instagram')) return 'logo-instagram';
+    if (host.includes('tiktok')) return 'musical-note-outline';
+  } catch {
+    return 'link-outline';
+  }
+  return 'globe-outline';
+}
+
 function ActiveJobRow({ job, accent, onCancel }: { job: Job; accent: string; onCancel: () => void }) {
   const label = job.result_media ? displayTitle(job.result_media) : job.match_title ?? 'Adding to your library';
   const stage = friendlyJobStage(job.stage_label, job.status === 'pending' ? 'Waiting to start' : 'Preparing media');
@@ -149,16 +163,24 @@ function ActiveJobRow({ job, accent, onCancel }: { job: Job; accent: string; onC
 
   return (
     <View style={styles.activeJobRow} accessibilityLabel={`${label}, ${stage}, ${Math.round(progress)} percent`}>
-      <View style={styles.jobIcon}>
-        <Ionicons name={job.job_type === 'recognize' ? 'sparkles' : 'arrow-down'} size={17} color={accent} />
+      <View style={styles.timelineRail}>
+        <View style={styles.jobIcon}>
+          <Ionicons name={job.job_type === 'recognize' ? 'sparkles' : sourceGlyph(job.source_url)} size={17} color={accent} />
+        </View>
+        <View style={styles.timelineSignal}>
+          <View style={[styles.timelineSignalFill, { height: `${Math.max(12, progress)}%`, backgroundColor: accent }]} />
+        </View>
       </View>
       <View style={styles.jobBody}>
         <View style={styles.jobTitleRow}>
           <Text numberOfLines={1} style={styles.jobTitle}>{label}</Text>
-          <Text style={[styles.jobPercent, { color: accent }]}>{Math.round(progress)}%</Text>
         </View>
+        <Text style={styles.timelineMeta}>SOURCE · {job.job_type === 'recognize' ? 'RECOGNITION' : 'LINK IMPORT'}</Text>
         <Text numberOfLines={1} style={styles.jobStage}>{stage}</Text>
         <ProgressBar progress={progress / 100} />
+      </View>
+      <View style={[styles.timelineEndpoint, { borderColor: `${accent}66` }]}>
+        <Text style={[styles.jobPercent, { color: accent }]}>{Math.round(progress)}%</Text>
       </View>
       <Pressable
         onPress={onCancel}
@@ -200,18 +222,21 @@ function SubmittedLinkRow({
       style={styles.batchLinkRow}
       accessibilityLabel={`${compactLinkLabel(url)}, ${status}, ${Math.round(progress)} percent`}
     >
-      <View style={[styles.batchStatusIcon, { borderColor: `${statusColor}45` }]}>
-        <Ionicons
-          name={failed ? 'alert' : complete ? 'checkmark' : 'arrow-down'}
-          size={14}
-          color={statusColor}
-        />
+      <View style={styles.batchTimelineRail}>
+        <View style={[styles.batchStatusIcon, { borderColor: `${statusColor}45` }]}>
+          <Ionicons name={sourceGlyph(url)} size={14} color={statusColor} />
+        </View>
+        <View style={styles.batchSignalLine} />
+        <View style={[styles.batchEndpoint, { borderColor: `${statusColor}55` }]}>
+          <Ionicons name={failed ? 'alert' : complete ? 'checkmark' : 'arrow-down'} size={11} color={statusColor} />
+        </View>
       </View>
       <View style={styles.batchLinkBody}>
         <View style={styles.batchLinkHeading}>
           <Text numberOfLines={1} style={styles.batchLinkTitle}>{compactLinkLabel(url)}</Text>
           <Text style={[styles.batchLinkPercent, { color: statusColor }]}>{Math.round(progress)}%</Text>
         </View>
+        <Text style={styles.timelineMeta}>SOURCE · {complete ? 'RESOLVED' : failed ? 'NEEDS ATTENTION' : 'IN TRANSIT'}</Text>
         <Text numberOfLines={2} style={[styles.batchLinkStage, failed && styles.batchLinkStageFailed]}>{status}</Text>
         <ProgressBar progress={progress / 100} />
       </View>
@@ -240,28 +265,37 @@ function SubmittedLinkRow({
   );
 }
 
-function MediaCard({ media, size, onPress }: { media: Media; size: number; onPress: () => void }) {
+function MediaCard({ media, size, onPress, pinned = false }: { media: Media; size: number; onPress: () => void; pinned?: boolean }) {
   const artist = displayArtist(media);
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Play ${displayTitle(media)}${artist ? ` by ${artist}` : ''}`}
-      style={({ pressed }) => [styles.recentCard, { width: size }, pressed && styles.cardPressed]}
+      style={({ pressed }) => [styles.recentCard, pinned && styles.pinnedCard, { width: size }, pressed && styles.cardPressed]}
     >
-      <Artwork media={media} size={size} style={styles.artwork} />
+      <View style={[styles.shelfArtworkFrame, pinned && styles.pinnedArtworkFrame]}>
+        <Artwork media={media} size="100%" style={styles.artwork} />
+        {pinned ? (
+          <View style={styles.pinnedStar}>
+            <Ionicons name="star" size={11} color={colors.gold} />
+          </View>
+        ) : null}
+      </View>
       <Text numberOfLines={1} style={styles.recentTitle}>{displayTitle(media)}</Text>
       <Text numberOfLines={1} style={styles.recentArtist}>{artist ?? (media.media_type === 'video' ? 'Video' : 'Unknown artist')}</Text>
     </Pressable>
   );
 }
 
-function StatTile({ icon, value, label, accent }: { icon: keyof typeof Ionicons.glyphMap; value: string; label: string; accent: string }) {
+function StatTile({ icon, value, label, accent, lead = false }: { icon: keyof typeof Ionicons.glyphMap; value: string; label: string; accent: string; lead?: boolean }) {
   return (
-    <View style={[styles.statTile, glassBlur]} accessibilityLabel={`${label}: ${value}`}>
-      <Ionicons name={icon} size={16} color={accent} />
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+    <View style={[styles.statTile, lead && styles.statTileLead]} accessibilityLabel={`${label}: ${value}`}>
+      <View style={[styles.statIconWell, lead && styles.statIconWellLead]}><Ionicons name={icon} size={lead ? 20 : 15} color={accent} /></View>
+      <View style={styles.statCopy}>
+        <Text style={[styles.statValue, lead && styles.statValueLead]}>{value}</Text>
+        <Text style={styles.statLabel}>{label}</Text>
+      </View>
     </View>
   );
 }
@@ -574,6 +608,12 @@ export function HomeScreen() {
     import: () => (
       <GlassPanel style={styles.importPanel} edgeColor={accentStyle === 'cosmic' ? 'rgba(169,155,219,0.24)' : 'rgba(99,214,181,0.24)'}>
         <View style={[styles.importContent, { padding: smallPhone ? spacing.md : panelPadding }]}>
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(99,214,181,0.10)', 'rgba(9,17,25,0.02)', 'rgba(169,155,219,0.08)']}
+            locations={[0, 0.58, 1]}
+            style={styles.importHorizon}
+          />
           <View style={styles.importHeading}>
             <View style={styles.importIcon}>
               <Ionicons name="link" size={18} color={accent} />
@@ -584,6 +624,11 @@ export function HomeScreen() {
             </View>
           </View>
 
+          <View style={styles.observatoryStep}>
+            <Text style={[styles.observatoryStepNumber, { color: accent }]}>01</Text>
+            <Text style={styles.observatoryStepLabel}>CAPTURE SIGNAL</Text>
+            <View style={styles.observatoryStepRule} />
+          </View>
           <View style={[styles.inputRow, styles.inputRowMultiline, glassBlur]}>
             <TextInput
               value={url}
@@ -668,6 +713,27 @@ export function HomeScreen() {
             </View>
           ) : null}
 
+          <View style={styles.observatoryStep}>
+            <Text style={[styles.observatoryStepNumber, { color: accent }]}>02</Text>
+            <Text style={styles.observatoryStepLabel}>CONFIRM SCOPE</Text>
+            <View style={styles.observatoryStepRule} />
+          </View>
+          <View style={styles.scopeRow} accessibilityLiveRegion="polite">
+            <Ionicons name={offline ? 'cloud-offline-outline' : downloadPlaylist && playlistDetected ? 'list' : 'link'} size={16} color={offline ? colors.warning : accent} />
+            <Text style={styles.scopeText}>
+              {offline
+                ? 'Server offline — cached browsing and playback still work; this draft will remain ready.'
+                : downloadPlaylist && playlistDetected
+                  ? 'Final scope: every available entry in the detected playlist.'
+                  : `Final scope: only the ${parsedUrls.length === 1 ? 'shared link' : `${parsedUrls.length} shared links`} shown above.`}
+            </Text>
+          </View>
+
+          <View style={styles.observatoryStep}>
+            <Text style={[styles.observatoryStepNumber, { color: accent }]}>03</Text>
+            <Text style={styles.observatoryStepLabel}>CHOOSE FORMAT</Text>
+            <View style={styles.observatoryStepRule} />
+          </View>
           <SegmentedControl
             options={MEDIA_KINDS}
             value={mediaKind}
@@ -676,7 +742,11 @@ export function HomeScreen() {
           />
 
           <View>
-            <Text style={styles.formatLabel}>QUALITY</Text>
+            <View style={styles.observatoryStep}>
+              <Text style={[styles.observatoryStepNumber, { color: accent }]}>04</Text>
+              <Text style={styles.observatoryStepLabel}>SET QUALITY</Text>
+              <View style={styles.observatoryStepRule} />
+            </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.formatRow}>
               {choices.map((choice) => {
                 const selected = mediaKind === 'audio' ? audioFormat === choice.key : videoQuality === choice.key;
@@ -706,15 +776,10 @@ export function HomeScreen() {
             </View>
           ) : null}
 
-          <View style={styles.scopeRow} accessibilityLiveRegion="polite">
-            <Ionicons name={offline ? 'cloud-offline-outline' : downloadPlaylist && playlistDetected ? 'list' : 'link'} size={16} color={offline ? colors.warning : accent} />
-            <Text style={styles.scopeText}>
-              {offline
-                ? 'Server offline — cached browsing and playback still work; this draft will remain ready.'
-                : downloadPlaylist && playlistDetected
-                  ? 'Final scope: every available entry in the detected playlist.'
-                  : `Final scope: only the ${parsedUrls.length === 1 ? 'shared link' : `${parsedUrls.length} shared links`} shown above.`}
-            </Text>
+          <View style={styles.observatoryStep}>
+            <Text style={[styles.observatoryStepNumber, { color: accent }]}>05</Text>
+            <Text style={styles.observatoryStepLabel}>COMMIT TO YOUR HOLLOW</Text>
+            <View style={styles.observatoryStepRule} />
           </View>
 
           <Button
@@ -789,9 +854,11 @@ export function HomeScreen() {
       !currentMedia || playing ? null : (
         <View style={{ marginTop: sectionGap }}>
           <SectionHeader title="Continue listening" style={styles.sectionHeader} />
-          <GlassPanel style={styles.continuePanel}>
+          <GlassPanel style={styles.continuePanel} edgeColor={`${accent}70`}>
             <View style={styles.continueContent}>
-              <Artwork media={currentMedia} size={compact ? 52 : 64} priority />
+              <View style={[styles.continueArtworkFrame, { borderColor: `${accent}52` }]}>
+                <Artwork media={currentMedia} size={compact ? 82 : isDesktop ? 122 : 98} priority borderRadius={radii.md} />
+              </View>
               <Pressable
                 onPress={() => navigation.navigate('Player')}
                 accessibilityRole="button"
@@ -845,12 +912,12 @@ export function HomeScreen() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.recentRow}
+            contentContainerStyle={[styles.recentRow, styles.pinnedRow]}
             snapToInterval={cardSize + spacing.md}
             decelerationRate="fast"
           >
             {pinnedItems.map((media) => (
-              <MediaCard key={media.id} media={media} size={cardSize} onPress={() => void playFrom(pinnedItems, media)} />
+              <MediaCard key={media.id} media={media} size={cardSize} pinned onPress={() => void playFrom(pinnedItems, media)} />
             ))}
           </ScrollView>
         </View>
@@ -861,14 +928,24 @@ export function HomeScreen() {
         <SectionHeader title="Offline shelf" style={styles.sectionHeader} />
         <GlassPanel style={[styles.offlinePanel, offlineShelfEmpty && styles.offlinePanelEmpty]}>
           {offlineShelfEmpty ? (
-            <EmptyState
-              compact
-              icon="cloud-download-outline"
-              title="Nothing saved yet"
-              subtitle={'Use "Save offline" on any track to keep it available on this device.'}
-              actionLabel="Offline settings"
-              onAction={() => navigation.navigate('Settings')}
-            />
+            <View style={styles.offlineEmptyScene}>
+              <View style={styles.offlineMotif} accessible accessibilityLabel="A device waiting for music from your private cloud">
+                <View style={styles.offlineCloud}>
+                  <Ionicons name="cloud-outline" size={27} color={colors.cyan} />
+                </View>
+                <View style={styles.offlineSignalDashed} />
+                <View style={styles.offlineDevice}>
+                  <Ionicons name="musical-note" size={18} color={colors.gold} />
+                  <View style={styles.offlineDeviceBar} />
+                </View>
+              </View>
+              <View style={styles.offlineEmptyCopy}>
+                <Text style={styles.offlineEmptyEyebrow}>YOUR POCKET CONSTELLATION</Text>
+                <Text style={styles.offlineEmptyTitle}>Nothing saved yet</Text>
+                <Text style={styles.offlineEmptyBody}>Use “Save offline” on any track to keep a small part of your hollow on this device.</Text>
+              </View>
+              <Button label="Offline settings" onPress={() => navigation.navigate('Settings')} variant="secondary" style={styles.offlineEmptyAction} />
+            </View>
           ) : (
             <View
               style={styles.offlineRow}
@@ -905,12 +982,15 @@ export function HomeScreen() {
     stats: () => (
       <View style={{ marginTop: sectionGap }}>
         <SectionHeader title="Your listening" style={styles.sectionHeader} />
-        <View style={styles.statsRow}>
-          <StatTile icon="musical-notes-outline" value={String(stats.tracks)} label="Tracks" accent={accent} />
-          <StatTile icon="videocam-outline" value={String(stats.videos)} label="Videos" accent={accent} />
-          <StatTile icon="time-outline" value={`${stats.minutes}m`} label="Last 30 days" accent={accent} />
-          <StatTile icon="play-outline" value={String(stats.plays)} label="Total plays" accent={accent} />
-        </View>
+        <GlassPanel style={styles.statsConstellation} variant="quiet">
+          <StatTile icon="time-outline" value={`${stats.minutes}m`} label="Listening · last 30 days" accent={accent} lead />
+          <View style={styles.statsRule} />
+          <View style={styles.statsSupportRow}>
+            <StatTile icon="musical-notes-outline" value={String(stats.tracks)} label="Tracks" accent={accent} />
+            <StatTile icon="videocam-outline" value={String(stats.videos)} label="Videos" accent={accent} />
+            <StatTile icon="play-outline" value={String(stats.plays)} label="Total plays" accent={accent} />
+          </View>
+        </GlassPanel>
       </View>
     ),
 
@@ -933,8 +1013,12 @@ export function HomeScreen() {
               accessibilityLabel={action.label}
               style={({ pressed }) => [styles.quickTile, glassBlur, pressed && styles.cardPressed]}
             >
-              <Ionicons name={action.icon} size={19} color={accent} />
-              <Text style={styles.quickLabel}>{action.label}</Text>
+              <View style={styles.quickIconWell}><Ionicons name={action.icon} size={19} color={accent} /></View>
+              <View style={styles.quickCopy}>
+                <Text style={styles.quickLabel}>{action.label}</Text>
+                <Text style={styles.quickHint}>Open portal</Text>
+              </View>
+              <Ionicons name="arrow-forward" size={15} color={colors.textMuted} />
             </Pressable>
           ))}
         </View>
@@ -953,11 +1037,18 @@ export function HomeScreen() {
           <Reveal>
             <View style={styles.headerRow}>
               <View style={styles.headerCopy}>
-                <Text style={[styles.eyebrow, { color: accent }]}>TODAY</Text>
-                <Text style={styles.title}>{dayGreeting()}{firstName ? `, ${firstName}` : ''}.</Text>
-                <Text style={styles.subtitle}>Keep what you find. Play it your way.</Text>
+                <View style={styles.todayEyebrowRow}>
+                  <Text style={[styles.eyebrow, { color: accent }]}>TODAY</Text>
+                  <View style={[styles.todayRule, { backgroundColor: `${accent}55` }]} />
+                  <Text style={styles.todayEdition}>STARHOLLOW · DAILY EDITION</Text>
+                </View>
+                <Text style={styles.title}>{dayGreeting()}{firstName ? `,\n${firstName}.` : '.'}</Text>
+                <View style={styles.editorialDeck}>
+                  <View style={[styles.editorialDeckRule, { backgroundColor: accent }]} />
+                  <Text style={styles.subtitle}>Keep what you find. Play it your way.</Text>
+                </View>
               </View>
-              <View style={styles.headerActions}>
+              <View style={[styles.headerActions, glassBlur]}>
                 <IconButton
                   icon="options-outline"
                   accessibilityLabel="Customize dashboard"
@@ -990,31 +1081,50 @@ export function HomeScreen() {
 
           {showFirstUse ? (
             <Reveal chapter={2} style={{ marginTop: sectionGap }}>
-              <SectionHeader title="Start here" style={styles.sectionHeader} />
-              <View style={styles.firstUseRow}>
-                <Pressable
+              <GlassPanel style={styles.firstUseScene} edgeColor="rgba(233,205,126,0.30)">
+                <View pointerEvents="none" style={styles.firstUseMoon} />
+                <View style={styles.firstUseHeading}>
+                  <Text style={styles.firstUseEyebrow}>FIRST NIGHT IN STARHOLLOW</Text>
+                  <Text style={styles.firstUseHeadline}>Begin your hollow.</Text>
+                  <Text style={styles.firstUseDeck}>Catch the song in the air, or open the door to music you already keep.</Text>
+                </View>
+                <View style={styles.firstUseRow}>
+                  <Pressable
                   onPress={() => openTab('Recognize')}
                   accessibilityRole="button"
                   accessibilityLabel="Identify music playing nearby"
                   style={({ pressed }) => [styles.firstUseCard, glassBlur, pressed && styles.cardPressed]}
                 >
-                  <View style={styles.firstUseIcon}><Ionicons name="mic" size={21} color={accent} /></View>
-                  <Text style={styles.firstUseTitle}>Identify music</Text>
-                  <Text style={styles.firstUseBody}>Hear something? Name it in seconds.</Text>
+                  <View style={styles.firstUseIllustration}>
+                    <View style={[styles.firstUseOrbit, { borderColor: `${accent}38` }]} />
+                    <View style={styles.firstUseIcon}><Ionicons name="mic" size={24} color={accent} /></View>
+                    <Ionicons name="musical-notes-outline" size={13} color={colors.gold} style={styles.firstUseSpark} />
+                  </View>
+                  <View style={styles.firstUseCardCopy}>
+                    <Text style={styles.firstUseTitle}>Identify music</Text>
+                    <Text style={styles.firstUseBody}>Hear something? Name it in seconds.</Text>
+                  </View>
                   <Ionicons name="arrow-forward" size={17} color={colors.textMuted} />
-                </Pressable>
-                <Pressable
+                  </Pressable>
+                  <Pressable
                   onPress={() => navigation.navigate('Telegram')}
                   accessibilityRole="button"
                   accessibilityLabel="Import from Telegram"
                   style={({ pressed }) => [styles.firstUseCard, glassBlur, pressed && styles.cardPressed]}
                 >
-                  <View style={styles.firstUseIcon}><Ionicons name="paper-plane" size={21} color={colors.violet} /></View>
-                  <Text style={styles.firstUseTitle}>Telegram</Text>
-                  <Text style={styles.firstUseBody}>Bring saved audio into your library.</Text>
+                  <View style={styles.firstUseIllustration}>
+                    <View style={[styles.firstUseOrbit, { borderColor: 'rgba(169,155,219,0.34)' }]} />
+                    <View style={[styles.firstUseIcon, styles.firstUseIconViolet]}><Ionicons name="paper-plane" size={24} color={colors.violet} /></View>
+                    <Ionicons name="sparkles" size={13} color={colors.gold} style={styles.firstUseSpark} />
+                  </View>
+                  <View style={styles.firstUseCardCopy}>
+                    <Text style={styles.firstUseTitle}>Telegram</Text>
+                    <Text style={styles.firstUseBody}>Bring saved audio into your library.</Text>
+                  </View>
                   <Ionicons name="arrow-forward" size={17} color={colors.textMuted} />
-                </Pressable>
-              </View>
+                  </Pressable>
+                </View>
+              </GlassPanel>
             </Reveal>
           ) : null}
 
@@ -1034,14 +1144,38 @@ export function HomeScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: 'transparent' },
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
-  headerCopy: { flex: 1 },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  eyebrow: { ...typography.eyebrow, marginBottom: spacing.xs },
-  title: { ...typography.mega, color: colors.textPrimary },
-  subtitle: { ...typography.body, color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.lg },
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md, marginBottom: spacing.lg },
+  headerCopy: { flex: 1, minWidth: 0 },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    padding: 3,
+    borderRadius: radii.pill,
+    backgroundColor: glass.fillDeep,
+    borderWidth: 1,
+    borderColor: glass.stroke,
+  },
+  todayEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+  eyebrow: { ...typography.eyebrow },
+  todayRule: { width: 28, height: 1 },
+  todayEdition: { ...typography.eyebrow, flexShrink: 1, fontSize: 7, lineHeight: 10, letterSpacing: 1.2, color: colors.textMuted },
+  title: { ...typography.display, fontSize: 43, lineHeight: 47, letterSpacing: -1.65, color: colors.textPrimary },
+  editorialDeck: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.sm, marginTop: spacing.md },
+  editorialDeckRule: { width: 2, borderRadius: radii.pill },
+  subtitle: { ...typography.body, flexShrink: 1, maxWidth: 430, color: colors.textMuted },
   importPanel: { marginBottom: spacing.sm },
-  importContent: { gap: spacing.md },
+  importContent: { position: 'relative', gap: spacing.md, overflow: 'hidden' },
+  importHorizon: {
+    position: 'absolute',
+    left: -80,
+    right: -80,
+    top: -60,
+    height: 240,
+    borderBottomLeftRadius: 240,
+    borderBottomRightRadius: 240,
+    opacity: 0.74,
+  },
   importHeading: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   importIcon: {
     width: 42,
@@ -1055,8 +1189,12 @@ const styles = StyleSheet.create({
   importEyebrow: { ...typography.eyebrow, fontSize: 9, lineHeight: 12, letterSpacing: 2 },
   importTitle: { ...typography.title, fontSize: 22, lineHeight: 28, color: colors.textPrimary },
   importTitleSmall: { fontSize: 19, lineHeight: 25 },
+  observatoryStep: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  observatoryStepNumber: { ...numericTypography.rank, width: 22, fontSize: 10, lineHeight: 12 },
+  observatoryStepLabel: { ...typography.eyebrow, fontSize: 8, lineHeight: 11, letterSpacing: 1.55, color: colors.textMuted },
+  observatoryStepRule: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: glass.stroke },
   inputRow: {
-    minHeight: 54,
+    minHeight: 78,
     flexDirection: 'row',
     alignItems: 'center',
     paddingLeft: spacing.md,
@@ -1065,7 +1203,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     backgroundColor: glass.fillDeep,
     borderWidth: 1,
-    borderColor: glass.stroke,
+    borderColor: glass.strokeStrong,
+    ...shadows.low,
   },
   inputRowMultiline: { alignItems: 'flex-start', paddingVertical: 5 },
   input: {
@@ -1091,8 +1230,8 @@ const styles = StyleSheet.create({
   },
   pasteButtonSmall: { minWidth: 44, width: 44, paddingHorizontal: 0 },
   pasteLabel: { ...typography.caption, fontFamily: 'Sora_500Medium', color: colors.textSecondary },
-  draftList: { gap: 2, borderRadius: radii.md, overflow: 'hidden' },
-  draftRow: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm, backgroundColor: glass.fillDeep },
+  draftList: { gap: 2, padding: 3, borderRadius: radii.md, overflow: 'hidden', borderWidth: 1, borderColor: glass.stroke, backgroundColor: glass.fillDeep },
+  draftRow: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radii.sm, backgroundColor: glass.fillBright },
   draftIndex: { width: 22, height: 22, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: glass.tintPrimary },
   draftIndexText: { ...typography.caption, fontSize: 10, color: colors.cyan },
   draftLink: { ...typography.caption, flex: 1, color: colors.textSecondary },
@@ -1115,7 +1254,7 @@ const styles = StyleSheet.create({
   inspectionNotice: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, padding: spacing.sm, borderRadius: radii.md, backgroundColor: 'rgba(242,183,93,0.08)' },
   inspectionNoticeText: { ...typography.caption, flex: 1, color: colors.textSecondary },
   formatLabel: { ...typography.eyebrow, fontSize: 9, lineHeight: 12, letterSpacing: 1.8, color: colors.textMuted, marginBottom: spacing.sm },
-  formatRow: { gap: spacing.sm, paddingRight: spacing.sm },
+  formatRow: { gap: spacing.sm, paddingRight: spacing.sm, paddingTop: spacing.sm },
   formatChip: {
     minHeight: 38,
     justifyContent: 'center',
@@ -1137,7 +1276,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(240,131,140,0.09)',
   },
   errorText: { ...typography.caption, flex: 1, color: colors.danger },
-  scopeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm },
+  scopeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderRadius: radii.md, backgroundColor: glass.fillDeep, borderWidth: 1, borderColor: glass.stroke },
   scopeText: { ...typography.caption, flex: 1, color: colors.textSecondary },
   importButton: { width: '100%' },
   helperText: { ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: -spacing.sm },
@@ -1156,14 +1295,24 @@ const styles = StyleSheet.create({
   },
   batchProgressEyebrow: { ...typography.eyebrow, fontSize: 9, letterSpacing: 1.6, color: colors.textMuted },
   batchProgressSummary: { ...typography.caption, fontSize: 11, color: colors.textSecondary },
-  batchLinkRow: { minHeight: 74, flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.sm },
+  batchLinkRow: { minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm },
+  batchTimelineRail: { width: 30, alignSelf: 'stretch', alignItems: 'center' },
   batchStatusIcon: {
     width: 30,
     height: 30,
-    marginTop: 2,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    backgroundColor: glass.fillDeep,
+  },
+  batchSignalLine: { flex: 1, width: 1, minHeight: 8, backgroundColor: glass.strokeStrong },
+  batchEndpoint: {
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.pill,
     borderWidth: 1,
     backgroundColor: glass.fillDeep,
   },
@@ -1173,15 +1322,17 @@ const styles = StyleSheet.create({
   batchLinkPercent: { ...typography.caption, fontFamily: 'Sora_600SemiBold', fontSize: 10 },
   batchLinkStage: { ...typography.caption, fontSize: 11, color: colors.textMuted },
   batchLinkStageFailed: { color: colors.danger },
+  timelineMeta: { ...typography.eyebrow, fontSize: 7, lineHeight: 9, letterSpacing: 1.1, color: colors.textMuted },
   batchCancelButton: { width: 36, height: 36, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
   batchDivider: { height: 1, backgroundColor: glass.stroke },
   sectionHeader: { marginBottom: spacing.sm },
-  activityPanel: { paddingHorizontal: spacing.md },
+  activityPanel: { paddingHorizontal: spacing.md, backgroundColor: glass.fillDeep },
   jobsStale: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
   jobsStaleCopy: { flex: 1, gap: 2 },
   jobsStaleTitle: { ...typography.subtitle, fontSize: 13, color: colors.warning },
   jobsStaleDetail: { ...typography.caption, color: colors.textMuted },
-  activeJobRow: { minHeight: 88, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
+  activeJobRow: { minHeight: 104, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
+  timelineRail: { width: 38, alignSelf: 'stretch', alignItems: 'center' },
   jobIcon: {
     width: 38,
     height: 38,
@@ -1190,91 +1341,173 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(99,214,181,0.11)',
   },
-  jobBody: { flex: 1, gap: 5 },
+  timelineSignal: { flex: 1, width: 2, minHeight: 16, marginTop: 3, borderRadius: radii.pill, overflow: 'hidden', backgroundColor: glass.stroke },
+  timelineSignalFill: { position: 'absolute', left: 0, right: 0, bottom: 0, borderRadius: radii.pill },
+  timelineEndpoint: {
+    width: 40,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    backgroundColor: glass.fillDeep,
+  },
+  jobBody: { flex: 1, minWidth: 0, gap: 5 },
   jobTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   jobTitle: { ...typography.subtitle, flex: 1, fontSize: 14, color: colors.textPrimary },
   jobPercent: { ...typography.caption, fontFamily: 'Sora_600SemiBold', fontSize: 11 },
   jobStage: { ...typography.caption, fontSize: 12, color: colors.textMuted },
   cancelButton: { width: 44, height: 44, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
   divider: { height: 1, backgroundColor: glass.stroke },
-  continuePanel: { padding: spacing.md },
+  continuePanel: { padding: spacing.md, backgroundColor: glass.fillDeep },
   continueContent: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  continueArtworkFrame: { padding: 3, borderRadius: radii.lg, borderWidth: 1, backgroundColor: glass.fillBright, ...shadows.card },
   continueCopy: { flex: 1, minHeight: 48, justifyContent: 'center' },
   continueEyebrow: { ...typography.eyebrow, fontSize: 8, lineHeight: 11, letterSpacing: 1.7 },
   continueTitle: { ...typography.subtitle, color: colors.textPrimary },
   continueArtist: { ...typography.caption, color: colors.textMuted },
   resumeButton: {
-    width: 48,
-    height: 48,
+    width: 54,
+    height: 54,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
   },
-  recentRow: { gap: spacing.md, paddingRight: spacing.lg, paddingBottom: spacing.sm },
+  recentRow: { gap: spacing.md, paddingLeft: spacing.xs, paddingRight: spacing.xl, paddingTop: spacing.xs, paddingBottom: spacing.md },
+  pinnedRow: { paddingTop: spacing.sm, paddingBottom: spacing.lg },
   recentCard: { gap: 4 },
-  artwork: { marginBottom: spacing.xs },
+  pinnedCard: { transform: [{ translateY: -2 }] },
+  shelfArtworkFrame: { width: '100%', aspectRatio: 1, padding: 1, borderRadius: radii.md, borderWidth: 1, borderColor: glass.stroke, backgroundColor: glass.fillDeep },
+  pinnedArtworkFrame: { padding: 3, borderColor: 'rgba(233,205,126,0.34)', backgroundColor: glass.fillBright, ...shadows.card },
+  artwork: { width: '100%', height: '100%' },
+  pinnedStar: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 25,
+    height: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(11,20,17,0.82)',
+    borderWidth: 1,
+    borderColor: 'rgba(233,205,126,0.42)',
+  },
   recentTitle: { ...typography.subtitle, fontSize: 14, lineHeight: 19, color: colors.textPrimary },
   recentArtist: { ...typography.caption, fontSize: 12, color: colors.textMuted },
   offlinePanel: { padding: spacing.md },
   offlinePanelEmpty: { padding: 0 },
+  offlineEmptyScene: { minHeight: 190, alignItems: 'center', justifyContent: 'center', gap: spacing.md, padding: spacing.lg },
+  offlineMotif: { width: 150, height: 74, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  offlineCloud: {
+    width: 52,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.pill,
+    backgroundColor: glass.tintPrimary,
+    borderWidth: 1,
+    borderColor: glass.tintPrimaryStroke,
+  },
+  offlineSignalDashed: { width: 31, height: 1, borderTopWidth: 1, borderStyle: 'dashed', borderColor: colors.surfaceBorderStrong },
+  offlineDevice: {
+    width: 45,
+    height: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderRadius: radii.md,
+    borderWidth: 2,
+    borderColor: colors.surfaceBorderStrong,
+    backgroundColor: glass.fillDeep,
+  },
+  offlineDeviceBar: { width: 14, height: 2, borderRadius: radii.pill, backgroundColor: colors.surfaceBorderStrong },
+  offlineEmptyCopy: { alignItems: 'center', gap: spacing.xs, maxWidth: 390 },
+  offlineEmptyEyebrow: { ...typography.eyebrow, fontSize: 8, color: colors.cyan },
+  offlineEmptyTitle: { ...typography.sectionTitle, fontSize: 19, lineHeight: 25, color: colors.textPrimary, textAlign: 'center' },
+  offlineEmptyBody: { ...typography.body, fontSize: 12, lineHeight: 19, color: colors.textMuted, textAlign: 'center' },
+  offlineEmptyAction: { minWidth: 170 },
   offlineRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   offlineDot: { width: 9, height: 9, borderRadius: radii.pill },
   offlineCopy: { flex: 1 },
   offlineTitle: { ...typography.subtitle, fontSize: 14, lineHeight: 19, color: colors.textPrimary },
   offlineDetail: { ...typography.caption, fontSize: 12, color: colors.textMuted, marginTop: 1 },
-  statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  statsConstellation: { padding: spacing.md, backgroundColor: glass.fillDeep },
+  statsRule: { height: StyleSheet.hairlineWidth, marginVertical: spacing.sm, backgroundColor: glass.strokeStrong },
+  statsSupportRow: { flexDirection: 'row' },
   statTile: {
-    flexGrow: 1,
-    flexBasis: '22%',
-    minWidth: 132,
-    minHeight: 86,
-    padding: spacing.md,
-    gap: 3,
-    borderRadius: radii.lg,
-    backgroundColor: glass.fill,
-    borderWidth: 1,
-    borderColor: glass.stroke,
+    flex: 1,
+    minWidth: 0,
+    minHeight: 76,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: glass.strokeStrong,
   },
-  statValue: { ...typography.title, fontSize: 21, lineHeight: 27, color: colors.textPrimary },
+  statTileLead: { minHeight: 96, borderRightWidth: 0, paddingHorizontal: spacing.md },
+  statIconWell: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center', borderRadius: radii.pill, backgroundColor: glass.fillBright },
+  statIconWellLead: { width: 46, height: 46, backgroundColor: glass.tintPrimary, borderWidth: 1, borderColor: glass.tintPrimaryStroke },
+  statCopy: { flex: 1, minWidth: 0 },
+  statValue: { ...numericTypography.total, fontSize: 18, lineHeight: 24, color: colors.textPrimary },
+  statValueLead: { ...typography.display, fontVariant: ['tabular-nums'], fontSize: 34, lineHeight: 39, color: colors.textPrimary },
   statLabel: { ...typography.caption, fontSize: 11, color: colors.textMuted },
   quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   quickTile: {
     flexGrow: 1,
-    flexBasis: '22%',
-    minWidth: 120,
-    minHeight: 72,
-    padding: spacing.md,
-    gap: spacing.xs,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
+    flexBasis: '46%',
+    minWidth: 150,
+    minHeight: 78,
+    flexDirection: 'row',
+    padding: spacing.sm,
+    gap: spacing.sm,
+    alignItems: 'center',
     borderRadius: radii.lg,
-    backgroundColor: glass.fill,
+    backgroundColor: glass.fillDeep,
     borderWidth: 1,
     borderColor: glass.stroke,
   },
+  quickIconWell: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: radii.md, backgroundColor: glass.tintPrimary, borderWidth: 1, borderColor: glass.tintPrimaryStroke },
+  quickCopy: { flex: 1, minWidth: 0 },
   quickLabel: { ...typography.subtitle, fontSize: 13, color: colors.textPrimary },
+  quickHint: { ...typography.caption, fontSize: 9, color: colors.textMuted },
+  firstUseScene: { padding: spacing.lg, backgroundColor: glass.fillDeep },
+  firstUseMoon: { position: 'absolute', width: 220, height: 220, right: -70, top: -105, borderRadius: radii.pill, backgroundColor: 'rgba(169,155,219,0.055)', borderWidth: 1, borderColor: 'rgba(233,205,126,0.08)' },
+  firstUseHeading: { maxWidth: 510, gap: spacing.xs, marginBottom: spacing.lg },
+  firstUseEyebrow: { ...typography.eyebrow, fontSize: 8, color: colors.gold },
+  firstUseHeadline: { ...typography.display, fontSize: 29, lineHeight: 35, color: colors.textPrimary },
+  firstUseDeck: { ...typography.body, fontSize: 13, lineHeight: 20, color: colors.textMuted },
   firstUseRow: { flexDirection: 'row', gap: spacing.sm },
   firstUseCard: {
     flex: 1,
-    minHeight: 174,
+    minWidth: 0,
+    minHeight: 190,
     padding: spacing.md,
     gap: spacing.sm,
     borderRadius: radii.lg,
-    backgroundColor: glass.fill,
+    backgroundColor: glass.fillBright,
     borderWidth: 1,
     borderColor: glass.stroke,
   },
+  firstUseIllustration: { position: 'relative', height: 72, alignItems: 'center', justifyContent: 'center' },
+  firstUseOrbit: { position: 'absolute', width: 68, height: 68, borderRadius: radii.pill, borderWidth: 1 },
   firstUseIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: radii.md,
+    width: 48,
+    height: 48,
+    borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(99,214,181,0.1)',
+    backgroundColor: glass.tintPrimary,
+    borderWidth: 1,
+    borderColor: glass.tintPrimaryStroke,
   },
+  firstUseIconViolet: { backgroundColor: 'rgba(169,155,219,0.12)', borderColor: 'rgba(169,155,219,0.28)' },
+  firstUseSpark: { position: 'absolute', right: '20%', top: 4 },
+  firstUseCardCopy: { flex: 1, gap: spacing.xs },
   firstUseTitle: { ...typography.subtitle, fontSize: 14, color: colors.textPrimary },
-  firstUseBody: { ...typography.caption, flex: 1, fontSize: 12, color: colors.textMuted },
+  firstUseBody: { ...typography.caption, fontSize: 12, color: colors.textMuted },
   libraryLoading: { minHeight: 84, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   libraryLoadingText: { ...typography.caption, color: colors.textMuted },
   pressed: { opacity: 0.68 },
