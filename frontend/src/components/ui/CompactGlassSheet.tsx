@@ -187,11 +187,22 @@ export function CompactGlassSheet({
       })()
     : null;
 
+  const anchoredLeft = typeof anchorStyle?.left === 'number' ? anchorStyle.left : width / 2 - panelWidth / 2;
+  const anchoredTop = typeof anchorStyle?.top === 'number' ? anchorStyle.top : height / 2;
+  const desktopOriginX = isDesktop && anchor
+    ? Math.max(-28, Math.min(28, anchor.x - (anchoredLeft + panelWidth / 2)))
+    : 0;
+  const desktopOriginY = isDesktop && anchor ? (anchor.y <= anchoredTop ? -10 : 10) : 0;
+  const enterTranslateX = reduceMotion ? 0 : desktopOriginX;
+  const enterTranslateY = reduceMotion ? 0 : isDesktop ? desktopOriginY : 42;
+  const enterScale = reduceMotion ? 1 : isDesktop ? 0.965 : 1;
+
   const animatedPanelStyle = {
     opacity: progress,
     transform: [
-      { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) },
-      { scale: progress.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] }) },
+      { translateX: progress.interpolate({ inputRange: [0, 1], outputRange: [enterTranslateX, 0] }) },
+      { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [enterTranslateY, 0] }) },
+      { scale: progress.interpolate({ inputRange: [0, 1], outputRange: [enterScale, 1] }) },
     ],
   };
 
@@ -205,7 +216,10 @@ export function CompactGlassSheet({
         ]}
         accessibilityViewIsModal
       >
-        <Animated.View pointerEvents="none" style={[styles.backdrop, { opacity: progress }]} />
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.backdrop, { opacity: progress.interpolate({ inputRange: [0, 1], outputRange: [0, isDesktop ? 0.76 : 1] }) }]}
+        />
         <Pressable
           style={StyleSheet.absoluteFill}
           onPress={onClose}

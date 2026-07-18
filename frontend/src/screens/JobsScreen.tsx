@@ -168,9 +168,9 @@ function JobRow({ job, onCancel, onRetry, onOpen }: { job: Job; onCancel: () => 
       status={{ label: meta.label, tone: meta.tone }}
       icon={meta.icon}
       leading={
-        running ? (
-          <ProgressRing progress={progress / 100} size={48} strokeWidth={3.5}>
-            <Text style={styles.progressText}>{Math.round(progress)}%</Text>
+        running || job.status === 'complete' ? (
+          <ProgressRing progress={job.status === 'complete' ? 1 : progress / 100} complete={job.status === 'complete'} size={48} strokeWidth={3.5}>
+            {job.status !== 'complete' ? <Text style={styles.progressText}>{Math.round(progress)}%</Text> : null}
           </ProgressRing>
         ) : undefined
       }

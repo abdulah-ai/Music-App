@@ -1,8 +1,10 @@
-import type { ReactNode } from 'react';
-import { StyleProp, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Animated, Easing, StyleProp, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { colors, iconography, numericTypography, radii, spacing, typography } from '../../theme/tokens';
+import { glass, motion } from '../../theme/tokens';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { GlassPanel } from './GlassPanel';
 
 export type DataRowTone = 'neutral' | 'active' | 'success' | 'attention';
@@ -50,9 +52,47 @@ export function DataRow({
   style,
 }: Props) {
   const toneColor = TONE_COLOR[status.tone];
+  const reduceMotion = useReducedMotion();
+  const previousTone = useRef(status.tone);
+  const sweep = useRef(new Animated.Value(0)).current;
+  const [rowWidth, setRowWidth] = useState(0);
+
+  useEffect(() => {
+    const completedNow = status.tone === 'success' && previousTone.current !== 'success';
+    previousTone.current = status.tone;
+    sweep.stopAnimation();
+    if (!completedNow || reduceMotion) {
+      sweep.setValue(0);
+      return;
+    }
+    sweep.setValue(0);
+    Animated.sequence([
+      Animated.delay(motion.duration.base + motion.duration.fast),
+      Animated.timing(sweep, {
+        toValue: 1,
+        duration: motion.duration.slow,
+        easing: Easing.bezier(...motion.easing.decelerate),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [reduceMotion, status.tone, sweep]);
 
   return (
-    <GlassPanel style={[styles.panel, style]}>
+    <GlassPanel
+      onLayout={(event) => setRowWidth(Math.ceil(event.nativeEvent.layout.width))}
+      style={[styles.panel, status.tone === 'attention' && styles.panelFailure, style]}
+    >
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.completionSweep,
+          {
+            width: Math.max(80, rowWidth * 0.42),
+            opacity: sweep.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 0.18, 0] }),
+            transform: [{ translateX: sweep.interpolate({ inputRange: [0, 1], outputRange: [-Math.max(80, rowWidth * 0.42), rowWidth] }) }],
+          },
+        ]}
+      />
       <View pointerEvents="none" style={[styles.accent, { backgroundColor: toneColor }]} />
       <View style={styles.content}>
         {leading ? (
@@ -84,7 +124,15 @@ export function DataRow({
 }
 
 const styles = StyleSheet.create({
-  panel: { borderRadius: radii.lg },
+  panel: { borderRadius: radii.lg, overflow: 'hidden' },
+  panelFailure: { borderColor: colors.danger },
+  completionSweep: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: glass.tintPrimary,
+  },
   accent: { position: 'absolute', top: 0, bottom: 0, left: 0, width: 4 },
   content: {
     minHeight: 88,

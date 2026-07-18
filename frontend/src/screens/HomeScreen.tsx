@@ -982,14 +982,14 @@ export function HomeScreen() {
             const rendered = widgetRenderers[id]();
             if (!rendered) return null;
             return (
-              <Reveal key={id} delay={Math.min(160, 60 + index * 30)}>
+              <Reveal key={id} chapter={1} chapterIndex={index}>
                 {rendered}
               </Reveal>
             );
           })}
 
           {showFirstUse ? (
-            <Reveal delay={120} style={{ marginTop: sectionGap }}>
+            <Reveal chapter={2} style={{ marginTop: sectionGap }}>
               <SectionHeader title="Start here" style={styles.sectionHeader} />
               <View style={styles.firstUseRow}>
                 <Pressable

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,7 +14,7 @@ import { useTrackAccent } from '../../hooks/useTrackAccent';
 import { canPlayNext, canPlayPrevious, usePlayerStore } from '../../store/playerStore';
 import { useVideoPlayerStore } from '../../store/videoPlayerStore';
 import { displayArtist, displayTitle, thumbnailUri } from '../../utils/mediaDisplay';
-import { colors, glass, radii, spacing, typography } from '../../theme/tokens';
+import { colors, glass, motion, radii, spacing, typography } from '../../theme/tokens';
 import type { RootStackParamList } from '../../navigation/types';
 
 const BAR_COUNT = 4;
@@ -25,7 +25,19 @@ type Props = {
 };
 
 /** A small glowing bar visualizer driven by the player's real amplitude signal — not a canned loop. */
-function AmplitudeBars({ playing, amplitude, reduceMotion }: { playing: boolean; amplitude: number; reduceMotion: boolean }) {
+function AmplitudeBars({
+  playing,
+  amplitude,
+  reduceMotion,
+  pulse,
+  activeColor,
+}: {
+  playing: boolean;
+  amplitude: number;
+  reduceMotion: boolean;
+  pulse: Animated.Value;
+  activeColor: string;
+}) {
   const smoothed = useRef(new Animated.Value(0.15)).current;
 
   useEffect(() => {
@@ -43,8 +55,6 @@ function AmplitudeBars({ playing, amplitude, reduceMotion }: { playing: boolean;
     return () => animation.stop();
   }, [amplitude, playing, reduceMotion, smoothed]);
 
-  if (!playing) return null;
-
   return (
     <View style={styles.eqRow}>
       {Array.from({ length: BAR_COUNT }).map((_, i) => {
@@ -59,6 +69,10 @@ function AmplitudeBars({ playing, amplitude, reduceMotion }: { playing: boolean;
                   inputRange: [0, 1],
                   outputRange: [3, 8 + phase * 12],
                 }),
+                opacity: playing
+                  ? pulse.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] })
+                  : 0.34,
+                backgroundColor: playing ? activeColor : colors.textMuted,
               },
             ]}
           />
@@ -141,9 +155,12 @@ export function MiniPlayerBar({ bottomOffset = 0 }: Props) {
   const shuffle = usePlayerStore((s) => s.shuffle);
   const videoMode = useVideoPlayerStore((state) => state.mode);
   const [queueOpen, setQueueOpen] = useState(false);
+  const [queueRendered, setQueueRendered] = useState(false);
   const trackAccent = useTrackAccent(currentMedia ? thumbnailUri(currentMedia) : null);
   const reduceMotion = useReducedMotion();
   const entrance = useRef(new Animated.Value(0)).current;
+  const playbackPulse = useRef(new Animated.Value(0)).current;
+  const queueProgress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const visible = !!currentMedia && isFocused && videoMode === 'closed';
@@ -161,6 +178,51 @@ export function MiniPlayerBar({ bottomOffset = 0 }: Props) {
     animation.start();
     return () => animation.stop();
   }, [currentMedia?.id, entrance, isFocused, reduceMotion, videoMode]);
+
+  useEffect(() => {
+    playbackPulse.stopAnimation();
+    if (!playing || reduceMotion) {
+      playbackPulse.setValue(playing ? 0.35 : 0);
+      return;
+    }
+    playbackPulse.setValue(0);
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(playbackPulse, {
+        toValue: 1,
+        duration: motion.duration.continuous,
+        easing: Easing.inOut(Easing.sin),
+        useNativeDriver: true,
+      }),
+      Animated.timing(playbackPulse, {
+        toValue: 0,
+        duration: motion.duration.continuous,
+        easing: Easing.inOut(Easing.sin),
+        useNativeDriver: true,
+      }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [playbackPulse, playing, reduceMotion]);
+
+  useEffect(() => {
+    queueProgress.stopAnimation();
+    if (queueOpen) setQueueRendered(true);
+    if (reduceMotion) {
+      queueProgress.setValue(queueOpen ? 1 : 0);
+      if (!queueOpen) setQueueRendered(false);
+      return;
+    }
+    Animated.timing(queueProgress, {
+      toValue: queueOpen ? 1 : 0,
+      duration: queueOpen ? motion.duration.base : motion.duration.fast,
+      easing: queueOpen
+        ? Easing.bezier(...motion.easing.decelerate)
+        : Easing.bezier(...motion.easing.accelerate),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished && !queueOpen) setQueueRendered(false);
+    });
+  }, [queueOpen, queueProgress, reduceMotion]);
 
   if (!currentMedia || !isFocused || videoMode !== 'closed') return null;
 
@@ -182,19 +244,51 @@ export function MiniPlayerBar({ bottomOffset = 0 }: Props) {
       style={[
         styles.holder,
         isDesktop && styles.holderDesktop,
-        { bottom, opacity: entrance, transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] },
+        {
+          bottom,
+          opacity: entrance,
+          transform: [{
+            translateY: Animated.add(
+              entrance.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }),
+              queueProgress.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }),
+            ),
+          }],
+        },
       ]}
     >
-      {queueOpen && (
-        <QueuePreview
-          onJump={() => setQueueOpen(false)}
-          onOpenFullQueue={() => {
-            setQueueOpen(false);
-            navigation.navigate('Player', { panel: 'queue' });
+      {queueRendered ? (
+        <Animated.View
+          style={{
+            opacity: queueProgress,
+            transform: [
+              { translateY: queueProgress.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) },
+              { scaleY: queueProgress.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }) },
+            ],
           }}
+        >
+          <QueuePreview
+            onJump={() => setQueueOpen(false)}
+            onOpenFullQueue={() => {
+              setQueueOpen(false);
+              navigation.navigate('Player', { panel: 'queue' });
+            }}
+          />
+        </Animated.View>
+      ) : null}
+      <View style={styles.playerWidth}>
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.playbackGlow,
+            {
+              borderColor: trackAccent.miniPlayerHighlight,
+              opacity: playing
+                ? playbackPulse.interpolate({ inputRange: [0, 1], outputRange: [0.14, 0.28] })
+                : 0,
+              transform: [{ scale: playbackPulse.interpolate({ inputRange: [0, 1], outputRange: [0.995, 1.008] }) }],
+            },
+          ]}
         />
-      )}
-      <View style={[styles.playerWidth, playing && styles.glowWrap, playing && { shadowColor: trackAccent.miniPlayerHighlight }]}>
         <GlassPanel style={styles.panel} variant="raised" overlayColor={glass.fillHeavy}>
           <View style={styles.content}>
             <Pressable
@@ -219,7 +313,13 @@ export function MiniPlayerBar({ bottomOffset = 0 }: Props) {
                   {displayArtist(currentMedia) ?? 'Unknown artist'}
                 </Text>
               </View>
-              <AmplitudeBars playing={playing} amplitude={amplitude} reduceMotion={reduceMotion} />
+              <AmplitudeBars
+                playing={playing}
+                amplitude={amplitude}
+                reduceMotion={reduceMotion}
+                pulse={playbackPulse}
+                activeColor={trackAccent.miniPlayerHighlight}
+              />
             </Pressable>
             <View style={styles.transportTargets} accessibilityRole="toolbar" accessibilityLabel="Mini player controls">
               {isDesktop && (
@@ -243,7 +343,21 @@ export function MiniPlayerBar({ bottomOffset = 0 }: Props) {
             </View>
           </View>
           <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: trackAccent.miniPlayerHighlight }]} />
+            <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: trackAccent.miniPlayerHighlight }]}>
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.progressEdge,
+                  {
+                    backgroundColor: trackAccent.miniPlayerHighlight,
+                    opacity: playing
+                      ? playbackPulse.interpolate({ inputRange: [0, 1], outputRange: [0.58, 1] })
+                      : 0.34,
+                    transform: [{ scale: playbackPulse.interpolate({ inputRange: [0, 1], outputRange: [0.82, 1.15] }) }],
+                  },
+                ]}
+              />
+            </View>
           </View>
         </GlassPanel>
       </View>
@@ -264,9 +378,12 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 640,
   },
-  glowWrap: {
+  playbackGlow: {
+    ...(StyleSheet.absoluteFill as object),
+    borderRadius: radii.md,
+    borderWidth: 1,
     shadowColor: colors.cyan,
-    shadowOpacity: 0.22,
+    shadowOpacity: 0.34,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 0 },
     elevation: 10,
@@ -322,6 +439,18 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     backgroundColor: colors.cyan,
+  },
+  progressEdge: {
+    position: 'absolute',
+    right: -2,
+    top: -2,
+    width: 6,
+    height: 6,
+    borderRadius: radii.pill,
+    shadowColor: colors.cyan,
+    shadowOpacity: 0.7,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 0 },
   },
   queueCard: {
     marginBottom: spacing.sm,

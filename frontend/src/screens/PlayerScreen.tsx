@@ -32,6 +32,7 @@ import { PressableScale } from '../components/ui/PressableScale';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useResponsive } from '../hooks/useResponsive';
 import { useTrackAccent } from '../hooks/useTrackAccent';
+import { motionPresets } from '../theme/motion';
 import { useFavoritesStore } from '../store/favoritesStore';
 import { usePinStore } from '../store/pinStore';
 import { canPlayNext, canPlayPrevious, usePlayerStore } from '../store/playerStore';
@@ -278,10 +279,10 @@ export function PlayerScreen() {
       artworkEntrance.setValue(1);
       return;
     }
-    const animation = Animated.spring(artworkEntrance, {
+    const animation = Animated.timing(artworkEntrance, {
       toValue: 1,
-      speed: 18,
-      bounciness: 3,
+      duration: motionPresets.emphasis.duration,
+      easing: motionPresets.emphasis.easing,
       useNativeDriver: true,
     });
     animation.start();
@@ -401,7 +402,7 @@ export function PlayerScreen() {
           height: artworkSize,
           shadowColor: trackAccent.artworkAura,
           opacity: artworkEntrance,
-          transform: [{ scale: artworkEntrance.interpolate({ inputRange: [0, 1], outputRange: [0.965, 1] }) }],
+          transform: [{ scale: artworkEntrance.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] }) }],
         },
       ]}
     >

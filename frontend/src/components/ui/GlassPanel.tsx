@@ -1,5 +1,5 @@
 import { PropsWithChildren } from 'react';
-import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, View, ViewStyle, type ViewProps } from 'react-native';
 
 import { glassRecipes, radii } from '../../theme/tokens';
 
@@ -12,6 +12,7 @@ type Props = PropsWithChildren<{
   overlayColor?: string;
   edgeColor?: string;
   variant?: GlassTier;
+  onLayout?: ViewProps['onLayout'];
 }>;
 
 /**
@@ -26,10 +27,12 @@ export function GlassPanel({
   overlayColor,
   edgeColor,
   variant = 'raised',
+  onLayout,
 }: Props) {
   const recipe = glassRecipes[variant];
   return (
     <View
+      onLayout={onLayout}
       style={[
         styles.panel,
         recipe.shadow,

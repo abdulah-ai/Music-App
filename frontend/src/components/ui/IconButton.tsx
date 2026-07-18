@@ -1,7 +1,8 @@
-import { Pressable, PressableProps, StyleProp, StyleSheet, ViewStyle } from 'react-native';
+import { Animated, Pressable, PressableProps, StyleProp, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { colors, glass, glassBlur, iconography } from '../../theme/tokens';
+import { useTactileGlass } from '../../hooks/useTactileGlass';
 
 type Props = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -33,6 +34,7 @@ export function IconButton({
   testID,
 }: Props) {
   const tone = variant === 'danger' ? colors.danger : variant === 'primary' ? colors.cyan : selected ? colors.cyan : colors.textSecondary;
+  const tactile = useTactileGlass({ disabled });
 
   return (
     <Pressable
@@ -44,7 +46,11 @@ export function IconButton({
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled, selected }}
-      style={({ pressed }) => [
+      onPressIn={tactile.onPressIn}
+      onPressOut={tactile.onPressOut}
+      onHoverIn={tactile.onHoverIn}
+      onHoverOut={tactile.onHoverOut}
+      style={[
         styles.base,
         glassBlur,
         {
@@ -56,12 +62,14 @@ export function IconButton({
         variant === 'primary' && styles.primary,
         variant === 'danger' && styles.danger,
         selected && variant !== 'primary' && styles.selected,
-        pressed && !disabled && styles.pressed,
         disabled && styles.disabled,
         style,
       ]}
     >
-      <Ionicons name={icon} size={iconSize} color={tone} />
+      <Animated.View style={{ opacity: tactile.highlight, transform: [{ scale: tactile.scale }] }}>
+        <Ionicons name={icon} size={iconSize} color={tone} />
+      </Animated.View>
+      <Animated.View pointerEvents="none" style={[styles.hoverBorder, { opacity: tactile.hoverBorder }]} />
     </Pressable>
   );
 }
@@ -80,6 +88,6 @@ const styles = StyleSheet.create({
   primary: { backgroundColor: glass.tintPrimary, borderColor: glass.tintPrimaryStroke },
   danger: { backgroundColor: glass.tintDanger, borderColor: glass.tintDangerStroke },
   selected: { backgroundColor: glass.tintPrimary, borderColor: glass.tintPrimaryStroke },
-  pressed: { opacity: 0.72, transform: [{ scale: 0.96 }] },
+  hoverBorder: { ...(StyleSheet.absoluteFill as object), borderRadius: 999, borderWidth: 1, borderColor: glass.edgeModal },
   disabled: { opacity: 0.4 },
 });

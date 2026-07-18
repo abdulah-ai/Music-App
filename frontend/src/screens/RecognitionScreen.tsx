@@ -37,7 +37,7 @@ import { useRecognitionCaptureStore } from '../store/recognitionCaptureStore';
 import { SCAN_HISTORY_LIMIT, type ScanEntry, useScanHistoryStore } from '../store/scanHistoryStore';
 import { toast } from '../store/toastStore';
 import { apiErrorMessage, friendlyJobError, friendlyJobStage } from '../utils/apiError';
-import { colors, glass, gradients, radii, spacing, typography } from '../theme/tokens';
+import { colors, glass, gradients, motion, radii, spacing, typography } from '../theme/tokens';
 
 const LISTEN_SECONDS = 15;
 
@@ -132,6 +132,7 @@ export function RecognitionScreen() {
   const bgShift = useRef(new Animated.Value(0)).current;
   const ringAnim = useRef(new Animated.Value(0)).current;
   const idleSpin = useRef(new Animated.Value(0)).current;
+  const phaseMorph = useRef(new Animated.Value(0)).current;
 
   // A slow dashed orbit around the button while idle — invites the tap.
   useEffect(() => {
@@ -226,6 +227,22 @@ export function RecognitionScreen() {
     ringAnim.setValue(0);
     return undefined;
   }, [phase, reduceMotion, ringAnim]);
+
+  useEffect(() => {
+    const phaseIndex: Record<Phase, number> = { idle: 0, listening: 1, analyzing: 2, result: 3 };
+    const target = phaseIndex[phase];
+    phaseMorph.stopAnimation();
+    if (reduceMotion) {
+      phaseMorph.setValue(target);
+      return;
+    }
+    Animated.timing(phaseMorph, {
+      toValue: target,
+      duration: phase === 'result' ? motion.duration.slow : motion.duration.base,
+      easing: Easing.bezier(...motion.easing.standard),
+      useNativeDriver: true,
+    }).start();
+  }, [phase, phaseMorph, reduceMotion]);
 
   function clearCaptureTimers() {
     if (tickTimer.current) clearInterval(tickTimer.current);
@@ -527,7 +544,27 @@ export function RecognitionScreen() {
           ) : null}
         </View>
 
-        <View style={styles.buttonZone}>
+        <Animated.View
+          style={[
+            styles.buttonZone,
+            {
+              transform: [
+                { scale: phaseMorph.interpolate({ inputRange: [0, 1, 2, 3], outputRange: [1, 1.035, 0.87, 0.94] }) },
+                { translateY: phaseMorph.interpolate({ inputRange: [0, 1, 2, 3], outputRange: [0, -2, 5, 2] }) },
+              ],
+            },
+          ]}
+        >
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.phaseHalo,
+              {
+                opacity: phaseMorph.interpolate({ inputRange: [0, 1, 2, 3], outputRange: [0.18, 0.72, 0.42, 0.24] }),
+                transform: [{ scale: phaseMorph.interpolate({ inputRange: [0, 1, 2, 3], outputRange: [1, 1.1, 0.82, 0.92] }) }],
+              },
+            ]}
+          />
           {phase === 'idle' && (
             <Animated.View
               pointerEvents="none"
@@ -599,7 +636,7 @@ export function RecognitionScreen() {
               </LinearGradient>
             </View>
           </PressableScale>
-        </View>
+        </Animated.View>
 
         <View style={styles.footer}>
           {phase === 'idle' && (
@@ -673,7 +710,15 @@ export function RecognitionScreen() {
           {phase === 'analyzing' && <ActivityIndicator color={colors.cyan} />}
 
           {phase === 'result' && match && (
-            <View style={styles.resultBlock}>
+            <Animated.View
+              style={[
+                styles.resultBlock,
+                {
+                  opacity: phaseMorph.interpolate({ inputRange: [2, 3], outputRange: [0, 1], extrapolate: 'clamp' }),
+                  transform: [{ translateY: phaseMorph.interpolate({ inputRange: [2, 3], outputRange: [10, 0], extrapolate: 'clamp' }) }],
+                },
+              ]}
+            >
               {match.stage_label === 'matched' ? (
                 <>
                   <GlassPanel style={styles.resultPanel}>
@@ -786,7 +831,7 @@ export function RecognitionScreen() {
                 </>
               )}
               <Button label="Listen again" variant="ghost" onPress={reset} style={styles.wide} />
-            </View>
+            </Animated.View>
           )}
         </View>
       </View>
@@ -972,6 +1017,19 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  phaseHalo: {
+    position: 'absolute',
+    width: BUTTON_SIZE + 46,
+    height: BUTTON_SIZE + 46,
+    borderRadius: (BUTTON_SIZE + 46) / 2,
+    borderWidth: 1,
+    borderColor: glass.tintPrimaryStroke,
+    backgroundColor: 'rgba(99,214,181,0.035)',
+    shadowColor: colors.cyan,
+    shadowOpacity: 0.28,
+    shadowRadius: 26,
+    shadowOffset: { width: 0, height: 0 },
   },
   pulseRing: {
     position: 'absolute',

@@ -1,7 +1,10 @@
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { colors, glass, glassBlur, radii, spacing } from '../../theme/tokens';
+import { motion } from '../../theme/tokens';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 export type SegmentOption<T extends string> = {
   value: T;
@@ -33,9 +36,49 @@ export function SegmentedControl<T extends string>({
   style,
 }: Props<T>) {
   const select = onValueChange ?? onChange;
+  const reducedMotion = useReducedMotion();
+  const [rootWidth, setRootWidth] = useState(0);
+  const plateX = useRef(new Animated.Value(0)).current;
+  const selectedIndex = Math.max(0, options.findIndex((option) => option.value === value));
+  const gap = 2;
+  const padding = 3;
+  const segmentWidth = rootWidth > 0
+    ? (rootWidth - padding * 2 - gap * Math.max(0, options.length - 1)) / Math.max(1, options.length)
+    : 0;
+
+  useEffect(() => {
+    if (segmentWidth <= 0) return;
+    const target = padding + selectedIndex * (segmentWidth + gap);
+    plateX.stopAnimation();
+    if (reducedMotion) {
+      plateX.setValue(target);
+      return;
+    }
+    Animated.timing(plateX, {
+      toValue: target,
+      duration: motion.duration.base,
+      easing: Easing.bezier(...motion.easing.standard),
+      useNativeDriver: true,
+    }).start();
+  }, [plateX, reducedMotion, segmentWidth, selectedIndex]);
 
   return (
-    <View accessibilityLabel={accessibilityLabel} style={[styles.root, glassBlur, style]}>
+    <View
+      accessibilityLabel={accessibilityLabel}
+      onLayout={(event) => setRootWidth(Math.ceil(event.nativeEvent.layout.width))}
+      style={[styles.root, glassBlur, style]}
+    >
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.selectionPlate,
+          {
+            opacity: segmentWidth > 0 ? 1 : 0,
+            width: segmentWidth,
+            transform: [{ translateX: plateX }],
+          },
+        ]}
+      />
       {options.map((option) => {
         const selected = option.value === value;
         return (
@@ -96,7 +139,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'transparent',
   },
-  selected: { backgroundColor: glass.tintPrimary, borderColor: glass.tintPrimaryStroke },
+  selected: { borderColor: 'transparent' },
+  selectionPlate: {
+    position: 'absolute',
+    left: 0,
+    top: 3,
+    bottom: 3,
+    borderRadius: radii.sm,
+    backgroundColor: glass.tintPrimary,
+    borderWidth: 1,
+    borderColor: glass.tintPrimaryStroke,
+  },
   pressed: { opacity: 0.72 },
   disabled: { opacity: 0.38 },
   label: { fontFamily: 'Sora_500Medium', fontSize: 12, lineHeight: 16, color: colors.textMuted },

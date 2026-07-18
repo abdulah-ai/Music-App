@@ -1,8 +1,7 @@
-import { PropsWithChildren, useEffect, useRef } from 'react';
+import { PropsWithChildren } from 'react';
 import {
   AccessibilityState,
   Animated,
-  Platform,
   Pressable,
   PressableProps,
   StyleProp,
@@ -10,7 +9,8 @@ import {
   ViewStyle,
 } from 'react-native';
 
-import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { useTactileGlass } from '../../hooks/useTactileGlass';
+import { glass, radii } from '../../theme/tokens';
 
 type Props = PropsWithChildren<{
   onPress?: PressableProps['onPress'];
@@ -33,39 +33,15 @@ export function PressableScale({
   onLongPress,
   disabled,
   style,
-  scaleTo = 0.97,
-  hoverScaleTo = 1.01,
+  scaleTo = 0.98,
+  hoverScaleTo: _hoverScaleTo = 1,
   hitSlop,
   accessibilityLabel,
   accessibilityHint,
   accessibilityState,
   testID,
 }: Props) {
-  const scale = useRef(new Animated.Value(1)).current;
-  const hovered = useRef(false);
-  const reducedMotion = useReducedMotion();
-
-  useEffect(() => {
-    if (reducedMotion) {
-      scale.stopAnimation();
-      scale.setValue(1);
-    }
-    return () => scale.stopAnimation();
-  }, [reducedMotion, scale]);
-
-  const to = (value: number) => {
-    scale.stopAnimation();
-    if (reducedMotion) {
-      scale.setValue(1);
-      return;
-    }
-    Animated.spring(scale, {
-      toValue: value,
-      useNativeDriver: true,
-      speed: 36,
-      bounciness: 1,
-    }).start();
-  };
+  const tactile = useTactileGlass({ disabled, scaleTo });
 
   return (
     <Pressable
@@ -79,27 +55,14 @@ export function PressableScale({
       accessibilityHint={accessibilityHint}
       accessibilityState={{ ...accessibilityState, disabled: !!disabled }}
       style={styles.hitTarget}
-      onPressIn={() => to(scaleTo)}
-      onPressOut={() => to(hovered.current ? hoverScaleTo : 1)}
-      onHoverIn={
-        Platform.OS === 'web'
-          ? () => {
-              hovered.current = true;
-              if (!disabled) to(hoverScaleTo);
-            }
-          : undefined
-      }
-      onHoverOut={
-        Platform.OS === 'web'
-          ? () => {
-              hovered.current = false;
-              to(1);
-            }
-          : undefined
-      }
+      onPressIn={tactile.onPressIn}
+      onPressOut={tactile.onPressOut}
+      onHoverIn={tactile.onHoverIn}
+      onHoverOut={tactile.onHoverOut}
     >
-      <Animated.View style={[style, { transform: [{ scale }] }, disabled && styles.disabled]}>
+      <Animated.View style={[style, { opacity: tactile.highlight, transform: [{ scale: tactile.scale }] }, disabled && styles.disabled]}>
         {children}
+        <Animated.View pointerEvents="none" style={[styles.hoverBorder, { opacity: tactile.hoverBorder }]} />
       </Animated.View>
     </Pressable>
   );
@@ -113,4 +76,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   disabled: { opacity: 0.45 },
+  hoverBorder: {
+    ...(StyleSheet.absoluteFill as object),
+    borderWidth: 1,
+    borderColor: glass.edgeModal,
+    borderRadius: radii.control,
+  },
 });

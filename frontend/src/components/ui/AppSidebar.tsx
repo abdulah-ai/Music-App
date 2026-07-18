@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -63,11 +63,15 @@ function SidebarNavRow({
   destination,
   focused,
   reducedMotion,
+  bloomDelay,
+  onLayout,
   onPress,
 }: {
   destination: NavDestination;
   focused: boolean;
   reducedMotion: boolean;
+  bloomDelay: number;
+  onLayout: (event: LayoutChangeEvent) => void;
   onPress: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
@@ -81,13 +85,14 @@ function SidebarNavRow({
     }
     const animation = Animated.timing(activeProgress, {
       toValue: focused ? 1 : 0,
+      delay: focused ? bloomDelay : 0,
       duration: motion.duration.base,
       easing: Easing.bezier(...motion.easing.standard),
       useNativeDriver: true,
     });
     animation.start();
     return () => animation.stop();
-  }, [activeProgress, focused, reducedMotion]);
+  }, [activeProgress, bloomDelay, focused, reducedMotion]);
 
   useEffect(() => {
     if (reducedMotion) {
@@ -107,6 +112,7 @@ function SidebarNavRow({
   return (
     <Pressable
       onPress={onPress}
+      onLayout={onLayout}
       onHoverIn={() => setHovered(true)}
       onHoverOut={() => setHovered(false)}
       accessibilityRole="button"
@@ -128,16 +134,6 @@ function SidebarNavRow({
       >
         <Animated.View pointerEvents="none" style={[styles.navHoverFill, { opacity: hoverProgress }]} />
         <Animated.View pointerEvents="none" style={[styles.navActiveFill, { opacity: activeProgress }]} />
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.navAccent,
-            {
-              opacity: activeProgress,
-              transform: [{ scaleY: activeProgress }],
-            },
-          ]}
-        />
         <Ionicons
           name={focused && destination.activeIcon ? destination.activeIcon : destination.icon}
           size={20}
@@ -167,8 +163,11 @@ export function AppSidebar({
   const accountMenuOpen = useUiStore((state) => state.accountMenuOpen);
   const toggleAccountMenu = useUiStore((state) => state.toggleAccountMenu);
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+  const [rowLayouts, setRowLayouts] = useState<Record<string, { y: number; height: number }>>({});
   const reducedMotion = useReducedMotion();
   const accountProgress = useRef(new Animated.Value(accountMenuOpen ? 1 : 0)).current;
+  const trailY = useRef(new Animated.Value(0)).current;
+  const trailOpacity = useRef(new Animated.Value(0)).current;
 
   const isRail = variant === 'rail';
   const offline = !networkOnline || backendOnline === false;
@@ -176,6 +175,42 @@ export function AppSidebar({
   const currentRoute = navigationRef.isReady() ? navigationRef.getCurrentRoute()?.name : undefined;
   const resolvedActiveTab = activeTab ?? (currentRoute && currentRoute in TAB_ROUTE_NAMES ? (currentRoute as keyof MainTabParamList) : undefined);
   const secondaryItems = user?.is_admin ? [...SECONDARY_NAV_ITEMS, ADMIN_NAV_ITEM] : SECONDARY_NAV_ITEMS;
+  const activeDestination = [...PRIMARY_NAV_ITEMS, ...secondaryItems].find((destination) =>
+    destination.kind === 'tab'
+      ? destination.tab === resolvedActiveTab && destination.label !== 'Playlists'
+      : destination.route === currentRoute,
+  );
+  const activeDestinationKey = activeDestination ? destinationKey(activeDestination) : null;
+
+  useEffect(() => {
+    if (!activeDestinationKey) {
+      trailOpacity.setValue(0);
+      return;
+    }
+    const layout = rowLayouts[activeDestinationKey];
+    if (!layout) return;
+    const targetY = layout.y + (layout.height - 22) / 2;
+    trailY.stopAnimation();
+    trailOpacity.stopAnimation();
+    if (reducedMotion) {
+      trailY.setValue(targetY);
+      trailOpacity.setValue(1);
+      return;
+    }
+    Animated.parallel([
+      Animated.timing(trailY, {
+        toValue: targetY,
+        duration: motion.duration.base,
+        easing: Easing.bezier(...motion.easing.standard),
+        useNativeDriver: true,
+      }),
+      Animated.timing(trailOpacity, {
+        toValue: 1,
+        duration: motion.duration.fast,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [activeDestinationKey, reducedMotion, rowLayouts, trailOpacity, trailY]);
 
   useEffect(() => {
     if (reducedMotion) {
@@ -214,6 +249,15 @@ export function AppSidebar({
         destination={destination}
         focused={focused}
         reducedMotion={reducedMotion}
+        bloomDelay={motion.duration.fast}
+        onLayout={(event) => {
+          const { y, height } = event.nativeEvent.layout;
+          setRowLayouts((current) => {
+            const previous = current[key];
+            if (previous?.y === y && previous.height === height) return current;
+            return { ...current, [key]: { y, height } };
+          });
+        }}
         onPress={() => go(destination)}
       />
     );
@@ -232,12 +276,18 @@ export function AppSidebar({
       </View>
 
       <GlassPanel style={styles.navigationPanel} variant="quiet" overlayColor={glass.fillDeep}>
-        <Text style={styles.sectionLabel}>LISTEN</Text>
-        <View style={styles.navList}>{PRIMARY_NAV_ITEMS.map(renderDestination)}</View>
+        <View style={styles.navMap}>
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.navTrail, { opacity: trailOpacity, transform: [{ translateY: trailY }] }]}
+          />
+          <Text style={styles.sectionLabel}>LISTEN</Text>
+          {PRIMARY_NAV_ITEMS.map(renderDestination)}
 
-        <View style={styles.sectionDivider} />
-        <Text style={styles.sectionLabel}>MORE</Text>
-        <View style={styles.navList}>{secondaryItems.map(renderDestination)}</View>
+          <View style={styles.sectionDivider} />
+          <Text style={styles.sectionLabel}>MORE</Text>
+          {secondaryItems.map(renderDestination)}
+        </View>
       </GlassPanel>
 
       {currentMedia ? (
@@ -380,7 +430,7 @@ const styles = StyleSheet.create({
     marginVertical: spacing.sm,
     backgroundColor: glass.stroke,
   },
-  navList: { gap: 2 },
+  navMap: { position: 'relative', gap: 2 },
   navPressable: { borderRadius: radii.md },
   navRow: {
     minHeight: 44,
@@ -403,14 +453,18 @@ const styles = StyleSheet.create({
     backgroundColor: glass.tintPrimary,
   },
   navRowHovered: { backgroundColor: glass.fillBright },
-  navAccent: {
+  navTrail: {
     position: 'absolute',
     left: 0,
-    top: 11,
-    bottom: 11,
+    top: 0,
+    height: 22,
     width: 3,
     borderRadius: radii.pill,
     backgroundColor: colors.cyan,
+    shadowColor: colors.cyan,
+    shadowOpacity: 0.42,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 0 },
   },
   navLabel: { ...typography.subtitle, fontSize: 14, color: colors.textMuted, flex: 1 },
   navLabelHovered: { color: colors.textSecondary },

@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { palette } from '../../theme/theme';
+import { motionPresets } from '../../theme/motion';
 
 type Props = {
   uri: string | null | undefined;
@@ -41,7 +42,12 @@ export function CoverBackdrop({ uri, opacity = 1, blurRadius = 50, scrimOpacity 
       return;
     }
     fade.setValue(0);
-    const animation = Animated.timing(fade, { toValue: 1, duration: 700, useNativeDriver: true });
+    const animation = Animated.timing(fade, {
+      toValue: 1,
+      duration: motionPresets.emphasis.duration,
+      easing: motionPresets.emphasis.easing,
+      useNativeDriver: true,
+    });
     animation.start();
     return () => animation.stop();
   }, [fade, reduceMotion, uri]);
@@ -53,7 +59,14 @@ export function CoverBackdrop({ uri, opacity = 1, blurRadius = 50, scrimOpacity 
       pointerEvents="none"
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      style={[StyleSheet.absoluteFill, styles.clip, { opacity: Animated.multiply(fade, opacity) }]}
+      style={[
+        StyleSheet.absoluteFill,
+        styles.clip,
+        {
+          opacity: Animated.multiply(fade, opacity),
+          transform: [{ scale: fade.interpolate({ inputRange: [0, 1], outputRange: [1.025, 1] }) }],
+        },
+      ]}
     >
       <Image
         source={{ uri }}
@@ -63,7 +76,7 @@ export function CoverBackdrop({ uri, opacity = 1, blurRadius = 50, scrimOpacity 
         priority="high"
         loading="eager"
         recyclingKey={uri}
-        transition={reduceMotion ? 0 : 180}
+        transition={reduceMotion ? 0 : motionPresets.emphasis.duration}
         accessible={false}
         alt=""
         style={styles.art}

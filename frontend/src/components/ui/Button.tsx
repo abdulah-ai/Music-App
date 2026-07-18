@@ -1,7 +1,8 @@
-import { ActivityIndicator, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { ActivityIndicator, Animated, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { colors, glass, glassBlur, iconography, radii, shadows, spacing, typography } from '../../theme/tokens';
+import { useTactileGlass } from '../../hooks/useTactileGlass';
 
 type Props = {
   label: string;
@@ -32,6 +33,7 @@ export function Button({
   const isDisabled = disabled || loading;
   const isPrimary = variant === 'primary';
   const isDanger = variant === 'danger';
+  const tactile = useTactileGlass({ disabled: !!isDisabled });
 
   return (
     <Pressable
@@ -42,14 +44,17 @@ export function Button({
       accessibilityLabel={loading ? `${label}, in progress` : label}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: !!isDisabled, busy: !!loading }}
-      style={({ pressed }) => [
+      onPressIn={tactile.onPressIn}
+      onPressOut={tactile.onPressOut}
+      onHoverIn={tactile.onHoverIn}
+      onHoverOut={tactile.onHoverOut}
+      style={[
         styles.base,
         glassBlur,
         isPrimary && styles.primary,
         variant === 'secondary' && styles.secondary,
         variant === 'ghost' && styles.ghost,
         isDanger && styles.danger,
-        pressed && !isDisabled && styles.pressed,
         isDisabled && isPrimary && styles.disabledPrimary,
         isDisabled && variant === 'secondary' && styles.disabledSecondary,
         isDisabled && variant === 'ghost' && styles.disabledGhost,
@@ -57,7 +62,7 @@ export function Button({
         style,
       ]}
     >
-      <View style={styles.content}>
+      <Animated.View style={[styles.content, { opacity: tactile.highlight, transform: [{ scale: tactile.scale }] }]}>
         {loading ? (
           <ActivityIndicator size="small" color={isDanger ? colors.danger : colors.cyan} />
         ) : icon ? (
@@ -77,7 +82,8 @@ export function Button({
         >
           {label}
         </Text>
-      </View>
+      </Animated.View>
+      <Animated.View pointerEvents="none" style={[styles.hoverBorder, { opacity: tactile.hoverBorder }]} />
     </Pressable>
   );
 }
@@ -112,7 +118,7 @@ const styles = StyleSheet.create({
     backgroundColor: glass.tintDanger,
     borderColor: glass.tintDangerStroke,
   },
-  pressed: { opacity: 0.86, transform: [{ scale: 0.985 }] },
+  hoverBorder: { ...(StyleSheet.absoluteFill as object), borderRadius: radii.control, borderWidth: 1, borderColor: glass.edgeModal },
   disabledPrimary: {
     backgroundColor: glass.fillDeep,
     borderColor: glass.stroke,

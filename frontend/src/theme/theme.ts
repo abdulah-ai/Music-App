@@ -250,12 +250,14 @@ export const shadows = {
 } as const;
 
 export const motion = {
-  duration: { instant: 80, fast: 120, base: 200, slow: 320 },
+  duration: { instant: 80, fast: 120, base: 200, slow: 320, continuous: 2600 },
   easing: {
     standard: [0.2, 0, 0, 1] as const,
     decelerate: [0, 0, 0, 1] as const,
     accelerate: [0.4, 0, 1, 1] as const,
   },
+  stagger: { item: 36, chapter: 64, max: 220 },
+  spring: { pressSpeed: 42, returnSpeed: 34 },
 } as const;
 
 export const literalThemes = {

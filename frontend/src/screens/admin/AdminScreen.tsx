@@ -11,6 +11,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { IconButton } from '../../components/ui/IconButton';
 import { ScreenContainer } from '../../components/ui/ScreenContainer';
 import { SectionHeader } from '../../components/ui/SectionHeader';
+import { TabChipRow } from '../../components/ui/TabChipRow';
 import { apiErrorMessage } from '../../utils/apiError';
 import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../theme/tokens';
@@ -136,9 +137,12 @@ export function AdminScreen() {
             <SectionHeader eyebrow="Operations" title="Admin console" subtitle="Accounts, activity, feedback, and system health." style={adminStyles.screenHeading} />
             <IconButton icon={refreshing ? 'hourglass-outline' : 'refresh'} accessibilityLabel={refreshing ? 'Refreshing admin data' : 'Refresh all admin data'} onPress={refreshAll} disabled={refreshing} variant="surface" />
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={adminStyles.tabRow} style={adminStyles.tabScroller}>
-            {TABS.map((item) => <Pressable key={item.key} onPress={() => setTab(item.key)} accessibilityRole="tab" accessibilityLabel={item.label} accessibilityState={{ selected: tab === item.key }} style={[adminStyles.tabChip, tab === item.key && adminStyles.tabChipActive]}><Ionicons name={item.icon} size={14} color={tab === item.key ? colors.cyan : colors.textMuted} /><Text style={[adminStyles.tabLabel, tab === item.key && adminStyles.tabLabelActive]}>{item.label}</Text></Pressable>)}
-          </ScrollView>
+          <TabChipRow
+            style={adminStyles.tabScroller}
+            options={TABS.map((item) => ({ value: item.key, label: item.label, icon: item.icon }))}
+            value={tab}
+            onChange={setTab}
+          />
 
           {tab === 'overview' && <SectionGate loading={loading.stats} error={errors.stats} hasData={!!stats} onRetry={() => void loadStats()}>{stats ? <OverviewTab stats={stats} /> : null}</SectionGate>}
           {tab === 'users' && <SectionGate loading={loading.users} error={errors.users} hasData={users.length > 0} onRetry={() => void loadUsers(usersQuery)}><UsersTab users={users} total={usersTotal} query={usersQuery} loading={loading.users} currentAdminEmail={adminUser?.email ?? ''} onQueryChange={(query) => { setUsersQuery(query); void loadUsers(query); }} onLoadMore={() => void loadUsers(usersQuery, true)} onChanged={(updated) => setUsers((prev) => prev.map((user) => user.id === updated.id ? updated : user))} /></SectionGate>}

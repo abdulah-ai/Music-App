@@ -24,11 +24,11 @@
 ## Status dashboard (update every round)
 - Phase: **DESIGN-IMPLEMENT**
 - Ideas found: 73 / 73 (DESIGN_IDEAS.md written)
-- Ideas done: 0 / 73
-- Round: 1 (in progress)
+- Ideas done: 12 / 73  (R1 #1-#12 — tsc + full smoke 40/40 green, pushed 88df962)
+- Round: 2 (in progress)
 - Branch: `codex/apk-fast-path` → origin/main
-- Last shipped APK: commit `c749471`, versionCode 40 (from the prior 60-issue loop). last_apk_push_epoch: 1784352668
-- Current Codex task id: task-mrpylcep-hbpmvc (R1 Foundations #1-#12, effort=high)
+- Last shipped APK: R1 `88df962` — CI GREEN (run 29633900581, quality+apk success), APK rebuilt. last_apk_push_epoch: 1784355790
+- Current Codex task id: task-mrpze7mg-3w8qef (R2 Motion #13-#23, effort=high)
 
 ### Batch plan (adaptive)
 - R1 Foundations: #1-#12 (tokens/type/spacing/grid/glass/elevation/palette/accent/gradients/radii/icons/numerics/daylight)
@@ -58,3 +58,4 @@
 ## Round log
 - 05:48 UTC — Created design loop. Launched DESIGN-DISCOVERY (`task-mrpy5gnp-iysej0`, effort=high) → DESIGN_IDEAS.md with 73 ideas. Prior 60-issue loop DONE (APK versionCode 40, commit c749471). Rescheduled poll ~600s.
 - 06:00 UTC — DISCOVERY done (8m50s). 73 ideas confirmed (#1-#73, no gaps, 5 groups). Phase=DESIGN-IMPLEMENT. Recorded batch plan + smoke-test invariants. Launched R1 Foundations #1-#12 (`task-mrpylcep-hbpmvc`, effort=high; Codex self-runs full smoke suite via system Chrome). Poll ~900s.
+- 06:23 UTC — R1 done (15m35s). #1-#12 marked done; 21 files (theme/tokens, theme/theme, shared components). tsc GREEN, build GREEN. Full smoke: first run 1 fail (auth remembered-accounts) = parallel-load flake (passed in isolation 1.2s), re-run 40/40 GREEN. ~52min since last push → committed+pushed `88df962` → origin/main (CI verify pending). Done 12/73. last_apk_push_epoch=1784355790. Launched R2 Motion #13-#23 (`task-mrpze7mg-3w8qef`, effort=high). Poll ~900s.

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { PanResponder, Platform, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, PanResponder, Platform, StyleSheet, Text, View } from 'react-native';
 
-import { colors, glass, radii, typography } from '../../theme/tokens';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { colors, glass, motion, radii, typography } from '../../theme/tokens';
 
 const BAR_COUNT = 40;
 const MAX_BAR = 40;
@@ -43,6 +44,7 @@ export function WaveformScrubber({
   waveformData,
 }: Props) {
   const [dragRatio, setDragRatio] = useState<number | null>(null);
+  const reduceMotion = useReducedMotion();
   const originX = useRef(0);
   const width = useRef(1);
   const containerRef = useRef<View>(null);
@@ -57,6 +59,7 @@ export function WaveformScrubber({
   currentTimeRef.current = safeCurrentTime;
   const keyboardFocused = useRef(false);
   const bars = useMemo(() => normalizeBars(waveformData), [waveformData]);
+  const smoothRatio = useRef(new Animated.Value(0)).current;
 
   const seekTo = (seconds: number) => latestSeek.current(Math.max(0, Math.min(safeDuration, seconds)));
   const ratioFromPageX = (pageX: number) => Math.max(0, Math.min(1, (pageX - originX.current) / width.current));
@@ -84,6 +87,20 @@ export function WaveformScrubber({
   ).current;
 
   const shown = dragRatio ?? (safeDuration > 0 ? safeCurrentTime / safeDuration : 0);
+
+  useEffect(() => {
+    smoothRatio.stopAnimation();
+    if (reduceMotion) {
+      smoothRatio.setValue(shown);
+      return;
+    }
+    Animated.timing(smoothRatio, {
+      toValue: shown,
+      duration: dragRatio == null ? motion.duration.base : motion.duration.instant,
+      easing: Easing.bezier(...motion.easing.standard),
+      useNativeDriver: false,
+    }).start();
+  }, [dragRatio, reduceMotion, shown, smoothRatio]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -132,23 +149,56 @@ export function WaveformScrubber({
         }}
         {...panResponder.panHandlers}
       >
+        {dragRatio !== null ? (
+          <View
+            pointerEvents="none"
+            style={[styles.previewCapsule, { left: `${Math.max(0.07, Math.min(0.93, dragRatio)) * 100}%` }]}
+          >
+            <Text style={styles.previewText}>{formatTime(dragRatio * safeDuration)}</Text>
+          </View>
+        ) : null}
         <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.bars}>
           {bars.map((amplitude, index) => {
-            const played = index / (BAR_COUNT - 1) <= shown;
+            const frontier = (index + 0.5) / BAR_COUNT;
+            const before = Math.max(0, frontier - 0.012);
+            const after = Math.min(1, frontier + 0.012);
+            const baseHeight = MIN_BAR + amplitude * (MAX_BAR - MIN_BAR);
             return (
-              <View
+              <Animated.View
                 key={index}
                 style={[
                   styles.bar,
                   {
-                    height: MIN_BAR + amplitude * (MAX_BAR - MIN_BAR),
-                    backgroundColor: played ? activeColor : glass.strokeStrong,
+                    height: baseHeight,
+                    backgroundColor: smoothRatio.interpolate({
+                      inputRange: [before, frontier, after],
+                      outputRange: [glass.strokeStrong, activeColor, activeColor],
+                      extrapolate: 'clamp',
+                    }),
+                    transform: [{
+                      scaleY: smoothRatio.interpolate({
+                        inputRange: [0, frontier, 1],
+                        outputRange: [0.92, 1.08, 1],
+                        extrapolate: 'clamp',
+                      }),
+                    }],
                   },
-                  played && dragRatio !== null ? styles.barDragging : null,
                 ]}
               />
             );
           })}
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.frontier,
+              {
+                left: smoothRatio.interpolate({ inputRange: [0, 1], outputRange: ['1%', '99%'] }),
+                backgroundColor: activeColor,
+                borderColor: activeColor,
+                opacity: dragRatio === null ? 0.72 : 1,
+              },
+            ]}
+          />
         </View>
       </View>
       {!waveformData?.length ? <Text style={styles.fallbackLabel}>Decorative rhythm · analyzed waveform unavailable</Text> : null}
@@ -158,8 +208,36 @@ export function WaveformScrubber({
 
 const styles = StyleSheet.create({
   row: { height: 56, justifyContent: 'center', paddingVertical: 8, borderRadius: radii.sm },
-  bars: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  bars: { flex: 1, position: 'relative', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   bar: { flex: 1, marginHorizontal: 1.5, borderRadius: radii.pill },
-  barDragging: { backgroundColor: colors.violet },
+  frontier: {
+    position: 'absolute',
+    top: '50%',
+    width: 7,
+    height: 7,
+    marginLeft: -3.5,
+    marginTop: -3.5,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    shadowColor: colors.cyan,
+    shadowOpacity: 0.9,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  previewCapsule: {
+    position: 'absolute',
+    top: -20,
+    zIndex: 2,
+    width: 58,
+    minHeight: 24,
+    marginLeft: -29,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.pill,
+    backgroundColor: glass.fillHeavy,
+    borderWidth: 1,
+    borderColor: glass.tintPrimaryStroke,
+  },
+  previewText: { ...typography.numeric, fontSize: 10, lineHeight: 14, color: colors.textPrimary },
   fallbackLabel: { ...typography.caption, fontSize: 9, lineHeight: 12, color: colors.textMuted, textAlign: 'center' },
 });

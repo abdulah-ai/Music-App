@@ -1,4 +1,5 @@
-import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { API_BASE_URL } from '../../config';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { colors, glass, radii } from '../../theme/tokens';
+import { motionPresets } from '../../theme/motion';
 import { coverGlyphColor, coverGradient, displayArtist, displayTitle } from '../../utils/mediaDisplay';
 
 export type ArtworkMedia = {
@@ -67,13 +69,38 @@ export function Artwork({
     ? Math.max(28, Math.min(72, size * 0.48))
     : 64;
   const fallbackGlyphSize = Math.max(16, Math.round(fallbackBadgeSize * 0.44));
+  const handoff = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    handoff.stopAnimation();
+    if (!priority || reduceMotion) {
+      handoff.setValue(1);
+      return;
+    }
+    handoff.setValue(0);
+    Animated.timing(handoff, {
+      toValue: 1,
+      duration: motionPresets.emphasis.duration,
+      easing: motionPresets.emphasis.easing,
+      useNativeDriver: true,
+    }).start();
+  }, [handoff, key, priority, reduceMotion]);
 
   return (
-    <View
+    <Animated.View
       accessible={!uri}
       accessibilityRole={!uri ? 'image' : undefined}
       accessibilityLabel={!uri ? label : undefined}
-      style={[styles.root, dimensions, { borderRadius }, style]}
+      style={[
+        styles.root,
+        dimensions,
+        { borderRadius },
+        priority && {
+          opacity: handoff,
+          transform: [{ scale: handoff.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] }) }],
+        },
+        style,
+      ]}
     >
       <LinearGradient colors={[...coverGradient(key)]} style={StyleSheet.absoluteFill}>
         <View style={styles.fallbackIcon}>
@@ -100,13 +127,13 @@ export function Artwork({
           priority={priority ? 'high' : 'normal'}
           loading={priority ? 'eager' : 'lazy'}
           recyclingKey={key}
-          transition={reduceMotion ? 0 : priority ? 120 : 160}
+          transition={reduceMotion ? 0 : priority ? motionPresets.emphasis.duration : 160}
           accessible
           accessibilityLabel={label}
           alt={label}
         />
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 

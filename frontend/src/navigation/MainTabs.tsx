@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
@@ -60,7 +60,7 @@ function DockItem({
       toValue: focused ? 1 : 0,
       useNativeDriver: true,
       speed: 26,
-      bounciness: 4,
+      bounciness: 0,
     });
     animation.start();
     return () => animation.stop();
@@ -77,16 +77,6 @@ function DockItem({
       style={({ pressed }) => [styles.dockItem, pressed && styles.dockItemPressed]}
     >
       <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.activePill,
-          {
-            opacity: focus,
-            transform: [{ scale: focus.interpolate({ inputRange: [0, 1], outputRange: [0.78, 1] }) }],
-          },
-        ]}
-      />
-      <Animated.View
         style={[
           styles.dockItemContent,
           {
@@ -99,7 +89,15 @@ function DockItem({
           size={21}
           color={focused ? colors.cyan : colors.textMuted}
         />
-        <Text style={[styles.dockLabel, focused && styles.dockLabelActive]}>{presentation.label}</Text>
+        <Animated.Text
+          style={[
+            styles.dockLabel,
+            focused && styles.dockLabelActive,
+            { opacity: focus.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] }) },
+          ]}
+        >
+          {presentation.label}
+        </Animated.Text>
       </Animated.View>
     </Pressable>
   );
@@ -110,7 +108,23 @@ function CompactDock({ state, navigation }: BottomTabBarProps) {
   const dockCollapsed = useUiStore((store) => store.dockCollapsed);
   const toggleDockCollapsed = useUiStore((store) => store.toggleDockCollapsed);
   const visibility = useRef(new Animated.Value(dockCollapsed ? 0 : 1)).current;
+  const focusPosition = useRef(new Animated.Value(state.index)).current;
+  const [surfaceWidth, setSurfaceWidth] = useState(0);
   const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    focusPosition.stopAnimation();
+    if (reduceMotion) {
+      focusPosition.setValue(state.index);
+      return;
+    }
+    Animated.spring(focusPosition, {
+      toValue: state.index,
+      speed: 26,
+      bounciness: 0,
+      useNativeDriver: true,
+    }).start();
+  }, [focusPosition, reduceMotion, state.index]);
 
   useEffect(() => {
     visibility.stopAnimation();
@@ -151,8 +165,25 @@ function CompactDock({ state, navigation }: BottomTabBarProps) {
           },
         ]}
       >
-        <View style={styles.dockSurface}>
+        <View style={styles.dockSurface} onLayout={(event) => setSurfaceWidth(Math.ceil(event.nativeEvent.layout.width))}>
           <View pointerEvents="none" style={styles.dockHighlight} />
+          {surfaceWidth > 0 ? (
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.dockFocusPlate,
+                {
+                  width: (surfaceWidth - 10) / Math.max(1, state.routes.length),
+                  transform: [{
+                    translateX: Animated.multiply(
+                      focusPosition,
+                      (surfaceWidth - 10) / Math.max(1, state.routes.length),
+                    ),
+                  }],
+                },
+              ]}
+            />
+          ) : null}
           {state.routes.map((route, index) => (
             <DockItem
               key={route.key}
@@ -377,10 +408,19 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
   },
   dockItemPressed: { opacity: 0.72 },
-  activePill: {
-    ...(StyleSheet.absoluteFill as object),
+  dockFocusPlate: {
+    position: 'absolute',
+    left: 5,
+    top: 5,
+    bottom: 5,
     borderRadius: radii.md,
     backgroundColor: glass.tintPrimary,
+    borderWidth: 1,
+    borderColor: glass.tintPrimaryStroke,
+    shadowColor: colors.cyan,
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
   },
   dockItemContent: { alignItems: 'center', justifyContent: 'center', gap: 3 },
   dockLabel: {

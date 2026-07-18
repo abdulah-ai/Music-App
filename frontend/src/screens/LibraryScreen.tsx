@@ -58,6 +58,7 @@ import { useReducedMotion } from '../hooks/useReducedMotion';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Artwork } from '../components/ui/Artwork';
 import { Reveal } from '../components/ui/Reveal';
+import { TabChipRow } from '../components/ui/TabChipRow';
 import { CompactGlassSheet, type SheetAnchor } from '../components/ui/CompactGlassSheet';
 import { tokenStorage } from '../services/storage/tokenStorage';
 import { PressableScale } from '../components/ui/PressableScale';
@@ -864,33 +865,20 @@ export function LibraryScreen() {
 
         {!selectMode && <Reveal delay={120}>
         <View style={styles.controlsRow}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabRow}
-            accessibilityRole="tablist"
-          >
-            {TABS.map((t) => (
-              <Pressable
-                key={t.key}
-                onPress={() => {
-                  setTab(t.key);
-                  setCategoryFilter(null);
-                  if (t.key === 'audio' || t.key === 'video') {
-                    setAdvancedFilters((current) => ({ ...current, mediaType: null }));
-                  }
-                  if (t.key === 'favorites') {
-                    setAdvancedFilters((current) => ({ ...current, favorite: null }));
-                  }
-                }}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: tab === t.key }}
-                style={[styles.tabChip, tab === t.key && styles.tabChipActive]}
-              >
-                <Text style={[styles.tabLabel, tab === t.key && styles.tabLabelActive]}>{t.label}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+          <TabChipRow
+            options={TABS.map((item) => ({ value: item.key, label: item.label }))}
+            value={tab}
+            onChange={(nextTab) => {
+              setTab(nextTab);
+              setCategoryFilter(null);
+              if (nextTab === 'audio' || nextTab === 'video') {
+                setAdvancedFilters((current) => ({ ...current, mediaType: null }));
+              }
+              if (nextTab === 'favorites') {
+                setAdvancedFilters((current) => ({ ...current, favorite: null }));
+              }
+            }}
+          />
           {tab !== 'playlists' && !(tab === 'categories' && !categoryFilter) && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolRow}>
               {tab === 'categories' && categoryFilter ? (
